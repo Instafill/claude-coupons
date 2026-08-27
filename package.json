@@ -1,0 +1,32 @@
+{
+  "name": "claude-coupons",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "node --require ./dns-fix.cjs node_modules/next/dist/bin/next dev",
+    "build": "next build",
+    "start": "node --require ./dns-fix.cjs node_modules/next/dist/bin/next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "@vercel/analytics": "^1.6.1",
+    "mongoose": "^9.1.5",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4",
+    "typescript": "5.9.3"
+  }
+}

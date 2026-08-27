@@ -1,7 +1,0 @@
-User-agent: *
-Disallow: /auth/
-Disallow: /signin
-Disallow: /manage
-Disallow: /api/
-
-Sitemap: https://claudecoupons.com/sitemap.xml

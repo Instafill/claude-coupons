@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* Warm paper background, ink text, terracotta accent - one deliberate look, and the same
+   palette the ASP.NET prototype used, so the design survived the migration. */
+@theme {
+  --color-paper: #faf9f5;
+  --color-surface: #ffffff;
+  --color-ink: #1f1e1d;
+  --color-muted: #6e6a63;
+  --color-line: #e8e5de;
+  --color-accent: #c9642f;
+  --color-accent-dark: #a94f20;
+  --color-good: #1d7a4f;
+  --color-bad: #b3341f;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.65;
+}
+
+/* The honeypot: off-screen, never focusable, invisible to a human. */
+.hp {
+  position: absolute;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  border: 0;
+  padding: 0;
+}
+
+@keyframes outcome-pulse {
+  50% {
+    color: var(--color-accent-dark);
+  }
+}
+.outcome-pulse {
+  animation: outcome-pulse 1s ease 2;
+}
