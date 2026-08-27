@@ -9,7 +9,7 @@ import { MAX_CLAIMS_PER_PASS, UNLOCKS_PER_USER_PER_DAY, getBoard } from "@/lib/p
 
 export const dynamic = "force-dynamic";
 
-const TITLE = "Free Claude Code Passes - Claim or Share | Claude Coupons";
+const TITLE = "Claude Code Passes | Claude Coupons";
 const DESCRIPTION =
   "Claim a free Claude Code pass, or share your spare ones. There is no official Claude coupon code - a guest pass is the real thing, and this is where they are exchanged.";
 
