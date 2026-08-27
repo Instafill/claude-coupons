@@ -5,7 +5,10 @@ import sgMail from "@sendgrid/mail";
 // put the magic link in at least one user's spam folder - botmakers.net authorises Google in
 // SPF, not SendGrid, so every send failed SPF too. claudecoupons.com is now authenticated in
 // SendGrid (DKIM CNAMEs + DMARC), so the from address and the link finally agree.
-const FROM_EMAIL = process.env.EMAIL_FROM || "hello@claudecoupons.com";
+// Not configurable on purpose. This address is only deliverable because claudecoupons.com
+// is the domain SendGrid signs for, so an env var pointing it elsewhere cannot be right -
+// it can only silently break DKIM alignment again, which is how the link reached spam.
+const FROM_EMAIL = "hello@claudecoupons.com";
 const FROM_NAME = "Claude Coupons";
 // The operator's real inbox, deliberately not on the sending domain.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "alex@botmakers.net";
