@@ -36,15 +36,13 @@ export const metadata: Metadata = {
     siteName: "Claude Coupons",
     title: TITLE,
     description: DESCRIPTION,
-    images: [{ url: "/logo-512.png", width: 512, height: 512, alt: "Claude Coupons" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Claude Code Coupons" }],
   },
-  // The logo is square, so the summary card frames it properly - a large_image card would
-  // letterbox or crop it.
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/logo-512.png"],
+    images: ["/og.png"],
   },
 };
 

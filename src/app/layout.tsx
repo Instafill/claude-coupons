@@ -25,7 +25,9 @@ export default async function RootLayout({
       <body className="antialiased">
         <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-5">
           <Link href="/" className="flex items-center gap-2 text-[19px] font-bold no-underline">
-            <Image src="/logo.svg" alt="" width={28} height={28} priority />
+            {/* Raster, not the zip's logo.svg: that file is a broken redraw - the % comes
+                out as two solid blobs and the ticket edge as a row of dots. */}
+            <Image src="/logo-256.png" alt="" width={28} height={28} priority />
             ClaudeCoupons<span className="font-normal text-muted">.com</span>
           </Link>
           <nav className="flex items-center gap-4 text-[15px]">
