@@ -116,7 +116,7 @@ export default function Board({
           return (
             <li
               key={pass.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-4"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-paper px-4 py-4"
             >
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="font-mono text-[15px] break-all">
@@ -194,7 +194,8 @@ export default function Board({
           );
         })}
       </ul>
-      <p className="mt-4 text-sm text-muted">
+      {/* mt-auto anchors the caveat to the bottom of the stretched panel. */}
+      <p className="mt-auto pt-4 text-sm text-muted">
         Passes are first-come, first-served and each covers a limited number of invites, so a
         link can run dry before the board knows. Unlocking is capped at {dailyCap} passes per
         day.

@@ -2,7 +2,7 @@
 // passes sees their own offer without scrolling, exactly as a claimer does.
 export default function ShareCard() {
   return (
-    <aside className="rounded-2xl bg-ink px-6 py-7 text-paper">
+    <aside className="flex flex-col rounded-2xl bg-ink px-6 py-7 text-paper">
       <p className="text-[13px] font-semibold tracking-wider text-accent uppercase">
         Have passes to give
       </p>
@@ -17,16 +17,19 @@ export default function ShareCard() {
         subscribed. Sitting on them pays nothing - they expire either way.
       </p>
 
-      <a
-        href="/submit"
-        className="mt-5 inline-block rounded-lg bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-dark"
-      >
-        Share your passes →
-      </a>
-
-      <p className="mt-3 text-[13px] text-white/50">
-        Takes about twenty seconds. You can retire a listing anytime.
-      </p>
+      {/* mt-auto keeps the call to action on the bottom edge, level with the caveat in the
+          board panel opposite. The wrapper carries the spacing so the button keeps its own. */}
+      <div className="mt-auto pt-5">
+        <a
+          href="/submit"
+          className="inline-block rounded-lg bg-accent px-5 py-2.5 font-semibold text-white hover:bg-accent-dark"
+        >
+          Share your passes →
+        </a>
+        <p className="mt-3 text-[13px] text-white/50">
+          Takes about twenty seconds. You can retire a listing anytime.
+        </p>
+      </div>
     </aside>
   );
 }

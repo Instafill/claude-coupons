@@ -82,9 +82,11 @@ export default async function Home() {
 
       {/* Both sides of the exchange get the first screen: claimers on the left, the
           subscribers who supply the passes on the right. */}
-      <div className="mt-9 grid items-start gap-8 lg:grid-cols-2">
-        <section>
-          <h2 className="mb-3.5 text-2xl font-semibold">Available Claude passes</h2>
+      {/* Grid items stretch by default, so both panels end on the same line however many
+          passes are on the board. */}
+      <div className="mt-9 grid gap-8 lg:grid-cols-2">
+        <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
+          <h2 className="mb-4 text-2xl font-semibold">Available Claude passes</h2>
           <Board
             passes={passes}
             signedIn={Boolean(user)}
