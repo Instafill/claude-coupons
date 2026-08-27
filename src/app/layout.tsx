@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -32,6 +33,19 @@ export default async function RootLayout({
             </Link>
             {user ? (
               <>
+                {user.picture && (
+                  // Saved from the Google profile at sign-in. Shown here so the stored
+                  // avatar is visibly working, not just sitting in a column.
+                  <Image
+                    src={user.picture}
+                    alt=""
+                    width={28}
+                    height={28}
+                    title={user.name || user.email}
+                    className="rounded-full"
+                    unoptimized
+                  />
+                )}
                 <Link href="/manage" className="hover:text-accent-dark">
                   My passes
                 </Link>

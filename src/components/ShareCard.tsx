@@ -28,7 +28,8 @@ export default function ShareCard() {
           Share your passes →
         </a>
         <p className="mt-3 text-[13px] text-white/50">
-          Takes about twenty seconds. You can retire a listing anytime.
+          Takes about twenty seconds. Your listing comes down on its own once your passes run
+          out.
         </p>
       </div>
     </aside>

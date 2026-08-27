@@ -65,7 +65,7 @@ export default function ShareCta() {
           List my Claude passes →
         </a>
         <span className="text-[15px] text-muted">
-          Refresh, retire or remove a listing whenever you like.
+          Nothing to maintain - the board takes a listing down by itself.
         </span>
       </div>
     </section>
