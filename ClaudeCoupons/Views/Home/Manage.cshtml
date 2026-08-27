@@ -1,0 +1,58 @@
+@using ClaudeCoupons.Models
+@{
+    ViewBag.title = "My passes - Claude Coupons";
+    ViewBag.noindex = true;
+    var listings = (List<PassDoc>)ViewBag.listings;
+}
+
+<section class="narrow wide">
+    <h1>My passes</h1>
+    <p>Signed in as <strong>@ViewBag.email</strong>.</p>
+
+    @if (listings.Count == 0)
+    {
+        <p>You haven't listed any passes yet. <a href="/submit">Share one now</a>.</p>
+    }
+    else
+    {
+        <table class="listing-table">
+            <thead>
+                <tr><th>Pass</th><th>Status</th><th>Unlocked</th><th>Claimed</th><th>Dead reports</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var pass in listings)
+                {
+                    <tr>
+                        <td class="pass-code">…/@pass.Code</td>
+                        <td><span class="status status-@pass.Status">@pass.Status</span></td>
+                        <td>@pass.UnlockCount</td>
+                        <td>@pass.ClaimedCount</td>
+                        <td>@pass.DeadCount</td>
+                        <td class="row-actions">
+                            <form method="post" action="/manage/@pass.Id/refresh" class="inline-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="mini" title="Relist and reset the expiry clock">Refresh</button>
+                            </form>
+                            @if (pass.Status == PassStatus.Live)
+                            {
+                                <form method="post" action="/manage/@pass.Id/exhausted" class="inline-form">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="mini" title="No passes left on this link">Out of passes</button>
+                                </form>
+                            }
+                            <form method="post" action="/manage/@pass.Id/remove" class="inline-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="mini mini-danger">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="hint">
+            A listing hides itself after @ClaudeCoupons.BL.PassStore.MaxClaimsPerPass reported
+            claims, after repeated "didn't work" reports, or 21 days after its last refresh.
+            Refresh it whenever you still have passes to give.
+        </p>
+    }
+</section>

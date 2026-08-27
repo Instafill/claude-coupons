@@ -1,0 +1,163 @@
+@using ClaudeCoupons.Models
+@using MongoDB.Bson
+@functions {
+    static string Esc(string s) => System.Text.Json.JsonEncodedText.Encode(s).ToString();
+}
+@{
+    ViewBag.title = "Claude Coupons - Free Claude Code Passes (7 Days of Claude Pro)";
+    ViewBag.description = "Claim a free Claude Code pass or share yours. Every Claude pass gives a new user 7 days of Claude Pro - Claude Code and Cowork included. There is no official Claude coupon code; guest passes are the real thing, exchanged here.";
+
+    var board = (List<PassDoc>)ViewBag.board;
+    var myUnlocks = (Dictionary<ObjectId, UnlockDoc>)ViewBag.myUnlocks;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+
+    var faqs = new (string Q, string A)[]
+    {
+        ("Is there an official Claude coupon code?",
+         "No. Anthropic does not publish coupon or promo codes for Claude. The only legitimate way to get free access to Claude's paid plan is a guest pass - a personal invite a Pro or Max subscriber shares. That is exactly what is exchanged on this site."),
+        ("What is a Claude Code pass?",
+         "A guest pass from Anthropic's referral program. It gives someone new to paid Claude 7 days of the Claude Pro plan for free, including Claude Code (the terminal coding agent) and Cowork. Every Pro and Max subscriber gets a small number of passes to share."),
+        ("Are Claude Code passes really free?",
+         "The 7 days are free, but Anthropic asks for a payment card at signup, and the account converts to a paid Claude Pro subscription when the week ends unless you cancel first. Cancel anytime during the trial and you pay nothing."),
+        ("Who can claim a Claude pass?",
+         "Only people who have never had a paid Claude subscription. If you already subscribe to Claude Pro or Max, or did in the past, the pass will not apply to your account."),
+        ("How do I claim a pass from this site?",
+         "Sign in with your email, unlock a pass from the board, and open the link. You'll land on claude.ai's invite page and sign up there. Afterwards, tell us whether the pass worked - that answer is what keeps dead links off the board."),
+        ("Why do I have to sign in to see a pass link?",
+         "Two reasons: it stops bots from scraping every link the moment it is listed, and it lets us log who unlocked each pass so exhausted links get retired quickly. One email, no password - we send you a sign-in link."),
+        ("How do I share my own Claude Code passes?",
+         "If you subscribe to Claude Pro or Max, run /passes in Claude Code or open Settings in the Claude apps to find your invite link, then list it here. Each subscriber has a limited number of passes; when yours run out, mark the listing exhausted from your dashboard."),
+        ("What do I get for sharing my passes?",
+         "When someone you invited stays subscribed after their free week, Anthropic credits you $10 in usage credits (per their referral terms). Listing here simply gets your link in front of people actively looking for a pass."),
+    };
+
+    var faqSb = new System.Text.StringBuilder();
+    faqSb.Append("{\"@context\":\"https://schema.org\",\"@type\":\"FAQPage\",\"mainEntity\":[");
+    for (int i = 0; i < faqs.Length; i++)
+    {
+        if (i > 0) faqSb.Append(',');
+        faqSb.Append($"{{\"@type\":\"Question\",\"name\":\"{Esc(faqs[i].Q)}\",\"acceptedAnswer\":{{\"@type\":\"Answer\",\"text\":\"{Esc(faqs[i].A)}\"}}}}");
+    }
+    faqSb.Append("]}");
+}
+@section headTags {
+    <link rel="canonical" href="https://claudecoupons.com/" />
+    <script type="application/ld+json">@Html.Raw(faqSb.ToString())</script>
+}
+
+<section class="hero">
+    <h1>Free Claude Code Passes</h1>
+    <p class="lede">
+        A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code and
+        Cowork included. Subscribers get a few passes each and most go unused. This board is where
+        spare passes meet the people looking for a Claude coupon.
+    </p>
+</section>
+
+<section class="board" id="board">
+    <h2>Available passes</h2>
+    @if (board.Count == 0)
+    {
+        <p class="board-empty">
+            No passes on the board right now - they go fast. Check back soon, or
+            <a href="/submit">list yours</a> if you have spares.
+        </p>
+    }
+    else
+    {
+        <form id="csrf" class="inline-form">@Html.AntiForgeryToken()</form>
+        <ul class="pass-list">
+            @foreach (var pass in board)
+            {
+                var unlocked = myUnlocks.TryGetValue(pass.Id, out var myUnlock);
+                <li class="pass-card" data-id="@pass.Id">
+                    <div class="pass-info">
+                        <span class="pass-code">claude.ai/referral/@(unlocked ? pass.Code : pass.MaskedCode)</span>
+                        <span class="pass-meta">
+                            @(pass.ClaimedCount == 0 ? "no claims reported yet" : $"{pass.ClaimedCount} of {ClaudeCoupons.BL.PassStore.MaxClaimsPerPass} claims reported")
+                            · listed @pass.CreatedAt.ToString("MMM d")
+                        </span>
+                    </div>
+                    <div class="pass-actions">
+                        @if (!signedIn)
+                        {
+                            <a class="btn" href="/signin?returnUrl=%2F" rel="nofollow">Sign in to unlock</a>
+                        }
+                        else if (unlocked)
+                        {
+                            <a class="btn btn-go" href="@pass.Url" target="_blank" rel="nofollow noopener">Open your pass ↗</a>
+                            @if (myUnlock!.Outcome == UnlockOutcome.None)
+                            {
+                                <span class="outcome-ask" data-id="@pass.Id">
+                                    Did it work?
+                                    <button class="mini" data-result="claimed">✓ Claimed it</button>
+                                    <button class="mini" data-result="dead">✗ Didn't work</button>
+                                </span>
+                            }
+                        }
+                        else
+                        {
+                            <button class="btn btn-unlock" data-id="@pass.Id">Unlock this pass</button>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+        <p class="board-note">
+            Passes are first-come, first-served and each covers a limited number of invites, so a
+            link can run dry before the board knows. Unlocking is capped at
+            @ClaudeCoupons.BL.PassStore.UnlocksPerUserPerDay passes per day.
+        </p>
+    }
+    <p class="board-cta"><a class="btn btn-secondary" href="/submit">Have spare passes? List them →</a></p>
+</section>
+
+<section class="prose">
+    <h2>What you get with a Claude Code pass</h2>
+    <ul>
+        <li><strong>7 days of Claude Pro, free</strong> - the full paid plan, not a limited demo.</li>
+        <li><strong>Claude Code</strong> - the agentic coding tool in your terminal and IDE.</li>
+        <li><strong>Cowork</strong> - Claude working alongside you on files and everyday tasks.</li>
+        <li>Higher usage limits and access to Anthropic's latest models while the pass runs.</li>
+    </ul>
+
+    <h2>Is there a Claude coupon code?</h2>
+    <p>
+        People search for a Claude coupon, a Claude promo code, a Claude Pro discount - and the
+        honest answer is that <strong>Anthropic doesn't issue any</strong>. What exists instead is the
+        <a href="https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes" rel="noopener">guest pass program</a>:
+        every Pro and Max subscriber holds a few personal invites, each worth a free week of Claude
+        Pro for someone new. Most of those passes expire unshared. A Claude pass from this board is
+        the closest thing to a Claude coupon that actually works.
+    </p>
+
+    <h2>How claiming works</h2>
+    <ol>
+        <li><strong>Sign in</strong> with your email - we send a link, no password to invent.</li>
+        <li><strong>Unlock a pass</strong> on the board to reveal its claude.ai invite link.</li>
+        <li><strong>Open the link and sign up</strong> on claude.ai. The 7-day Claude Pro trial starts there.</li>
+        <li><strong>Tell us if it worked.</strong> Your one-click answer retires exhausted links for everyone after you.</li>
+    </ol>
+
+    <h2>Before you claim - the fine print</h2>
+    <p>
+        Passes only apply to people <strong>new to paid Claude</strong>. Anthropic asks for a payment
+        card at signup, and unless you cancel within the 7 days the account becomes a regular paid
+        Claude Pro subscription. Passes are limited per subscriber and first-come, first-served, so a
+        listed link can be exhausted before anyone reports it. All program rules are Anthropic's -
+        see the <a href="https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes" rel="noopener">official guest pass page</a>.
+    </p>
+
+    <h2 id="faq">Frequently asked questions</h2>
+    <dl class="faq">
+        @foreach (var (q, a) in faqs)
+        {
+            <dt>@q</dt>
+            <dd>@a</dd>
+        }
+    </dl>
+</section>
+
+@section scripts {
+    <script src="~/js/board.js" asp-append-version="true"></script>
+}

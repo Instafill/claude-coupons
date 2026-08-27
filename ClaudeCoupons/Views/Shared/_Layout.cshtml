@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewBag.title ?? "Claude Coupons - Free Claude Code Passes")</title>
+    @if (ViewBag.description != null)
+    {
+        <meta name="description" content="@ViewBag.description" />
+    }
+    @if (ViewBag.noindex != null)
+    {
+        <meta name="robots" content="noindex" />
+    }
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%9F%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+    @await RenderSectionAsync("headTags", required: false)
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="/">🎟️ ClaudeCoupons<span class="brand-tld">.com</span></a>
+        <nav>
+            <a href="/submit">Share a pass</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/manage">My passes</a>
+                <form method="post" action="/signout" class="inline-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="link-button">Sign out</button>
+                </form>
+            }
+            else
+            {
+                <a href="/signin">Sign in</a>
+            }
+        </nav>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <p>
+            ClaudeCoupons.com is a community exchange for
+            <a href="https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes" rel="noopener">Claude Code and Cowork guest passes</a>.
+            Pass links are personal referral links; whoever shared one (including us) may earn usage
+            credits from Anthropic if you later subscribe. Claiming a pass requires a payment card and
+            the account converts to a paid Claude Pro subscription after 7 days unless canceled.
+        </p>
+        <p>Not affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic, PBC.</p>
+    </footer>
+
+    @await RenderSectionAsync("scripts", required: false)
+</body>
+</html>
