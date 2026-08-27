@@ -32,3 +32,6 @@ next-env.d.ts
 
 # Windows NUL device name collision
 nul
+
+.vercel
+.env*

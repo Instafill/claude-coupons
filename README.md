@@ -60,6 +60,12 @@ magic links print to the console instead of sending), `EMAIL_FROM`, `GOOGLE_CLIE
 `dns-fix.cjs` exists because Node 24's c-ares resolver defaults to 127.0.0.1 when it can't detect
 system DNS, which breaks the `mongodb+srv` lookup.
 
+## Deployment
+
+Vercel project `claude-coupons` (scope `oleksandr-gamaniuks-projects`), linked to
+`Instafill/claude-coupons` on GitHub - a push to `main` deploys to production. Live at
+https://claude-coupons.vercel.app until `claudecoupons.com` DNS points at Vercel.
+
 ## Google OAuth
 
 Authorized redirect URIs must include `http://localhost:3000/api/auth/callback` and
