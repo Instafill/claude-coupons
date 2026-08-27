@@ -83,7 +83,11 @@ export default async function Home() {
       ))}
 
       <section className="pt-7 pb-2">
-        <h1 className="text-[38px] leading-tight font-bold">Free Claude Code Passes</h1>
+        {/* Carries both target phrases and states the page's argument: the coupon people
+            search for does not exist, and a pass is the thing they actually want. */}
+        <h1 className="text-[38px] leading-tight font-bold">
+          Claude Code Passes: the Real Claude Coupon
+        </h1>
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
           and Cowork included. Subscribers get a few passes each and most go unused. This board
