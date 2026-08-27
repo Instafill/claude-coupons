@@ -1,17 +1,38 @@
 import type { Metadata } from "next";
 
 import Board from "@/components/Board";
+import ShareCard from "@/components/ShareCard";
+import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { FAQS } from "@/lib/faqs";
 import { MAX_CLAIMS_PER_PASS, UNLOCKS_PER_USER_PER_DAY, getBoard } from "@/lib/passes";
 
 export const dynamic = "force-dynamic";
 
+const TITLE = "Free Claude Code Passes - Claim or Share | Claude Coupons";
+const DESCRIPTION =
+  "Claim a free Claude Code pass, or share your spare ones. There is no official Claude coupon code - a guest pass is the real thing, and this is where they are exchanged.";
+
 export const metadata: Metadata = {
-  title: "Claude Coupons - Free Claude Code Passes (7 Days of Claude Pro)",
-  description:
-    "Claim a free Claude Code pass or share yours. Every Claude pass gives a new user 7 days of Claude Pro - Claude Code and Cowork included. There is no official Claude coupon code; guest passes are the real thing, exchanged here.",
+  title: TITLE,
+  description: DESCRIPTION,
   alternates: { canonical: "https://claudecoupons.com/" },
+  keywords: [
+    "claude code passes",
+    "claude coupon",
+    "claude pass",
+    "claude promo code",
+    "claude pro free trial",
+    "claude code free",
+  ],
+  openGraph: {
+    type: "website",
+    url: "https://claudecoupons.com/",
+    siteName: "Claude Coupons",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
 const GUEST_PASS_DOC =
@@ -21,51 +42,63 @@ export default async function Home() {
   const user = await getUser();
   const passes = await getBoard(user?.id ?? null);
 
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQS.map(({ q, a }) => ({
-      "@type": "Question",
-      name: q,
-      acceptedAnswer: { "@type": "Answer", text: a },
-    })),
-  };
+  const schema = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Claude Coupons",
+      url: "https://claudecoupons.com",
+      description: DESCRIPTION,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQS.map(({ q, a }) => ({
+        "@type": "Question",
+        name: q,
+        acceptedAnswer: { "@type": "Answer", text: a },
+      })),
+    },
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+      {schema.map((entry, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(entry) }}
+        />
+      ))}
 
       <section className="pt-7 pb-2">
         <h1 className="text-[38px] leading-tight font-bold">Free Claude Code Passes</h1>
-        <p className="mt-3 max-w-xl text-[19px] text-muted">
+        <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
           and Cowork included. Subscribers get a few passes each and most go unused. This board
           is where spare passes meet the people looking for a Claude coupon.
         </p>
       </section>
 
-      <section className="mt-9">
-        <h2 className="mb-3.5 text-2xl font-semibold">Available passes</h2>
-        <Board
-          passes={passes}
-          signedIn={Boolean(user)}
-          maxClaims={MAX_CLAIMS_PER_PASS}
-          dailyCap={UNLOCKS_PER_USER_PER_DAY}
-        />
-        <p className="mt-5">
-          <a
-            href="/submit"
-            className="inline-block rounded-lg border border-accent px-4 py-2 font-semibold text-accent-dark hover:bg-[#f7ede4]"
-          >
-            Have spare passes? List them →
-          </a>
-        </p>
-      </section>
+      {/* Both sides of the exchange get the first screen: claimers on the left, the
+          subscribers who supply the passes on the right. */}
+      <div className="mt-9 grid items-start gap-8 lg:grid-cols-2">
+        <section>
+          <h2 className="mb-3.5 text-2xl font-semibold">Available Claude passes</h2>
+          <Board
+            passes={passes}
+            signedIn={Boolean(user)}
+            maxClaims={MAX_CLAIMS_PER_PASS}
+            dailyCap={UNLOCKS_PER_USER_PER_DAY}
+          />
+        </section>
 
-      <section className="mt-12 [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
+        <ShareCard />
+      </div>
+
+      <ShareCta />
+
+      <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
         <h2>What you get with a Claude Code pass</h2>
         <ul className="list-disc space-y-1 pl-6">
           <li>
@@ -97,7 +130,7 @@ export default async function Home() {
           this board is the closest thing to a Claude coupon that actually works.
         </p>
 
-        <h2>How claiming works</h2>
+        <h2>How to claim a free Claude pass</h2>
         <ol className="list-decimal space-y-1 pl-6">
           <li>
             <strong>Sign in</strong> with Google or your email - no password to invent.
@@ -115,7 +148,7 @@ export default async function Home() {
           </li>
         </ol>
 
-        <h2>Before you claim - the fine print</h2>
+        <h2>Who can use a Claude Code pass</h2>
         <p>
           Passes only apply to people <strong>new to paid Claude</strong>. Anthropic asks for a
           payment card at signup, and unless you cancel within the 7 days the account becomes a
@@ -128,7 +161,7 @@ export default async function Home() {
           .
         </p>
 
-        <h2 id="faq">Frequently asked questions</h2>
+        <h2 id="faq">Claude pass questions, answered</h2>
         <dl>
           {FAQS.map(({ q, a }) => (
             <div key={q}>

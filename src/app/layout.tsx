@@ -21,7 +21,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <header className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-5 py-5">
+        <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-5">
           <Link href="/" className="text-[19px] font-bold no-underline">
             🎟️ ClaudeCoupons<span className="font-normal text-muted">.com</span>
           </Link>
@@ -48,9 +48,9 @@ export default async function RootLayout({
           </nav>
         </header>
 
-        <main className="mx-auto max-w-3xl px-5 pb-16">{children}</main>
+        <main className="mx-auto max-w-5xl px-5 pb-16">{children}</main>
 
-        <footer className="mx-auto max-w-3xl border-t border-line px-5 pt-6 pb-10 text-[13px] text-muted">
+        <footer className="mx-auto max-w-5xl border-t border-line px-5 pt-6 pb-10 text-[13px] text-muted">
           <p>
             ClaudeCoupons.com is a community exchange for{" "}
             <a
