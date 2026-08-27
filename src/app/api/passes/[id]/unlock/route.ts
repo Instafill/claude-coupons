@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import {
   UNLOCKS_PER_USER_PER_DAY,
@@ -27,6 +28,7 @@ export async function POST(
   await dbConnect();
   const pass = await Pass.findById(id);
   if (!pass || pass.status !== PASS_STATUS.live) {
+    logEvent("unlock_rejected", { reason: "gone", user: user.id });
     return NextResponse.json({ error: "This pass is no longer available." }, { status: 404 });
   }
 
@@ -35,6 +37,7 @@ export async function POST(
     userId: new Types.ObjectId(user.id),
   });
   if (!already && (await countRecentUnlocks(user.id)) >= UNLOCKS_PER_USER_PER_DAY) {
+    logEvent("unlock_rejected", { reason: "daily_cap", user: user.id });
     return NextResponse.json(
       {
         error: `You've unlocked ${UNLOCKS_PER_USER_PER_DAY} passes in the last 24 hours. Try one of those first, or come back tomorrow.`,
@@ -47,6 +50,7 @@ export async function POST(
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     request.headers.get("x-real-ip");
   await recordUnlock(id, user.id, hashIp(ip));
+  logEvent("pass_unlocked", { pass: id, user: user.id });
 
   return NextResponse.json({ url: passUrl(pass.code), code: pass.code });
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import GoogleButton from "@/components/GoogleButton";
 import SignInForm from "@/components/SignInForm";
 import { getUser, safeReturnTo } from "@/lib/auth";
 
@@ -38,13 +39,7 @@ export default async function SignInPage({
         <p className="mt-3 font-medium text-bad">{ERRORS[params.error] ?? ERRORS.google}</p>
       )}
 
-      <a
-        href={`/api/auth/signin?return_to=${encodeURIComponent(returnTo)}`}
-        rel="nofollow"
-        className="mt-5 block rounded-lg border border-line bg-surface px-4 py-2.5 text-center font-semibold hover:bg-[#f4f2ec]"
-      >
-        Continue with Google
-      </a>
+      <GoogleButton returnTo={returnTo} />
       <p className="my-1 text-center text-[13px] text-muted">or</p>
 
       <SignInForm returnTo={returnTo} />

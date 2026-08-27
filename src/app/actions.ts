@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { parseReferralCode } from "@/lib/passes";
 import Pass, { PASS_STATUS } from "@/models/Pass";
@@ -13,7 +14,9 @@ export interface SubmitState {
   error?: string;
 }
 
-// Listing a pass requires an account, same as unlocking one.
+// Listing a pass requires an account, same as unlocking one. Submitting a link you already
+// own puts it back on the board - that is the only way back for a listing the lifecycle
+// rules retired, since the dashboard is read-only.
 export async function submitPass(
   _prev: SubmitState,
   formData: FormData
@@ -23,6 +26,7 @@ export async function submitPass(
 
   const code = parseReferralCode(String(formData.get("link") || ""));
   if (!code) {
+    logEvent("submit_rejected", { reason: "bad_link" });
     return {
       error:
         "Paste your personal invite link, e.g. https://claude.ai/referral/AbCd123456 - nothing else is accepted.",
@@ -30,40 +34,31 @@ export async function submitPass(
   }
 
   await dbConnect();
-  if (await Pass.exists({ code })) {
-    return { error: "This pass link is already listed." };
+  const submitterUserId = new Types.ObjectId(user.id);
+  const existing = await Pass.findOne({ code });
+
+  if (existing) {
+    if (!existing.submitterUserId.equals(submitterUserId)) {
+      logEvent("submit_rejected", { reason: "duplicate" });
+      return { error: "This pass link is already listed by someone else." };
+    }
+    if (existing.status === PASS_STATUS.live) {
+      logEvent("submit_rejected", { reason: "already_live" });
+      return { error: "This pass link is already on the board." };
+    }
+    // Back on the board, with the expiry clock and the dead-report count reset - the
+    // claims it already served still stand against the sender's allotment.
+    existing.status = PASS_STATUS.live;
+    existing.lastRefreshedAt = new Date();
+    existing.deadCount = 0;
+    await existing.save();
+    logEvent("pass_relisted", { pass: existing._id.toString(), user: user.id });
+  } else {
+    const created = await Pass.create({ code, submitterUserId });
+    logEvent("pass_submitted", { pass: created._id.toString(), user: user.id });
   }
 
-  await Pass.create({ code, submitterUserId: new Types.ObjectId(user.id) });
   revalidatePath("/");
-  redirect("/manage");
-}
-
-// Submitter self-service. Each action re-checks ownership, so a guessed id changes nothing.
-async function updateOwnPass(passId: string, update: Record<string, unknown>) {
-  const user = await getUser();
-  if (!user || !Types.ObjectId.isValid(passId)) return;
-
-  await dbConnect();
-  await Pass.updateOne(
-    { _id: new Types.ObjectId(passId), submitterUserId: new Types.ObjectId(user.id) },
-    { $set: update }
-  );
   revalidatePath("/manage");
-  revalidatePath("/");
-}
-
-export async function refreshPass(formData: FormData) {
-  await updateOwnPass(String(formData.get("id")), {
-    lastRefreshedAt: new Date(),
-    status: PASS_STATUS.live,
-  });
-}
-
-export async function markExhausted(formData: FormData) {
-  await updateOwnPass(String(formData.get("id")), { status: PASS_STATUS.exhausted });
-}
-
-export async function removePass(formData: FormData) {
-  await updateOwnPass(String(formData.get("id")), { status: PASS_STATUS.removed });
+  redirect("/manage");
 }

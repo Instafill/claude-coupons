@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { findOrCreateUser, safeReturnTo, setSessionCookie } from "@/lib/auth";
+import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { sendMagicLink } from "@/lib/sendgrid";
 import LoginToken from "@/models/LoginToken";
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
   // "website" is a honeypot - humans never see it, bots fill it. Answer normally so the
   // bot cannot tell it was caught.
   if (form.get("website")) {
+    logEvent("honeypot_tripped");
     return NextResponse.json({ ok: true });
   }
 
@@ -32,6 +34,7 @@ export async function POST(request: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin;
   await sendMagicLink(email, `${baseUrl}/api/auth/magic?token=${token}`);
+  logEvent("magic_link_sent");
 
   return NextResponse.json({ ok: true });
 }
@@ -48,7 +51,10 @@ export async function GET(request: NextRequest) {
     { token, usedAt: { $exists: false } },
     { $set: { usedAt: new Date() } }
   );
-  if (!loginToken) return NextResponse.redirect(`${baseUrl}/signin?error=link`);
+  if (!loginToken) {
+    logEvent("magic_link_rejected");
+    return NextResponse.redirect(`${baseUrl}/signin?error=link`);
+  }
 
   const user = await findOrCreateUser(loginToken.email);
   const response = NextResponse.redirect(`${baseUrl}${safeReturnTo(loginToken.returnTo)}`);

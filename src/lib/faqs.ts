@@ -3,11 +3,23 @@
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "Is there an official Claude coupon code?",
-    a: "No. Anthropic does not publish coupon or promo codes for Claude. The only legitimate way to get free access to Claude's paid plan is a guest pass - a personal invite a Pro or Max subscriber shares. That is exactly what is exchanged on this site.",
+    a: "No. Anthropic does not publish coupon codes, promo codes or discount codes for Claude. The only legitimate way to get free access to Claude's paid plan is a guest pass - a personal invite a Pro or Max subscriber shares. That is exactly what is exchanged on this site.",
+  },
+  {
+    q: "Is a Claude Code coupon the same thing as a Claude pass?",
+    a: "In practice, yes. There is no such thing as a Claude Code coupon code you type at checkout, so when people search for one they are looking for what a guest pass already does: a free week of Claude Pro with Claude Code included. The passes on this board are that.",
+  },
+  {
+    q: "Is there a Claude AI coupon or discount?",
+    a: "The only real Claude AI coupon is a guest pass. Anthropic runs no discount codes, no seasonal sales and no student pricing on Claude Pro, and a Claude AI pass from a subscriber is the one supported way to use the paid plan without paying for the first week.",
   },
   {
     q: "What is a Claude Code pass?",
     a: "A guest pass from Anthropic's referral program. It gives someone new to paid Claude 7 days of the Claude Pro plan for free, including Claude Code (the terminal coding agent) and Cowork. Every Pro and Max subscriber gets a small number of passes to share.",
+  },
+  {
+    q: "How do I redeem a Claude coupon?",
+    a: "Sign in here, unlock a pass to reveal its claude.ai invite link, then open it. You redeem the pass on claude.ai itself by creating your account there - nothing is entered on this site. Afterwards, tell us whether it worked so the board stays accurate.",
   },
   {
     q: "Are Claude Code passes really free?",
@@ -18,8 +30,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Only people who have never had a paid Claude subscription. If you already subscribe to Claude Pro or Max, or did in the past, the pass will not apply to your account.",
   },
   {
-    q: "How do I claim a pass from this site?",
-    a: "Sign in with Google or your email, unlock a pass from the board, and open the link. You'll land on claude.ai's invite page and sign up there. Afterwards, tell us whether the pass worked - that answer is what keeps dead links off the board.",
+    q: "Is there a Claude Groupon deal?",
+    a: "No - Groupon does not sell Claude subscriptions, and searches for a Claude Groupon are usually after a Claude coupon. Anthropic sells Claude Pro only at its own price, so a shared guest pass is the only free week available.",
   },
   {
     q: "Why do I have to sign in to see a pass link?",
@@ -27,7 +39,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do I share my own Claude Code passes?",
-    a: "If you subscribe to Claude Pro or Max, run /passes in Claude Code or open Settings in the Claude apps to find your invite link, then list it here. Each subscriber has a limited number of passes; when yours run out, mark the listing exhausted from your dashboard.",
+    a: "If you subscribe to Claude Pro or Max, run /passes in Claude Code or open Settings in the Claude apps to find your invite link, then list it here. Each subscriber has a limited number of passes, and a listing retires itself once three people report claiming it.",
   },
   {
     q: "What do I get for sharing my passes?",

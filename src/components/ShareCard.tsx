@@ -4,17 +4,18 @@ export default function ShareCard() {
   return (
     <aside className="flex flex-col rounded-2xl bg-ink px-6 py-7 text-paper">
       <p className="text-[13px] font-semibold tracking-wider text-accent uppercase">
-        Have passes to give
+        For Claude Pro &amp; Max subscribers
       </p>
 
       <h2 className="mt-2 text-[25px] leading-tight font-bold">
-        Your spare Claude passes are worth <span className="text-accent">$10 each</span>
+        Share your spare Claude passes
       </h2>
 
       <p className="mt-3 text-[15px] text-white/70">
-        Every Claude Pro and Max subscriber holds a few guest passes, and almost nobody spends
-        them. Hand one over and Anthropic credits you $10 in usage when that person stays
-        subscribed. Sitting on them pays nothing - they expire either way.
+        You get a few guest passes with your subscription and most people never use them. Give
+        one away and a stranger gets a free week of Claude Pro - and if they stay subscribed,
+        Anthropic credits you <span className="font-semibold text-accent">$10</span> in usage.
+        Unused passes expire either way.
       </p>
 
       {/* mt-auto keeps the call to action on the bottom edge, level with the caveat in the

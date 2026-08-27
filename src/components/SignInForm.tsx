@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@vercel/analytics";
 import { useState } from "react";
 
 export default function SignInForm({ returnTo }: { returnTo: string }) {
@@ -16,6 +17,7 @@ export default function SignInForm({ returnTo }: { returnTo: string }) {
       body: new FormData(event.currentTarget),
     });
     if (res.ok) {
+      track("signin_started", { method: "email" });
       setState("sent");
     } else {
       const data = await res.json().catch(() => ({}));

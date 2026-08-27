@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import User from "@/models/User";
 
@@ -67,17 +68,28 @@ export async function getUser(): Promise<SessionUser | null> {
   return verifySessionCookie(cookie.value);
 }
 
+// Google hands back a 96px avatar (".../photo.jpg=s96-c"). Ask for 256 instead, so a
+// contributors wall can render one at a readable size without a blurry upscale. The suffix
+// is a Google image-server directive, not part of the file name, so rewriting it is safe.
+function upscaleAvatar(url: string): string {
+  return url.replace(/=s\d+(-c)?$/, "=s256$1");
+}
+
 // Both doors - a proven mailbox or a Google account - end here: one email address becomes
-// one user document and one session.
+// one user document and one session. Name and avatar are refreshed on every Google sign-in,
+// so a contributors or claimers list can be built from these rows later without asking
+// anyone for anything again.
 export async function findOrCreateUser(
   email: string,
   profile?: { name?: string; picture?: string; googleId?: string }
 ): Promise<SessionUser> {
   await dbConnect();
   const normalized = email.trim().toLowerCase();
+  // Read before the upsert so signups can be told apart from sign-ins.
+  const existed = await User.exists({ email: normalized });
   const set: Record<string, string> = {};
   if (profile?.name) set.name = profile.name;
-  if (profile?.picture) set.picture = profile.picture;
+  if (profile?.picture) set.picture = upscaleAvatar(profile.picture);
   if (profile?.googleId) set.googleId = profile.googleId;
 
   const user = await User.findOneAndUpdate(
@@ -85,6 +97,11 @@ export async function findOrCreateUser(
     { $setOnInsert: { email: normalized }, ...(Object.keys(set).length ? { $set: set } : {}) },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  logEvent(existed ? "signed_in" : "signed_up", {
+    method: profile?.googleId ? "google" : "email",
+    user: user._id!.toString(),
+  });
 
   return {
     id: user._id!.toString(),

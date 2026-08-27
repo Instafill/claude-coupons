@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@vercel/analytics";
 import { useActionState } from "react";
 
 import { submitPass, type SubmitState } from "@/app/actions";
@@ -8,7 +9,11 @@ export default function SubmitForm() {
   const [state, formAction, pending] = useActionState<SubmitState, FormData>(submitPass, {});
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2.5">
+    <form
+      action={formAction}
+      onSubmit={() => track("pass_submit_attempted")}
+      className="mt-4 flex flex-col gap-2.5"
+    >
       <label htmlFor="link" className="text-sm font-semibold">
         Your invite link
       </label>

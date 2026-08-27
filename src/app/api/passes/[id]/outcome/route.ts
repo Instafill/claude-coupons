@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { recordOutcome } from "@/lib/passes";
 
@@ -19,7 +20,14 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}));
   await dbConnect();
-  const recorded = await recordOutcome(id, user.id, String(body.result || ""));
+  const result = String(body.result || "");
+  const recorded = await recordOutcome(id, user.id, result);
+  // The whole lifecycle turns on these answers, so record both the ones that counted and
+  // the ones that arrived too late to.
+  logEvent(recorded ? "pass_outcome" : "pass_outcome_ignored", {
+    result,
+    pass: id,
+  });
 
   return recorded
     ? NextResponse.json({ ok: true })

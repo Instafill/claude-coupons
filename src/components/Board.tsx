@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -77,8 +78,14 @@ export default function Board({
         return;
       }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      if (!res.ok) {
+        // Vercel Analytics allows two properties per event on Pro - keep it to what a
+        // funnel actually needs.
+        track("unlock_failed", { status: res.status });
+        throw new Error(data.error || "Something went wrong.");
+      }
 
+      track("pass_unlocked");
       patch(id, { code: data.code, ask: "hidden", busy: false });
       pending.current = id;
       window.open(data.url, "_blank", "noopener");
@@ -88,6 +95,7 @@ export default function Board({
   }
 
   async function answer(id: string, result: Outcome) {
+    track("pass_outcome", { result });
     patch(id, { ask: "done" });
     await fetch(`/api/passes/${id}/outcome`, {
       method: "POST",
@@ -140,6 +148,7 @@ export default function Board({
                   <a
                     href="/signin?return_to=%2F"
                     rel="nofollow"
+                    onClick={() => track("signin_prompted", { from: "board" })}
                     className="rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
                   >
                     Sign in to unlock
@@ -151,6 +160,7 @@ export default function Board({
                       target="_blank"
                       rel="nofollow noopener"
                       onClick={() => {
+                        track("pass_opened");
                         if (state[pass.id].ask === "hidden") pending.current = pass.id;
                       }}
                       className="rounded-lg bg-good px-4 py-2 text-[15px] font-semibold text-white hover:brightness-90"

@@ -11,19 +11,24 @@ export const dynamic = "force-dynamic";
 
 const TITLE = "Claude Code Passes | Claude Coupons";
 const DESCRIPTION =
-  "Claim a free Claude Code pass, or share your spare ones. There is no official Claude coupon code - a guest pass is the real thing, and this is where they are exchanged.";
+  "Claude coupons that actually work: free Claude Code passes, each a week of Claude Pro. Anthropic issues no Claude Code coupon or promo codes, so a guest pass is the real Claude AI coupon - claim one or share yours.";
 
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "https://claudecoupons.com/" },
   keywords: [
-    "claude code passes",
+    "claude coupons",
     "claude coupon",
+    "claude passes",
+    "claude code passes",
+    "claude code coupon",
+    "claude ai coupon",
+    "claude ai pass",
     "claude pass",
+    "redeem claude coupon",
+    "claude groupon",
     "claude promo code",
-    "claude pro free trial",
-    "claude code free",
   ],
   openGraph: {
     type: "website",
@@ -76,7 +81,7 @@ export default async function Home() {
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
           and Cowork included. Subscribers get a few passes each and most go unused. This board
-          is where spare passes meet the people looking for a Claude coupon.
+          is where spare Claude passes meet the people hunting for Claude coupons.
         </p>
       </section>
 
@@ -119,11 +124,12 @@ export default async function Home() {
           </li>
         </ul>
 
-        <h2>Is there a Claude coupon code?</h2>
+        <h2>Is there a Claude coupon or Claude Code coupon code?</h2>
         <p>
-          People search for a Claude coupon, a Claude promo code, a Claude Pro discount - and
-          the honest answer is that <strong>Anthropic doesn&rsquo;t issue any</strong>. What
-          exists instead is the{" "}
+          People search for Claude coupons, a Claude Code coupon, a Claude AI coupon, a Claude
+          promo code, a Claude Pro discount - and the honest answer is that{" "}
+          <strong>Anthropic doesn&rsquo;t issue any of them</strong>. There is no code to type
+          at checkout, no seasonal sale and no student rate. What exists instead is the{" "}
           <a className="text-accent-dark underline" href={GUEST_PASS_DOC} rel="noopener">
             guest pass program
           </a>
@@ -132,17 +138,18 @@ export default async function Home() {
           this board is the closest thing to a Claude coupon that actually works.
         </p>
 
-        <h2>How to claim a free Claude pass</h2>
+        <h2>How to redeem a Claude coupon</h2>
         <ol className="list-decimal space-y-1 pl-6">
           <li>
             <strong>Sign in</strong> with Google or your email - no password to invent.
           </li>
           <li>
-            <strong>Unlock a pass</strong> on the board to reveal its claude.ai invite link.
+            <strong>Unlock a Claude pass</strong> on the board to reveal its claude.ai invite
+            link.
           </li>
           <li>
-            <strong>Open the link and sign up</strong> on claude.ai. The 7-day Claude Pro trial
-            starts there.
+            <strong>Redeem it on claude.ai</strong> - open the link and create your account
+            there. The 7-day Claude Pro trial starts on Anthropic&rsquo;s side, never here.
           </li>
           <li>
             <strong>Tell us if it worked.</strong> Your one-click answer retires exhausted links
@@ -163,7 +170,7 @@ export default async function Home() {
           .
         </p>
 
-        <h2 id="faq">Claude pass questions, answered</h2>
+        <h2 id="faq">Claude coupon and pass questions, answered</h2>
         <dl>
           {FAQS.map(({ q, a }) => (
             <div key={q}>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Types } from "mongoose";
 
-import { markExhausted, refreshPass, removePass } from "@/app/actions";
 import { getUser } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { MAX_CLAIMS_PER_PASS } from "@/lib/passes";
@@ -52,7 +51,7 @@ export default async function ManagePage() {
             <table className="w-full border-collapse text-[15px]">
               <thead>
                 <tr className="text-xs tracking-wide text-muted uppercase">
-                  {["Pass", "Status", "Unlocked", "Claimed", "Dead reports", ""].map((h) => (
+                  {["Pass", "Status", "Unlocked", "Claimed", "Dead reports"].map((h) => (
                     <th key={h} className="border-b border-line px-2.5 py-2 text-left">
                       {h}
                     </th>
@@ -77,41 +76,6 @@ export default async function ManagePage() {
                     <td className="border-b border-line px-2.5 py-2">{pass.unlockCount}</td>
                     <td className="border-b border-line px-2.5 py-2">{pass.claimedCount}</td>
                     <td className="border-b border-line px-2.5 py-2">{pass.deadCount}</td>
-                    <td className="border-b border-line px-2.5 py-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        <form action={refreshPass}>
-                          <input type="hidden" name="id" value={pass._id.toString()} />
-                          <button
-                            type="submit"
-                            title="Relist and reset the expiry clock"
-                            className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-accent"
-                          >
-                            Refresh
-                          </button>
-                        </form>
-                        {pass.status === PASS_STATUS.live && (
-                          <form action={markExhausted}>
-                            <input type="hidden" name="id" value={pass._id.toString()} />
-                            <button
-                              type="submit"
-                              title="No passes left on this link"
-                              className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-accent"
-                            >
-                              Out of passes
-                            </button>
-                          </form>
-                        )}
-                        <form action={removePass}>
-                          <input type="hidden" name="id" value={pass._id.toString()} />
-                          <button
-                            type="submit"
-                            className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-bad hover:text-bad"
-                          >
-                            Remove
-                          </button>
-                        </form>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -119,8 +83,12 @@ export default async function ManagePage() {
           </div>
           <p className="mt-4 text-sm text-muted">
             A listing hides itself after {MAX_CLAIMS_PER_PASS} reported claims, after repeated
-            &ldquo;didn&rsquo;t work&rdquo; reports, or 21 days after its last refresh. Refresh
-            it whenever you still have passes to give.
+            &ldquo;didn&rsquo;t work&rdquo; reports, or 21 days on the board. Still have passes
+            on a link that stopped showing?{" "}
+            <a className="text-accent-dark underline" href="/submit">
+              Paste it in again
+            </a>{" "}
+            and it goes back up.
           </p>
         </>
       )}
