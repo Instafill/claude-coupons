@@ -10,9 +10,38 @@ import { dbConnect } from "@/lib/mongodb";
 import { parseReferralCode } from "@/lib/passes";
 import { notifyNewPass } from "@/lib/sendgrid";
 import Pass, { PASS_STATUS } from "@/models/Pass";
+import RejectedSubmission from "@/models/RejectedSubmission";
 
 export interface SubmitState {
   error?: string;
+}
+
+// Keeps the raw paste when the form turns someone away, so the next validator bug is
+// diagnosable from our own records instead of a user's screenshot. Stored in Mongo, not
+// the log line - the log gets only a masked shape ("xxxxx://xxxxxx.xx/xxxxxxxx/x_xxxx...")
+// that shows structure without carrying a possibly-working code. Never throws: losing the
+// diagnostic must not change what the submitter sees.
+async function recordRejection(
+  input: string,
+  reason: string,
+  userId: string
+): Promise<void> {
+  const trimmed = input.trim().slice(0, 500);
+  logEvent("submit_rejected", {
+    reason,
+    shape: trimmed.replace(/[A-Za-z]/g, "x").replace(/[0-9]/g, "9").slice(0, 120),
+    len: trimmed.length,
+  });
+  try {
+    await dbConnect();
+    await RejectedSubmission.create({
+      input: trimmed,
+      reason,
+      userId: new Types.ObjectId(userId),
+    });
+  } catch (error) {
+    console.error("Failed to record rejected submission:", error);
+  }
 }
 
 // Listing a pass requires an account, same as unlocking one. Submitting a link you already
@@ -25,9 +54,10 @@ export async function submitPass(
   const user = await getUser();
   if (!user) redirect("/signin?return_to=%2Fsubmit");
 
-  const code = parseReferralCode(String(formData.get("link") || ""));
+  const raw = String(formData.get("link") || "");
+  const code = parseReferralCode(raw);
   if (!code) {
-    logEvent("submit_rejected", { reason: "bad_link" });
+    await recordRejection(raw, "bad_link", user.id);
     return {
       error:
         "That doesn't look like an invite link. Paste the whole thing, e.g. https://claude.ai/referral/c_AbCd1234 - or just the code after the last slash.",
@@ -40,11 +70,11 @@ export async function submitPass(
 
   if (existing) {
     if (!existing.submitterUserId.equals(submitterUserId)) {
-      logEvent("submit_rejected", { reason: "duplicate" });
+      await recordRejection(raw, "duplicate", user.id);
       return { error: "This pass link is already listed by someone else." };
     }
     if (existing.status === PASS_STATUS.live) {
-      logEvent("submit_rejected", { reason: "already_live" });
+      await recordRejection(raw, "already_live", user.id);
       return { error: "This pass link is already on the board." };
     }
     // Back on the board, with the expiry clock and the dead-report count reset - the
