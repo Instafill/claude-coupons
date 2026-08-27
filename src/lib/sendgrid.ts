@@ -10,7 +10,10 @@ import sgMail from "@sendgrid/mail";
 // it can only silently break DKIM alignment again, which is how the link reached spam.
 const FROM_EMAIL = "hello@claudecoupons.com";
 const FROM_NAME = "Claude Coupons";
-// The operator's real inbox, deliberately not on the sending domain.
+// The operator's real inbox, deliberately not on the sending domain. It doubles as the
+// Reply-To: hello@claudecoupons.com can send but has no mailbox behind it, so a reply
+// would bounce. This routes answers to a real inbox without putting MX records on the
+// zone or standing up Cloudflare Email Routing.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "alex@botmakers.net";
 
 let initialized = false;
@@ -80,6 +83,7 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
+      replyTo: NOTIFY_EMAIL,
       subject: "Your sign-in link for claudecoupons.com",
       text: `Click to sign in to claudecoupons.com:\n\n${link}\n\nThe link works once and expires in 30 minutes. If you didn't request it, ignore this email.`,
       html: `
