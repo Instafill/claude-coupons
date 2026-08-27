@@ -8,6 +8,7 @@ import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { parseReferralCode } from "@/lib/passes";
+import { notifyNewPass } from "@/lib/sendgrid";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 
 export interface SubmitState {
@@ -53,12 +54,31 @@ export async function submitPass(
     existing.deadCount = 0;
     await existing.save();
     logEvent("pass_relisted", { pass: existing._id.toString(), user: user.id });
+    await notify(code, user, "back on the board");
   } else {
     const created = await Pass.create({ code, submitterUserId });
     logEvent("pass_submitted", { pass: created._id.toString(), user: user.id });
+    await notify(code, user, "listed");
   }
 
   revalidatePath("/");
   revalidatePath("/manage");
   redirect("/manage");
+}
+
+// Awaited rather than fired and forgotten: a serverless function can be frozen the moment
+// it responds, which would drop a pending send. notifyNewPass swallows its own failures,
+// so this can never cost the submitter their listing.
+async function notify(
+  code: string,
+  user: { email: string; name?: string },
+  what: string
+): Promise<void> {
+  const livePasses = await Pass.countDocuments({ status: PASS_STATUS.live });
+  await notifyNewPass({
+    code,
+    submitterEmail: user.email,
+    submitterName: user.name ? `${user.name} - ${what}` : undefined,
+    livePasses,
+  });
 }

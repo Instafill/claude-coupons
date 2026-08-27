@@ -83,10 +83,10 @@ export default async function Home() {
       ))}
 
       <section className="pt-7 pb-2">
-        {/* Carries both target phrases and states the page's argument: the coupon people
-            search for does not exist, and a pass is the thing they actually want. */}
+        {/* Carries three target phrases at once - "claude code passes", "claude coupons"
+            and, via the domain form, "claude ai coupon". */}
         <h1 className="text-[38px] leading-tight font-bold">
-          Claude Code Passes: the Real Claude Coupon
+          Claude Code Passes | Claude.ai Coupons
         </h1>
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
