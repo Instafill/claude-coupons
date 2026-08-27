@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Claude Code Coupons">
+  <!-- Warhol-offset color plates -->
+  <g transform="translate(1.2,1.6)">
+    <path fill="#3DDCFF" d="M14 10 h34 a8 8 0 0 1 8 8 v28 a8 8 0 0 1-8 8 H16 c-1.2-2.2-2.6-3.4-4.8-3.4 S8.6 51.8 7.4 54 H10 a6 6 0 0 1-6-6 V18 a8 8 0 0 1 8-8 z"/>
+  </g>
+  <g transform="translate(-1.4,-1.2)">
+    <path fill="#FFE14A" d="M14 10 h34 a8 8 0 0 1 8 8 v28 a8 8 0 0 1-8 8 H16 c-1.2-2.2-2.6-3.4-4.8-3.4 S8.6 51.8 7.4 54 H10 a6 6 0 0 1-6-6 V18 a8 8 0 0 1 8-8 z"/>
+  </g>
+  <g transform="translate(1.1,-0.8)">
+    <path fill="#B6F23A" d="M14 10 h34 a8 8 0 0 1 8 8 v28 a8 8 0 0 1-8 8 H16 c-1.2-2.2-2.6-3.4-4.8-3.4 S8.6 51.8 7.4 54 H10 a6 6 0 0 1-6-6 V18 a8 8 0 0 1 8-8 z"/>
+  </g>
+  <!-- Main terracotta ticket -->
+  <path fill="#D97757" stroke="#141413" stroke-width="2.4" stroke-linejoin="round"
+        d="M14 10 h34 a8 8 0 0 1 8 8 v28 a8 8 0 0 1-8 8 H16
+           c-1.1-2-2.4-3.2-4.6-3.2 S8.7 51.8 7.6 54
+           H10 a6 6 0 0 1-6-6 V18 a8 8 0 0 1 8-8 z"/>
+  <!-- Perforations -->
+  <g fill="#141413">
+    <circle cx="10.2" cy="18.5" r="1.15"/>
+    <circle cx="10.2" cy="25.2" r="1.15"/>
+    <circle cx="10.2" cy="32" r="1.15"/>
+    <circle cx="10.2" cy="38.8" r="1.15"/>
+    <circle cx="10.2" cy="45.5" r="1.15"/>
+  </g>
+  <!-- Percent -->
+  <g fill="#141413">
+    <circle cx="24.2" cy="24.6" r="4.6"/>
+    <circle cx="39.6" cy="39.2" r="4.6"/>
+    <rect x="22.6" y="30.2" width="18.6" height="3.6" rx="1.2" transform="rotate(-52 32 32)"/>
+  </g>
+  <!-- Code brackets -->
+  <g fill="none" stroke="#141413" stroke-width="2.6" stroke-linecap="square">
+    <path d="M25.2 48.2 l-4.2-3.2 4.2-3.2"/>
+    <path d="M38.8 48.2 l4.2-3.2-4.2-3.2"/>
+  </g>
+</svg>

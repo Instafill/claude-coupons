@@ -36,8 +36,16 @@ export const metadata: Metadata = {
     siteName: "Claude Coupons",
     title: TITLE,
     description: DESCRIPTION,
+    images: [{ url: "/logo-512.png", width: 512, height: 512, alt: "Claude Coupons" }],
   },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
+  // The logo is square, so the summary card frames it properly - a large_image card would
+  // letterbox or crop it.
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/logo-512.png"],
+  },
 };
 
 const GUEST_PASS_DOC =
