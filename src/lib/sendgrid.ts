@@ -1,7 +1,13 @@
 import sgMail from "@sendgrid/mail";
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "alex@botmakers.net";
+// Must stay on claudecoupons.com: a sign-in link for one domain arriving from another is
+// the shape of a phishing mail, and filters score it that way. Sending as alex@botmakers.net
+// put the magic link in at least one user's spam folder - botmakers.net authorises Google in
+// SPF, not SendGrid, so every send failed SPF too. claudecoupons.com is now authenticated in
+// SendGrid (DKIM CNAMEs + DMARC), so the from address and the link finally agree.
+const FROM_EMAIL = process.env.EMAIL_FROM || "hello@claudecoupons.com";
 const FROM_NAME = "Claude Coupons";
+// The operator's real inbox, deliberately not on the sending domain.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "alex@botmakers.net";
 
 let initialized = false;
