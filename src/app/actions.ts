@@ -30,7 +30,7 @@ export async function submitPass(
     logEvent("submit_rejected", { reason: "bad_link" });
     return {
       error:
-        "Paste your personal invite link, e.g. https://claude.ai/referral/AbCd123456 - nothing else is accepted.",
+        "That doesn't look like an invite link. Paste the whole thing, e.g. https://claude.ai/referral/c_AbCd1234 - or just the code after the last slash.",
     };
   }
 

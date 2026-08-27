@@ -22,7 +22,7 @@ export default function SubmitForm() {
         name="link"
         type="text"
         required
-        placeholder="https://claude.ai/referral/AbCd123456"
+        placeholder="https://claude.ai/referral/c_AbCd1234"
         className="rounded-lg border border-line bg-surface px-3 py-2.5 font-mono text-[15px] outline-accent"
       />
       {state.error && <p className="text-sm text-bad">{state.error}</p>}

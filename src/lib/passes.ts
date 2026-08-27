@@ -15,10 +15,18 @@ const LISTING_LIFETIME_DAYS = 21;
 export const UNLOCKS_PER_USER_PER_DAY = 3;
 
 // Accepts a full referral URL or a bare code; only the code survives.
-const REFERRAL_SHAPE = /^(?:https?:\/\/claude\.ai\/referral\/)?([A-Za-z0-9]{6,20})\/?$/;
+//
+// The host check is the security boundary - it is what keeps an arbitrary link off the
+// board. The code itself is deliberately loose: Anthropic's shapes vary ("ygonyoOrXw",
+// "c_ULXAbieQ", ...), so any URL-safe token is taken rather than guessing at a format and
+// turning away real invite links. Stripped first: whitespace, query string, fragment,
+// trailing slashes - the noise a real paste picks up from share buttons.
+const REFERRAL_SHAPE =
+  /^(?:https?:\/\/(?:www\.)?claude\.ai\/referral\/)?([A-Za-z0-9._~-]{4,64})$/i;
 
 export function parseReferralCode(input: string): string | null {
-  const match = REFERRAL_SHAPE.exec(input.trim());
+  const cleaned = input.trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
+  const match = REFERRAL_SHAPE.exec(cleaned);
   return match ? match[1] : null;
 }
 
