@@ -28,7 +28,11 @@ export default async function RootLayout({
             {/* Raster, not the zip's logo.svg: that file is a broken redraw - the % comes
                 out as two solid blobs and the ticket edge as a row of dots. */}
             <Image src="/logo-256.png" alt="" width={28} height={28} priority />
-            ClaudeCoupons<span className="font-normal text-muted">.com</span>
+            {/* One flex item, so the gap sits between logo and wordmark only - a bare text
+                node would become its own item and push ".com" away. */}
+            <span>
+              ClaudeCoupons<span className="font-normal text-muted">.com</span>
+            </span>
           </Link>
           <nav className="flex items-center gap-4 text-[15px]">
             <Link href="/submit" className="hover:text-accent-dark">
