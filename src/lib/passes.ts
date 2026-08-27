@@ -60,7 +60,12 @@ function nextStatus(pass: IPass): string | null {
   if (pass.status !== PASS_STATUS.live) return null;
   if (pass.claimedCount >= MAX_CLAIMS_PER_PASS) return PASS_STATUS.exhausted;
   if (pass.deadCount >= DEAD_REPORTS_TO_HIDE && pass.deadCount > pass.claimedCount)
-    return PASS_STATUS.dead;
+    // Hidden either way, but the label matters: "dead" accuses the submitter of listing a
+    // broken link. A pass somebody has actually claimed demonstrably worked, so later dead
+    // reports mean the allotment ran out - latecomers cannot tell "used up" from "fake".
+    // Reaching MAX_CLAIMS_PER_PASS is the rare path, since most claimers never report at
+    // all; without this, every generous submitter ends up marked as having posted junk.
+    return pass.claimedCount > 0 ? PASS_STATUS.exhausted : PASS_STATUS.dead;
   const cutoff = Date.now() - LISTING_LIFETIME_DAYS * 24 * 60 * 60 * 1000;
   if (pass.lastRefreshedAt.getTime() < cutoff) return PASS_STATUS.expired;
   return null;
