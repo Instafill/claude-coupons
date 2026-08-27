@@ -1,19 +1,17 @@
 import sgMail from "@sendgrid/mail";
 
-// Must stay on claudecoupons.com: a sign-in link for one domain arriving from another is
-// the shape of a phishing mail, and filters score it that way. Sending as alex@botmakers.net
-// put the magic link in at least one user's spam folder - botmakers.net authorises Google in
-// SPF, not SendGrid, so every send failed SPF too. claudecoupons.com is now authenticated in
-// SendGrid (DKIM CNAMEs + DMARC), so the from address and the link finally agree.
-// Not configurable on purpose. This address is only deliverable because claudecoupons.com
-// is the domain SendGrid signs for, so an env var pointing it elsewhere cannot be right -
-// it can only silently break DKIM alignment again, which is how the link reached spam.
+// Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
+// one domain arriving from another is the shape of a phishing mail and filters score it
+// that way; sending as alex@botmakers.net put the magic link in a user's spam folder, and
+// failed SPF besides, since botmakers.net authorises Google rather than SendGrid. This
+// address is only deliverable because claudecoupons.com is the domain SendGrid signs for,
+// so an env var pointing it elsewhere could only break DKIM alignment again.
+//
+// It receives as well as sends: Cloudflare Email Routing forwards it to a real inbox, so
+// replies need no Reply-To pointing off the brand domain.
 const FROM_EMAIL = "hello@claudecoupons.com";
 const FROM_NAME = "Claude Coupons";
-// The operator's real inbox, deliberately not on the sending domain. It doubles as the
-// Reply-To: hello@claudecoupons.com can send but has no mailbox behind it, so a reply
-// would bounce. This routes answers to a real inbox without putting MX records on the
-// zone or standing up Cloudflare Email Routing.
+// Where operator alerts are delivered. A recipient only - it cannot affect authentication.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "alex@botmakers.net";
 
 let initialized = false;
@@ -83,7 +81,6 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      replyTo: NOTIFY_EMAIL,
       subject: "Your sign-in link for claudecoupons.com",
       text: `Click to sign in to claudecoupons.com:\n\n${link}\n\nThe link works once and expires in 30 minutes. If you didn't request it, ignore this email.`,
       html: `
