@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import Board from "@/components/Board";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { FAQS } from "@/lib/faqs";
-import { MAX_CLAIMS_PER_PASS, UNLOCKS_PER_USER_PER_DAY, getBoard } from "@/lib/passes";
+import {
+  MAX_CLAIMS_PER_PASS,
+  UNLOCKS_PER_USER_PER_DAY,
+  getBoard,
+} from "@/lib/passes";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +41,9 @@ export const metadata: Metadata = {
     siteName: "Claude Coupons",
     title: TITLE,
     description: DESCRIPTION,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Claude Code Coupons" }],
+    images: [
+      { url: "/og.png", width: 1200, height: 630, alt: "Claude Code Coupons" },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -89,10 +96,11 @@ export default async function Home() {
           Claude Code Passes | Claude.ai Coupons
         </h1>
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
-          A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
-          and Cowork included. If you subscribe, sharing a pass can give someone who cannot
-          afford Claude Pro the chance to learn, build, and experience what it can do. This
-          board turns spare passes into opportunities instead of letting them expire unused.
+          A Claude pass gives you <strong>7 days of Claude Pro for free</strong>{" "}
+          - Claude Code and Cowork included. If you subscribe, sharing a pass
+          can give someone who cannot afford Claude Pro the chance to learn,
+          build, and experience what it can do. This board turns spare passes
+          into opportunities instead of letting them expire unused.
         </p>
       </section>
 
@@ -102,7 +110,9 @@ export default async function Home() {
           stretching the contributor card and leaving a large empty gap inside it. */}
       <div className="mt-9 grid items-start gap-8 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
-          <h2 className="mb-4 text-2xl font-semibold">Available Claude passes</h2>
+          <h2 className="mb-4 text-2xl font-semibold">
+            Available Claude passes
+          </h2>
           <Board
             passes={passes}
             signedIn={Boolean(user)}
@@ -120,66 +130,88 @@ export default async function Home() {
         <h2>What you get with a Claude Code pass</h2>
         <ul className="list-disc space-y-1 pl-6">
           <li>
-            <strong>7 days of Claude Pro, free</strong> - the full paid plan, not a limited
-            demo.
+            <strong>7 days of Claude Pro, free</strong> - the full paid plan,
+            not a limited demo.
           </li>
           <li>
-            <strong>Claude Code</strong> - the agentic coding tool in your terminal and IDE.
+            <strong>Claude Code</strong> - the agentic coding tool in your
+            terminal and IDE.
           </li>
           <li>
-            <strong>Cowork</strong> - Claude working alongside you on files and everyday tasks.
+            <strong>Cowork</strong> - Claude working alongside you on files and
+            everyday tasks.
           </li>
           <li>
-            Higher usage limits and access to Anthropic&rsquo;s latest models while the pass
-            runs.
+            Higher usage limits and access to Anthropic&rsquo;s latest models
+            while the pass runs.
           </li>
         </ul>
 
         <h2>Is there a Claude coupon or Claude Code coupon code?</h2>
         <p>
-          People search for Claude coupons, a Claude Code coupon, a Claude AI coupon, a Claude
-          promo code, a Claude Pro discount - and the honest answer is that{" "}
-          <strong>Anthropic doesn&rsquo;t issue any of them</strong>. There is no code to type
-          at checkout, no seasonal sale and no student rate. What exists instead is the{" "}
-          <a className="text-accent-dark underline" href={GUEST_PASS_DOC} rel="noopener">
-            guest pass program
-          </a>
-          : every Pro and Max subscriber holds a few personal invites, each worth a free week of
-          Claude Pro for someone new. Sharing one can open the door for someone who otherwise
-          would not get to try it. Most of those passes expire unshared; this board helps put
-          them in the hands of people who can use them. A Claude pass from this board is the
+          People search for Claude coupons, a Claude Code coupon, a Claude AI
+          coupon, a Claude promo code, a Claude Pro discount - and the honest
+          answer is that{" "}
+          <strong>Anthropic doesn&rsquo;t issue any of them</strong>. There is
+          no code to type at checkout, no seasonal sale and no student rate.
+          What exists instead is the{" "}
+          <Link
+            className="text-accent-dark underline"
+            href="/claude-guest-pass"
+          >
+            Claude guest pass
+          </Link>{" "}
+          program: eligible Pro and Max subscribers hold a few personal invites,
+          each worth a free week of Claude Pro for someone new. Sharing one can
+          open the door for someone who otherwise would not get to try it. Most
+          of those passes expire unshared; this board helps put them in the
+          hands of people who can use them. A Claude pass from this board is the
           closest thing to a Claude coupon that actually works.
         </p>
 
         <h2>How to redeem a Claude coupon</h2>
         <ol className="list-decimal space-y-1 pl-6">
           <li>
-            <strong>Sign in</strong> with Google or your email - no password to invent.
+            <strong>Sign in</strong> with Google or your email - no password to
+            invent.
           </li>
           <li>
-            <strong>Unlock a Claude pass</strong> on the board to reveal its claude.ai invite
-            link.
+            <strong>Unlock a Claude pass</strong> on the board to reveal its
+            claude.ai invite link.
           </li>
           <li>
-            <strong>Redeem it on claude.ai</strong> - open the link and create your account
-            there. The 7-day Claude Pro trial starts on Anthropic&rsquo;s side, never here.
+            <strong>Redeem it on claude.ai</strong> - open the link and create
+            your account there. The 7-day Claude Pro trial starts on
+            Anthropic&rsquo;s side, never here.
           </li>
           <li>
-            <strong>Tell us if it worked.</strong> Your one-click answer retires exhausted links
-            for everyone after you.
+            <strong>Tell us if it worked.</strong> Your one-click answer retires
+            exhausted links for everyone after you.
           </li>
         </ol>
 
         <h2>Who can use a Claude Code pass</h2>
         <p>
-          Passes only apply to people <strong>new to paid Claude</strong>. Anthropic asks for a
-          payment card at signup, and unless you cancel within the 7 days the account becomes a
-          regular paid Claude Pro subscription. Passes are limited per subscriber and
-          first-come, first-served, so a listed link can be exhausted before anyone reports it.
-          All program rules are Anthropic&rsquo;s - see the{" "}
-          <a className="text-accent-dark underline" href={GUEST_PASS_DOC} rel="noopener">
+          Passes only apply to people <strong>new to paid Claude</strong>.
+          Anthropic asks for a payment card at signup, and unless you cancel
+          within the 7 days the account becomes a regular paid Claude Pro
+          subscription. Passes are limited per subscriber and first-come,
+          first-served, so a listed link can be exhausted before anyone reports
+          it. All program rules are Anthropic&rsquo;s - see the{" "}
+          <a
+            className="text-accent-dark underline"
+            href={GUEST_PASS_DOC}
+            rel="noopener"
+          >
             official guest pass page
           </a>
+          , or our plain-English guide to{" "}
+          <Link
+            className="text-accent-dark underline"
+            href="/claude-guest-pass"
+          >
+            how a Claude guest pass works
+          </Link>
           .
         </p>
 
