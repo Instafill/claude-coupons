@@ -5,8 +5,7 @@ Every Claude Pro/Max subscriber holds a few guest passes (7 free days of Claude 
 new to paid Claude, shared via a personal `claude.ai/referral/{code}` link). Most expire unused.
 Here anyone can list their link and anyone can unlock one — behind a signup wall on both sides.
 
-Next.js 16 (App Router) + MongoDB via Mongoose, deployed on Vercel. Same stack and conventions
-as `C:\appmakers\sprinkles`.
+Next.js 16 (App Router) + MongoDB via Mongoose, deployed on Vercel.
 
 ## Why there is no automatic validity check
 
@@ -62,9 +61,9 @@ system DNS, which breaks the `mongodb+srv` lookup.
 
 ## Deployment
 
-Vercel project `claude-coupons` (scope `oleksandr-gamaniuks-projects`), linked to
-`Instafill/claude-coupons` on GitHub - a push to `main` deploys to production. Live at
-https://claude-coupons.vercel.app until `claudecoupons.com` DNS points at Vercel.
+Deployed on Vercel from `Instafill/claude-coupons` - a push to `main` deploys to
+production. Live at https://claude-coupons.vercel.app until `claudecoupons.com` DNS points
+at Vercel.
 
 ## Google OAuth
 

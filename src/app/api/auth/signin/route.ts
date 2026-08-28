@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { safeReturnTo } from "@/lib/auth";
 
-// Kicks off the Google handshake. Same shape as the sprinkles implementation: return_to
-// rides through the OAuth `state` parameter so the callback can send the user back.
+// Kicks off the Google handshake. return_to rides through the OAuth `state` parameter so
+// the callback can send the user back.
 export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin;
   const returnTo = safeReturnTo(request.nextUrl.searchParams.get("return_to"));

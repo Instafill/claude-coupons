@@ -1,9 +1,16 @@
-// Lists our own referral link so the board is never empty. Idempotent - safe to re-run.
+// Lists a referral link so the board is never empty. Idempotent - safe to re-run.
+// The pass to seed is never hardcoded: it is a live referral link that anyone reading
+// this file could otherwise spend.
 import mongoose from "mongoose";
 
 const uri = process.env.MONGODB_URI;
-const code = process.env.SEED_CODE || "ygonyoOrXw";
-const email = (process.env.SEED_EMAIL || "alex@botmakers.net").toLowerCase();
+const code = process.env.SEED_CODE;
+const email = process.env.SEED_EMAIL?.toLowerCase();
+
+if (!uri || !code || !email) {
+  console.error("Set MONGODB_URI, SEED_CODE and SEED_EMAIL to seed the board.");
+  process.exit(1);
+}
 
 await mongoose.connect(uri);
 const db = mongoose.connection.db;
