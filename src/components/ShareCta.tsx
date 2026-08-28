@@ -25,11 +25,12 @@ export default function ShareCta() {
     },
     {
       n: "3",
-      title: "Watch it, and get paid",
+      title: "Give someone the opportunity",
       body: (
         <>
-          Your dashboard shows how many people unlocked and claimed each link. Anthropic credits
-          you $10 in usage for every referral that stays subscribed.
+          Someone gets a full week to experience Claude Pro because you chose not to let a pass
+          go unused. Your dashboard shows how many people you reached, and Anthropic may add $10
+          in usage if a referral stays subscribed.
         </>
       ),
     },
@@ -41,8 +42,8 @@ export default function ShareCta() {
         How sharing your Claude Code passes works
       </h2>
       <p className="mt-2 max-w-2xl text-muted">
-        The board only works if subscribers keep it stocked, so this side is built to cost you
-        nothing but a paste.
+        Every pass comes from a subscriber choosing to help someone else. Listing yours takes
+        only a few seconds, costs nothing, and gives another person a real chance to use Claude.
       </p>
 
       <ol className="mt-7 grid gap-7 sm:grid-cols-3">
@@ -65,7 +66,7 @@ export default function ShareCta() {
           List my Claude passes →
         </a>
         <span className="text-[15px] text-muted">
-          Nothing to maintain - the board takes a listing down by itself.
+          A small act for you. A week of possibility for someone else.
         </span>
       </div>
     </section>

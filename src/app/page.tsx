@@ -90,16 +90,17 @@ export default async function Home() {
         </h1>
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
-          and Cowork included. Subscribers get a few passes each and most go unused. This board
-          is where spare Claude passes meet the people hunting for Claude coupons.
+          and Cowork included. If you subscribe, sharing a pass can give someone who cannot
+          afford Claude Pro the chance to learn, build, and experience what it can do. This
+          board turns spare passes into opportunities instead of letting them expire unused.
         </p>
       </section>
 
       {/* Both sides of the exchange get the first screen: claimers on the left, the
           subscribers who supply the passes on the right. */}
-      {/* Grid items stretch by default, so both panels end on the same line however many
-          passes are on the board. */}
-      <div className="mt-9 grid gap-8 lg:grid-cols-2">
+      {/* Keep each panel at its natural height. The pass list can grow independently without
+          stretching the contributor card and leaving a large empty gap inside it. */}
+      <div className="mt-9 grid items-start gap-8 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
           <h2 className="mb-4 text-2xl font-semibold">Available Claude passes</h2>
           <Board
@@ -144,8 +145,10 @@ export default async function Home() {
             guest pass program
           </a>
           : every Pro and Max subscriber holds a few personal invites, each worth a free week of
-          Claude Pro for someone new. Most of those passes expire unshared. A Claude pass from
-          this board is the closest thing to a Claude coupon that actually works.
+          Claude Pro for someone new. Sharing one can open the door for someone who otherwise
+          would not get to try it. Most of those passes expire unshared; this board helps put
+          them in the hands of people who can use them. A Claude pass from this board is the
+          closest thing to a Claude coupon that actually works.
         </p>
 
         <h2>How to redeem a Claude coupon</h2>

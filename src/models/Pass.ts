@@ -15,7 +15,8 @@ export type PassStatus = (typeof PASS_STATUS)[keyof typeof PASS_STATUS];
 export interface IPass extends Document {
   _id: Types.ObjectId;
   code: string;
-  submitterUserId: Types.ObjectId;
+  submitterUserId?: Types.ObjectId;
+  submitterIpHash?: string;
   status: PassStatus;
   lastRefreshedAt: Date;
   unlockCount: number;
@@ -28,7 +29,8 @@ export interface IPass extends Document {
 const PassSchema = new Schema<IPass>(
   {
     code: { type: String, required: true, unique: true, trim: true },
-    submitterUserId: { type: Schema.Types.ObjectId, required: true, ref: "User", index: true },
+    submitterUserId: { type: Schema.Types.ObjectId, ref: "User", index: true },
+    submitterIpHash: { type: String, index: true },
     status: { type: String, enum: Object.values(PASS_STATUS), default: PASS_STATUS.live, index: true },
     lastRefreshedAt: { type: Date, default: Date.now },
     // Denormalized from the unlock log so the board renders without an aggregation.

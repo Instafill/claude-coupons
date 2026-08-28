@@ -11,6 +11,7 @@ export interface IRejectedSubmission extends Document {
   input: string;
   reason: string;
   userId?: Types.ObjectId;
+  ipHash?: string;
   createdAt: Date;
 }
 
@@ -19,6 +20,7 @@ const RejectedSubmissionSchema = new Schema<IRejectedSubmission>(
     input: { type: String, required: true, maxlength: 500 },
     reason: { type: String, required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
+    ipHash: { type: String },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

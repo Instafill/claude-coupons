@@ -40,3 +40,36 @@ body {
 .outcome-pulse {
   animation: outcome-pulse 1s ease 2;
 }
+
+@keyframes pass-card-next {
+  from {
+    opacity: 0.35;
+    transform: translateX(18px);
+    background: #f7e5da;
+    border-color: var(--color-accent);
+  }
+}
+
+@keyframes pass-card-previous {
+  from {
+    opacity: 0.35;
+    transform: translateX(-18px);
+    background: #f7e5da;
+    border-color: var(--color-accent);
+  }
+}
+
+.pass-card-next {
+  animation: pass-card-next 420ms ease-out;
+}
+
+.pass-card-previous {
+  animation: pass-card-previous 420ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass-card-next,
+  .pass-card-previous {
+    animation: none;
+  }
+}

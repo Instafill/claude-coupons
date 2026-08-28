@@ -10,8 +10,6 @@ type Outcome = "claimed" | "dead";
 
 interface CardState {
   code: string | null;
-  // null = nothing to ask; "hidden" = unlocked but not yet returned from claude.ai;
-  // "asking" = the visitor is back and the question is on screen; "done" = answered.
   ask: null | "hidden" | "asking" | "done";
   busy: boolean;
   error: string | null;
@@ -28,13 +26,16 @@ export default function Board({
   maxClaims: number;
   dailyCap: number;
 }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [direction, setDirection] = useState<"next" | "previous">("next");
   const [state, setState] = useState<Record<string, CardState>>(() =>
     Object.fromEntries(
-      passes.map((p) => [
-        p.id,
+      passes.map((pass) => [
+        pass.id,
         {
-          code: p.code,
-          ask: p.code && p.unlockedOutcome === "none" ? "hidden" : null,
+          code: pass.code,
+          ask: pass.code && pass.unlockedOutcome === "none" ? "hidden" : null,
           busy: false,
           error: null,
         } satisfies CardState,
@@ -43,45 +44,50 @@ export default function Board({
   );
 
   const router = useRouter();
-
-  // Which card is waiting for an answer while the visitor is away on claude.ai.
   const pending = useRef<string | null>(null);
 
   const patch = useCallback((id: string, next: Partial<CardState>) => {
-    setState((prev) => ({ ...prev, [id]: { ...prev[id], ...next } }));
+    setState((previous) => ({ ...previous, [id]: { ...previous[id], ...next } }));
   }, []);
 
-  // Opening a pass means leaving for claude.ai. When the tab comes back, surface the
-  // question while claude.ai's answer is still on the visitor's screen - they are the
-  // only validity check that exists, since claude.ai tells automation nothing.
+  useEffect(() => {
+    if (passes.length <= 1 || paused) return;
+    const timer = window.setInterval(() => {
+      setDirection("next");
+      setActiveIndex((current) => (current + 1) % passes.length);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [passes.length, paused]);
+
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       const id = pending.current;
       if (!id) return;
       pending.current = null;
-      setState((prev) =>
-        prev[id]?.ask === "hidden" ? { ...prev, [id]: { ...prev[id], ask: "asking" } } : prev
+      const index = passes.findIndex((pass) => pass.id === id);
+      if (index >= 0) setActiveIndex(index);
+      setState((previous) =>
+        previous[id]?.ask === "hidden"
+          ? { ...previous, [id]: { ...previous[id], ask: "asking" } }
+          : previous
       );
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  }, [passes]);
 
   async function unlock(id: string) {
     patch(id, { busy: true, error: null });
     try {
-      const res = await fetch(`/api/passes/${id}/unlock`, { method: "POST" });
-      if (res.status === 401) {
-        // The cookie expired between the page render and this click.
+      const response = await fetch(`/api/passes/${id}/unlock`, { method: "POST" });
+      if (response.status === 401) {
         router.push("/signin?return_to=%2F");
         return;
       }
-      const data = await res.json();
-      if (!res.ok) {
-        // Vercel Analytics allows two properties per event on Pro - keep it to what a
-        // funnel actually needs.
-        track("unlock_failed", { status: res.status });
+      const data = await response.json();
+      if (!response.ok) {
+        track("unlock_failed", { status: response.status });
         throw new Error(data.error || "Something went wrong.");
       }
 
@@ -89,8 +95,8 @@ export default function Board({
       patch(id, { code: data.code, ask: "hidden", busy: false });
       pending.current = id;
       window.open(data.url, "_blank", "noopener");
-    } catch (err) {
-      patch(id, { busy: false, error: err instanceof Error ? err.message : "Failed." });
+    } catch (error) {
+      patch(id, { busy: false, error: error instanceof Error ? error.message : "Failed." });
     }
   }
 
@@ -116,100 +122,156 @@ export default function Board({
     );
   }
 
-  return (
-    <>
-      <ul className="grid gap-3">
-        {passes.map((pass) => {
-          const card = state[pass.id];
-          return (
-            <li
-              key={pass.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-paper px-4 py-4"
-            >
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-mono text-[15px] break-all">
-                  claude.ai/referral/{card.code ?? pass.maskedCode}
-                </span>
-                <span className="text-[13px] text-muted">
-                  {pass.claimedCount === 0
-                    ? "no claims reported yet"
-                    : `${pass.claimedCount} of ${maxClaims} claims reported`}{" "}
-                  · listed{" "}
-                  {new Date(pass.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-                {card.error && <span className="text-[13px] text-bad">{card.error}</span>}
-              </div>
+  const pass = passes[activeIndex];
+  const card = state[pass.id];
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                {!signedIn ? (
-                  <a
-                    href="/signin?return_to=%2F"
-                    rel="nofollow"
-                    onClick={() => track("signin_prompted", { from: "board" })}
-                    className="rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
-                  >
-                    Sign in to unlock
-                  </a>
-                ) : card.code ? (
-                  <>
-                    <a
-                      href={`https://claude.ai/referral/${card.code}`}
-                      target="_blank"
-                      rel="nofollow noopener"
-                      onClick={() => {
-                        track("pass_opened");
-                        if (state[pass.id].ask === "hidden") pending.current = pass.id;
-                      }}
-                      className="rounded-lg bg-good px-4 py-2 text-[15px] font-semibold text-white hover:brightness-90"
-                    >
-                      Open your pass ↗
-                    </a>
-                    {card.ask === "asking" && (
-                      <span className="outcome-pulse flex flex-wrap items-center gap-1.5 text-sm text-muted">
-                        Did it work?
-                        <button
-                          onClick={() => answer(pass.id, "claimed")}
-                          className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-accent"
-                        >
-                          ✓ Claimed it
-                        </button>
-                        <button
-                          onClick={() => answer(pass.id, "dead")}
-                          className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-bad hover:text-bad"
-                        >
-                          ✗ Didn&rsquo;t work
-                        </button>
-                      </span>
-                    )}
-                    {card.ask === "done" && (
-                      <span className="text-sm text-good">
-                        Thanks - that keeps the board honest.
-                      </span>
-                    )}
-                  </>
-                ) : (
+  function showPrevious() {
+    setDirection("previous");
+    setActiveIndex((current) => (current - 1 + passes.length) % passes.length);
+  }
+
+  function showNext() {
+    setDirection("next");
+    setActiveIndex((current) => (current + 1) % passes.length);
+  }
+
+  function showPass(index: number) {
+    setDirection(index < activeIndex ? "previous" : "next");
+    setActiveIndex(index);
+  }
+
+  return (
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
+      }}
+    >
+      <div
+        key={pass.id}
+        className={`flex min-h-[190px] flex-col justify-between rounded-xl border border-line bg-paper px-4 py-4 ${
+          direction === "previous" ? "pass-card-previous" : "pass-card-next"
+        }`}
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-mono text-[15px] break-all">
+            claude.ai/referral/{card.code ?? pass.maskedCode}
+          </span>
+          <span className="text-[13px] text-muted">
+            {pass.claimedCount === 0
+              ? "no claims reported yet"
+              : `${pass.claimedCount} of ${maxClaims} claims reported`}{" "}
+            &middot; listed{" "}
+            {new Date(pass.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+          {card.error && <span className="text-[13px] text-bad">{card.error}</span>}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          {!signedIn ? (
+            <a
+              href="/signin?return_to=%2F"
+              rel="nofollow"
+              onClick={() => track("signin_prompted", { from: "board" })}
+              className="rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
+            >
+              Sign in to unlock
+            </a>
+          ) : card.code ? (
+            <>
+              <a
+                href={`https://claude.ai/referral/${card.code}`}
+                target="_blank"
+                rel="nofollow noopener"
+                onClick={() => {
+                  track("pass_opened");
+                  if (state[pass.id].ask === "hidden") pending.current = pass.id;
+                }}
+                className="rounded-lg bg-good px-4 py-2 text-[15px] font-semibold text-white hover:brightness-90"
+              >
+                Open your pass &nearr;
+              </a>
+              {card.ask === "asking" && (
+                <span className="outcome-pulse flex flex-wrap items-center gap-1.5 text-sm text-muted">
+                  Did it work?
                   <button
-                    onClick={() => unlock(pass.id)}
-                    disabled={card.busy}
-                    className="cursor-pointer rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark disabled:opacity-60"
+                    onClick={() => answer(pass.id, "claimed")}
+                    className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-accent"
                   >
-                    {card.busy ? "Unlocking…" : "Unlock this pass"}
+                    &#10003; Claimed it
                   </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {/* mt-auto anchors the caveat to the bottom of the stretched panel. */}
-      <p className="mt-auto pt-4 text-sm text-muted">
+                  <button
+                    onClick={() => answer(pass.id, "dead")}
+                    className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-bad hover:text-bad"
+                  >
+                    &#10007; Didn&rsquo;t work
+                  </button>
+                </span>
+              )}
+              {card.ask === "done" && (
+                <span className="text-sm text-good">Thanks - that keeps the board honest.</span>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => unlock(pass.id)}
+              disabled={card.busy}
+              className="cursor-pointer rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark disabled:opacity-60"
+            >
+              {card.busy ? "Unlocking..." : "Unlock this pass"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {passes.length > 1 && (
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={showPrevious}
+            aria-label="Show previous Claude pass"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-lg hover:border-accent hover:text-accent-dark"
+          >
+            &larr;
+          </button>
+          <div className="flex items-center gap-2" aria-label={`Pass ${activeIndex + 1} of ${passes.length}`}>
+            {passes.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => showPass(index)}
+                aria-label={`Show pass ${index + 1}`}
+                aria-current={index === activeIndex ? "true" : undefined}
+                className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
+                  index === activeIndex ? "w-7 bg-accent" : "w-2.5 bg-line hover:bg-muted"
+                }`}
+              />
+            ))}
+            <span className="ml-1 rounded-full bg-[#f4e4da] px-2.5 py-0.5 text-[12px] font-semibold text-accent-dark" aria-live="polite">
+              {activeIndex + 1} of {passes.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={showNext}
+            aria-label="Show next Claude pass"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-lg hover:border-accent hover:text-accent-dark"
+          >
+            &rarr;
+          </button>
+        </div>
+      )}
+
+      <p className="pt-4 text-sm text-muted">
         Passes are first-come, first-served and each covers a limited number of invites, so a
         link can run dry before the board knows. Unlocking is capped at {dailyCap} passes per
         day.
       </p>
-    </>
+    </div>
   );
 }

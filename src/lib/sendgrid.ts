@@ -28,14 +28,16 @@ function init() {
 // real from the phone that got the alert. It goes to one fixed inbox, never to a user.
 export async function notifyNewPass(pass: {
   code: string;
-  submitterEmail: string;
+  submitterEmail?: string;
   submitterName?: string;
   livePasses: number;
 }): Promise<void> {
   const url = `https://claude.ai/referral/${pass.code}`;
   const who = pass.submitterName
-    ? `${pass.submitterName} (${pass.submitterEmail})`
-    : pass.submitterEmail;
+    ? pass.submitterEmail
+      ? `${pass.submitterName} (${pass.submitterEmail})`
+      : pass.submitterName
+    : pass.submitterEmail || "an anonymous contributor";
 
   if (!process.env.SENDGRID_API_KEY) {
     console.log(`[notify] new pass ${pass.code} from ${who}`);
@@ -47,7 +49,7 @@ export async function notifyNewPass(pass: {
     await sgMail.send({
       to: NOTIFY_EMAIL,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: `New Claude pass listed by ${pass.submitterEmail}`,
+      subject: `New Claude pass listed by ${pass.submitterEmail || "an anonymous contributor"}`,
       text: `${who} listed a pass.\n\n${url}\n\nLive passes on the board: ${pass.livePasses}\nhttps://claudecoupons.com/`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d;">

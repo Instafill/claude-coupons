@@ -24,6 +24,55 @@ export const UNLOCKS_PER_USER_PER_DAY = 3;
 const REFERRAL_SHAPE =
   /^(?:https?:\/\/(?:www\.)?claude\.ai\/referral\/)?([A-Za-z0-9._~-]{4,64})$/i;
 
+// Anonymous submissions accept only the official URL shape. Normalizing common character
+// substitutions catches obvious attempts to spell profanity inside an otherwise valid token.
+const BLOCKED_CODE_WORDS = [
+  "bitch",
+  "cock",
+  "cunt",
+  "dick",
+  "fagg",
+  "fuck",
+  "nigg",
+  "pussy",
+  "rape",
+  "shit",
+  "slut",
+  "whore",
+];
+
+function normalizedCodeText(code: string): string {
+  return code
+    .toLowerCase()
+    .replaceAll("0", "o")
+    .replaceAll("1", "i")
+    .replaceAll("3", "e")
+    .replaceAll("4", "a")
+    .replaceAll("5", "s")
+    .replaceAll("7", "t")
+    .replaceAll("$", "s")
+    .replaceAll("@", "a")
+    .replace(/[^a-z]/g, "");
+}
+
+export function containsBlockedCodeWord(code: string): boolean {
+  const normalized = normalizedCodeText(code);
+  return BLOCKED_CODE_WORDS.some((word) => normalized.includes(word));
+}
+
+export function parseOfficialReferralUrl(input: string): string | null {
+  try {
+    const url = new URL(input.trim());
+    if (url.protocol !== "https:" || !["claude.ai", "www.claude.ai"].includes(url.hostname)) {
+      return null;
+    }
+    const match = /^\/referral\/([A-Za-z0-9._~-]{4,64})\/?$/.exec(url.pathname);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseReferralCode(input: string): string | null {
   const cleaned = input.trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
   const match = REFERRAL_SHAPE.exec(cleaned);
