@@ -85,3 +85,41 @@ export const GUEST_PASS_FAQS: { q: string; a: string }[] = [
     a: "Less certainly than most pages claim. $10 per conversion is widely repeated, but Anthropic's own wording is that a guest pass will sometimes result in a specified amount of overage credits - conditional, unspecified, and paid in usage credit rather than cash. The credits expire a year after issuance and are voided if you move to the Free tier.",
   },
 ];
+
+// The free trial page's set. Again no overlap with either list above: this one answers
+// "does this product have a free trial at all", which is a question about Anthropic's
+// pricing rather than about coupons or about how the pass programme works.
+export const FREE_TRIAL_FAQS: { q: string; a: string }[] = [
+  {
+    q: "Does Claude Pro have a free trial?",
+    a: "Not as a standing offer. Anthropic's pricing page has no trial option and every plan's button reads 'Try Claude' rather than 'Start free trial'. The one route to a free week of Pro is a guest pass from an existing subscriber, and Anthropic may occasionally run limited promotions on individual accounts.",
+  },
+  {
+    q: "Is Claude free to use without paying?",
+    a: "Yes, there is a permanently free plan at $0. It covers chat on web, desktop and mobile, web search, memory, file creation and code execution, connectors and extended thinking. It is a real product rather than a countdown, but it is not the Pro plan and the usage limits are lower.",
+  },
+  {
+    q: "Is Claude Code included in the free plan?",
+    a: "No. Anthropic's pricing page lists Pro as the cheapest plan that includes Claude Code and Cowork, so the free tier does not cover the terminal coding agent. This is the single most common reason people go looking for a trial in the first place.",
+  },
+  {
+    q: "How do I get Claude Pro free for 7 days?",
+    a: "Open a guest pass link from a Pro or Max subscriber and create your account on claude.ai. That is the whole mechanism - there is no code and no trial button. If you do not know a subscriber, this board lists passes people have shared rather than let them expire.",
+  },
+  {
+    q: "How much is Claude Pro after the free week?",
+    a: "$20 per month billed monthly, or $17 per month if you pay for a year up front. Max plans start at $100 per month. Nothing is charged during the seven days, but the account converts to paid Pro at the end unless you cancel first.",
+  },
+  {
+    q: "Is there a student discount for Claude Pro?",
+    a: "Anthropic publishes no student or education pricing for Claude Pro, and no seasonal sales. A guest pass is the only supported way to use the paid plan without paying, and it lasts a week rather than a term.",
+  },
+  {
+    q: "Does Cowork need a paid plan?",
+    a: "Yes. Like Claude Code, Cowork starts at the Pro tier, and a guest pass includes both for the seven days it runs.",
+  },
+  {
+    q: "Are 'free Claude Pro account' offers safe?",
+    a: "Treat them as suspect. Anthropic issues no free Pro accounts, so anything advertised as one is usually a shared login, a resold subscription or a phishing page. A genuine pass is a claude.ai link you open yourself and an account you create in your own name - nobody needs your password to give you one.",
+  },
+];

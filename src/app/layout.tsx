@@ -43,6 +43,9 @@ export default async function RootLayout({
             <Link href="/claude-guest-pass" className="hover:text-accent-dark">
               Guest passes
             </Link>
+            <Link href="/claude-free-trial" className="hover:text-accent-dark">
+              Free trial
+            </Link>
             <Link href="/submit" className="hover:text-accent-dark">
               Share a pass
             </Link>

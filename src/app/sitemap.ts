@@ -16,6 +16,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://claudecoupons.com/claude-free-trial",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: "https://claudecoupons.com/submit",
       changeFrequency: "monthly",
       priority: 0.6,
