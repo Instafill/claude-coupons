@@ -21,7 +21,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "https://claudecoupons.com/" },
+  alternates: { canonical: "https://claudecoupons.com" },
   keywords: [
     "claude coupons",
     "claude coupon",

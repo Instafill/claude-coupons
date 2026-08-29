@@ -2,8 +2,11 @@ import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
+    // No trailing slash, deliberately. Next strips it from the rendered canonical tag
+    // (trailingSlash defaults to false), so a slash here submits one URL while the page
+    // canonicalises to another - which is why the home page alone was reported twice.
     {
-      url: "https://claudecoupons.com/",
+      url: "https://claudecoupons.com",
       changeFrequency: "daily",
       priority: 1,
     },
