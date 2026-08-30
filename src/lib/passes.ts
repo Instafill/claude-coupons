@@ -161,6 +161,17 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
     });
 }
 
+// How many passes a visitor would actually see right now. Deliberately not a
+// countDocuments on status alone: nextStatus() retires exhausted, dead and expired
+// listings lazily on read, so a row can still say "live" in Mongo while the board renders
+// empty. Filtering through the same predicate - rather than restating its rules as a query
+// - is what keeps this answer and getBoard's in agreement.
+export async function countLivePasses(): Promise<number> {
+  await dbConnect();
+  const passes = await Pass.find({ status: PASS_STATUS.live });
+  return passes.filter((pass) => nextStatus(pass) === null).length;
+}
+
 export async function countRecentUnlocks(userId: string): Promise<number> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   return Unlock.countDocuments({

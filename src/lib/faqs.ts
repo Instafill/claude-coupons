@@ -45,6 +45,10 @@ export const FAQS: { q: string; a: string }[] = [
     q: "What do I get for sharing my passes?",
     a: "You give someone who may not be able to afford Claude Pro a full week to experience it. A pass that might otherwise expire can help another person learn, build, create or solve a real problem. As a secondary benefit, Anthropic sometimes issues usage credits when a referral stays subscribed after the free week - the amount is not published, whatever other sites claim.",
   },
+  {
+    q: "The board is empty. Can you tell me when a pass appears?",
+    a: "Yes. When there are no passes left, the board shows a form where you can leave an email address. Confirm it once and we will email you the next time the board goes from empty to having passes - only then, never more than once every 12 hours, and never anything else. Every message carries a one-click link to stop.",
+  },
 ];
 
 // The guest pass page's own set. Deliberately no overlap with FAQS above: that set answers

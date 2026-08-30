@@ -8,8 +8,14 @@ import { Types } from "mongoose";
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
-import { containsBlockedCodeWord, hashIp, parseOfficialReferralUrl } from "@/lib/passes";
+import {
+  containsBlockedCodeWord,
+  countLivePasses,
+  hashIp,
+  parseOfficialReferralUrl,
+} from "@/lib/passes";
 import { notifyNewPass } from "@/lib/sendgrid";
+import { notifyWatchers } from "@/lib/watchers";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 import RejectedSubmission from "@/models/RejectedSubmission";
 
@@ -87,6 +93,11 @@ export async function submitPass(
   }
 
   await dbConnect();
+  // Read before the write, not after. Two people listing to an empty board at the same
+  // moment then both see zero and both try to alert, and the per-address cooldown in
+  // notifyWatchers collapses that to one email. Reading afterwards would let the same race
+  // show each of them a count of two and send nothing at all, which is the worse failure.
+  const wasEmpty = (await countLivePasses()) === 0;
   const submitterUserId = user ? new Types.ObjectId(user.id) : undefined;
   const existing = await Pass.findOne({ code });
 
@@ -113,7 +124,7 @@ export async function submitPass(
       pass: existing._id.toString(),
       user: user?.id || "anonymous",
     });
-    await notify(code, user, "back on the board");
+    await notify(code, user, "back on the board", wasEmpty);
   } else {
     if (!user) {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -133,7 +144,7 @@ export async function submitPass(
       pass: created._id.toString(),
       user: user?.id || "anonymous",
     });
-    await notify(code, user, "listed");
+    await notify(code, user, "listed", wasEmpty);
   }
 
   revalidatePath("/");
@@ -143,18 +154,24 @@ export async function submitPass(
 }
 
 // Awaited rather than fired and forgotten: a serverless function can be frozen the moment
-// it responds, which would drop a pending send. notifyNewPass swallows its own failures,
-// so this can never cost the submitter their listing.
+// it responds, which would drop a pending send. Both calls swallow their own failures, so
+// this can never cost the submitter their listing.
 async function notify(
   code: string,
   user: { email: string; name?: string } | null,
-  what: string
+  what: string,
+  wasEmpty: boolean
 ): Promise<void> {
-  const livePasses = await Pass.countDocuments({ status: PASS_STATUS.live });
+  const livePasses = await countLivePasses();
   await notifyNewPass({
     code,
     submitterEmail: user?.email,
     submitterName: user?.name ? `${user.name} - ${what}` : user ? undefined : `Anonymous - ${what}`,
     livePasses,
   });
+
+  // The watch list hears only about the empty-to-not-empty transition. Someone signed up
+  // because there was nothing to claim, so a listing that joins passes already on the board
+  // is not news to them - it is just mail.
+  if (wasEmpty) await notifyWatchers();
 }

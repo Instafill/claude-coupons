@@ -99,3 +99,107 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
     console.error("Magic link send failed:", error);
   }
 }
+
+// Asks someone to confirm they want alerts before a single one is sent. The confirmation
+// step is not ceremony: unconfirmed bulk mail from this domain would put the sign-in links
+// above at risk, and those are the one email this site cannot afford to have filtered.
+export async function sendWatchConfirmation(email: string, confirmUrl: string): Promise<void> {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.log(`[watch-confirm] ${email}: ${confirmUrl}`);
+    return;
+  }
+
+  try {
+    init();
+    await sgMail.send({
+      to: email,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: "Confirm you want Claude pass alerts",
+      text: `Someone asked us to email this address when claudecoupons.com has Claude guest passes again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
+      html: `
+        <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
+          <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
+          <p>Someone asked us to email this address when the board at claudecoupons.com has Claude guest passes again.</p>
+          <p style="margin: 24px 0;">
+            <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Confirm and start watching</a>
+          </p>
+          <p style="color: #6e6a63; font-size: 13px;">
+            You&rsquo;ll hear from us only when the board goes from empty to having passes, and never more than
+            once every 12 hours. No newsletter, and we don&rsquo;t share your address. Every alert carries a
+            one-click link to stop.
+          </p>
+          <p style="color: #6e6a63; font-size: 13px;">If this wasn&rsquo;t you, ignore this email &mdash; nothing further will be sent.</p>
+        </div>`,
+    });
+  } catch (error) {
+    console.error("Watch confirmation send failed:", error);
+  }
+}
+
+export interface AlertRecipient {
+  email: string;
+  stopUrl: string;
+}
+
+// How many alerts one refill may send. The fan-out runs inside the submitter's request, so
+// this is the ceiling on how long listing a pass can be made to take by a long watch list.
+const MAX_ALERT_BATCH = 25;
+
+// The refill alert. Sent one message per recipient rather than as a single call with
+// personalizations, because each needs its own List-Unsubscribe header - that header is
+// per-message in the SendGrid API, and Gmail and Yahoo require it of bulk senders (RFC 8058).
+//
+// Returns the addresses that were actually accepted, so the caller only marks those as
+// notified and a failed send is retried on the next refill instead of being lost.
+export async function sendPassAlerts(recipients: AlertRecipient[]): Promise<string[]> {
+  if (!process.env.SENDGRID_API_KEY) {
+    for (const recipient of recipients) {
+      console.log(`[pass-alert] ${recipient.email}: stop ${recipient.stopUrl}`);
+    }
+    return recipients.map((recipient) => recipient.email);
+  }
+
+  init();
+  const delivered: string[] = [];
+
+  for (let i = 0; i < recipients.length; i += MAX_ALERT_BATCH) {
+    const chunk = recipients.slice(i, i + MAX_ALERT_BATCH);
+    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r)));
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") delivered.push(chunk[index].email);
+      else console.error("Pass alert send failed:", result.reason);
+    });
+  }
+
+  return delivered;
+}
+
+function sendOneAlert({ email, stopUrl }: AlertRecipient): Promise<unknown> {
+  return sgMail.send({
+    to: email,
+    from: { email: FROM_EMAIL, name: FROM_NAME },
+    subject: "A Claude guest pass is on the board",
+    // One-click unsubscribe. The POST variant is what Gmail's own "unsubscribe" button
+    // calls; the mailto-free header list is what marks this as bulk mail honestly.
+    headers: {
+      "List-Unsubscribe": `<${stopUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    text: `The board at claudecoupons.com has Claude guest passes again.\n\nhttps://claudecoupons.com/\n\nPasses are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
+    html: `
+      <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
+        <h2 style="color: #c9642f;">The board has passes again</h2>
+        <p>You asked to hear when claudecoupons.com had Claude guest passes. It does right now.</p>
+        <p style="margin: 24px 0;">
+          <a href="https://claudecoupons.com/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
+        </p>
+        <p style="color: #6e6a63; font-size: 14px;">
+          Passes are first-come, first-served and often go within minutes, so this one may already be gone by
+          the time you arrive. If it is, you stay on the list and we&rsquo;ll tell you about the next one.
+        </p>
+        <p style="color: #6e6a63; font-size: 13px;">
+          <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
+        </p>
+      </div>`,
+  });
+}

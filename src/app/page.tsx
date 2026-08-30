@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import Board from "@/components/Board";
+import EmptyBoard from "@/components/EmptyBoard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
@@ -113,12 +114,19 @@ export default async function Home() {
           <h2 className="mb-4 text-2xl font-semibold">
             Available Claude passes
           </h2>
-          <Board
-            passes={passes}
-            signedIn={Boolean(user)}
-            maxClaims={MAX_CLAIMS_PER_PASS}
-            dailyCap={UNLOCKS_PER_USER_PER_DAY}
-          />
+          {/* Branched here rather than inside Board: an empty board needs none of the
+              carousel, unlock or outcome machinery, and this keeps the viewer's address out
+              of the client bundle on every request that does have passes to show. */}
+          {passes.length === 0 ? (
+            <EmptyBoard signedIn={Boolean(user)} email={user?.email} />
+          ) : (
+            <Board
+              passes={passes}
+              signedIn={Boolean(user)}
+              maxClaims={MAX_CLAIMS_PER_PASS}
+              dailyCap={UNLOCKS_PER_USER_PER_DAY}
+            />
+          )}
         </section>
 
         <ShareCard />

@@ -110,18 +110,6 @@ export default function Board({
     });
   }
 
-  if (passes.length === 0) {
-    return (
-      <p className="text-sm text-muted">
-        No passes on the board right now - they go fast. Check back soon, or{" "}
-        <a className="text-accent-dark underline" href="/submit">
-          list yours
-        </a>{" "}
-        if you have spares.
-      </p>
-    );
-  }
-
   const pass = passes[activeIndex];
   const card = state[pass.id];
 

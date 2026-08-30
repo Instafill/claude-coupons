@@ -43,6 +43,13 @@ drives the lifecycle.
 - **Anti-abuse**: unlocking is capped at 3 passes per account per rolling 24h; the sign-in form
   carries a honeypot field; magic-link tokens are single-use and expire in 30 minutes via a
   MongoDB TTL index.
+- **Watch list** (`watchers` collection, `lib/watchers.ts`): when the board is empty a visitor
+  can leave an email address and be told when passes return. Confirmed opt-in - nothing is
+  mailed to an address until a confirmation link is clicked, except for an address that came
+  from the visitor's own signed-in session, which was already verified through Google or a
+  magic link. The alert fires only on the empty-to-not-empty transition, with a 12h floor per
+  address, and every message carries a one-click stop link (`List-Unsubscribe`, RFC 8058).
+  Rows are soft-deleted on stop, so a stop link stays valid and idempotent.
 
 ## Run locally
 
@@ -52,9 +59,13 @@ npm run dev          # http://localhost:3000
 node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our own pass
 ```
 
-`.env.local` keys — `MONGODB_URI` (the `claudecoupons` database), `SENDGRID_API_KEY` (omit and
-magic links print to the console instead of sending), `EMAIL_FROM`, `GOOGLE_CLIENT_ID`,
+`.env.local` keys - `MONGODB_URI` (the `claudecoupons` database), `SENDGRID_API_KEY` (omit and
+every email prints to the console instead of sending), `GOOGLE_CLIENT_ID`,
 `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`.
+
+The sender address is pinned in `lib/sendgrid.ts` rather than configurable: it has to stay on
+`claudecoupons.com`, which is the domain SendGrid signs for, or DKIM alignment breaks and
+sign-in links land in spam.
 
 `dns-fix.cjs` exists because Node 24's c-ares resolver defaults to 127.0.0.1 when it can't detect
 system DNS, which breaks the `mongodb+srv` lookup.
