@@ -31,8 +31,9 @@ export default async function SignInPage({
     <section className="mx-auto mt-8 max-w-md">
       <h1 className="text-[28px] font-bold">Sign in</h1>
       <p className="mt-2 text-muted">
-        Signing in is what unlocks pass links - it keeps bots off the board and lets us retire
-        exhausted passes quickly. No password either way.
+        Signing in is for people who list passes: it gives you a dashboard of your listings.
+        To unlock a pass, join the list on the home page instead - confirming your email is
+        the sign-in. No password either way.
       </p>
 
       {params.error && (

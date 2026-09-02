@@ -1,7 +1,6 @@
 "use client";
 
 import { track } from "@vercel/analytics";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { BoardPass } from "@/lib/passes";
@@ -15,14 +14,16 @@ interface CardState {
   error: string | null;
 }
 
+// `onList` is the gate: a visitor who has not joined and confirmed sees the pass exists
+// and one button, which takes them to the form. Signing in on its own opens nothing.
 export default function Board({
   passes,
-  signedIn,
+  onList,
   maxClaims,
   dailyCap,
 }: {
   passes: BoardPass[];
-  signedIn: boolean;
+  onList: boolean;
   maxClaims: number;
   dailyCap: number;
 }) {
@@ -43,7 +44,6 @@ export default function Board({
     )
   );
 
-  const router = useRouter();
   const pending = useRef<string | null>(null);
 
   const patch = useCallback((id: string, next: Partial<CardState>) => {
@@ -81,8 +81,11 @@ export default function Board({
     patch(id, { busy: true, error: null });
     try {
       const response = await fetch(`/api/passes/${id}/unlock`, { method: "POST" });
-      if (response.status === 401) {
-        router.push("/signin?return_to=%2F");
+      if (response.status === 401 || response.status === 403) {
+        // Not on the list (or the session lapsed): the form is the answer, not a sign-in.
+        track("join_prompted", { from: "unlock" });
+        patch(id, { busy: false });
+        document.getElementById("join")?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
       const data = await response.json();
@@ -161,14 +164,13 @@ export default function Board({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2.5">
-          {!signedIn ? (
+          {!onList ? (
             <a
-              href="/signin?return_to=%2F"
-              rel="nofollow"
-              onClick={() => track("signin_prompted", { from: "board" })}
+              href="#join"
+              onClick={() => track("join_prompted", { from: "board" })}
               className="rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
             >
-              Sign in to unlock
+              Join the list to unlock
             </a>
           ) : card.code ? (
             <>
@@ -256,9 +258,8 @@ export default function Board({
       )}
 
       <p className="pt-4 text-sm text-muted">
-        Passes are first-come, first-served and each covers a limited number of invites, so a
-        link can run dry before the board knows. Unlocking is capped at {dailyCap} passes per
-        day.
+        First come, first served. Each link covers a few invites, so it can run dry before the
+        board knows. Unlocking is for people on the list, capped at {dailyCap} passes a day.
       </p>
     </div>
   );

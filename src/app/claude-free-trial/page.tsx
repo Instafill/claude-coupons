@@ -193,8 +193,8 @@ export default function FreeTrialPage() {
           checked, and unshared passes expire.
         </li>
         <li>
-          <strong>Or take one from this board.</strong> Sign in, unlock a pass,
-          open it on claude.ai.{" "}
+          <strong>Or take one from this board.</strong> Join the list, unlock a
+          pass when one is listed, open it on claude.ai.{" "}
           <Link className="text-accent-dark underline" href="/">
             See what is available now
           </Link>

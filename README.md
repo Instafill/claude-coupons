@@ -28,9 +28,15 @@ drives the lifecycle.
 
 ## How it works
 
-- **Signup wall, both sides** (`lib/auth.ts`): Google OAuth or a passwordless email magic link,
-  both resolving to one `User` per email address, carried in an HMAC-signed session cookie.
-  Listing a pass requires an account; unlocking a pass link requires an account.
+- **The list is the only door** (`lib/watchers.ts`, `api/passes/[id]/unlock`): unlocking a
+  pass requires a session *and* a confirmed, active place on the watch list; a session on its
+  own gets `403 join`. Confirming the watch link starts the session (`api/watch/confirm`),
+  and the alert email's button carries a long-lived `enterToken` (`api/watch/enter`) that
+  signs the address in on any device and lands on the board - no sign-in screen between the
+  email and the pass. `stopToken` stays separate so a leaked stop link remains harmless.
+- **Accounts** (`lib/auth.ts`): Google OAuth or a passwordless email magic link, both
+  resolving to one `User` per email address, carried in an HMAC-signed session cookie. The
+  `/signin` page is for people who list passes and want the `/manage` dashboard.
 - **Unlock log** (`models/Unlock.ts`): one row per (pass, user) with time, salted IP hash and the
   reported outcome — so there is an answer to "who unlocked this coupon, and did they get it".
   Submitters see per-listing unlock/claim/dead counts on `/manage`.

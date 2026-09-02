@@ -5,7 +5,7 @@ import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { SITE_URL } from "@/lib/seo";
 import { sendPassAlerts, sendWatchConfirmation } from "@/lib/sendgrid";
-import Watcher from "@/models/Watcher";
+import Watcher, { IWatcher } from "@/models/Watcher";
 
 // The watch list: everything that decides whether an address is on it, and everything that
 // decides whether it receives mail. The routes below this only translate HTTP into these
@@ -40,6 +40,10 @@ export function confirmUrl(value: string): string {
 
 export function stopUrl(value: string): string {
   return `${baseUrl()}/api/watch/stop?token=${value}`;
+}
+
+export function enterUrl(value: string): string {
+  return `${baseUrl()}/api/watch/enter?token=${value}`;
 }
 
 /**
@@ -103,22 +107,56 @@ export async function subscribe(input: {
   return { watching: false };
 }
 
-/** Spends a confirmation token. Clearing it is what makes a replayed link find nothing. */
-export async function confirm(value: string): Promise<boolean> {
+/**
+ * Spends a confirmation token. Clearing it is what makes a replayed link find nothing.
+ * Returns the address so the caller can start its session: clicking the link proved the
+ * mailbox, which is exactly what a magic link proves, and the list is the door.
+ */
+export async function confirm(value: string): Promise<{ email: string } | null> {
   await dbConnect();
   const cutoff = new Date(Date.now() - CONFIRM_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const watcher = await Watcher.findOneAndUpdate(
     { confirmToken: value, confirmSentAt: { $gte: cutoff } },
     // Clearing stoppedAt too: confirming is an unambiguous "yes", so it revives a row that
     // someone stopped and then signed up for again.
-    { $set: { confirmedAt: new Date() }, $unset: { confirmToken: "", stoppedAt: "" } }
+    { $set: { confirmedAt: new Date() }, $unset: { confirmToken: "", stoppedAt: "" } },
+    { returnDocument: "after" }
   );
   if (!watcher) {
     logEvent("watch_confirm_rejected");
-    return false;
+    return null;
   }
   logEvent("watch_confirmed", { via: "email" });
-  return true;
+  return { email: watcher.email };
+}
+
+/** The link in an alert email: an active address gets its session and lands on the board. */
+export async function enter(value: string): Promise<{ email: string } | null> {
+  await dbConnect();
+  const watcher = await Watcher.findOne({
+    enterToken: value,
+    confirmedAt: { $exists: true },
+    stoppedAt: { $exists: false },
+  });
+  if (!watcher) {
+    logEvent("watch_enter_rejected");
+    return null;
+  }
+  logEvent("watch_entered");
+  return { email: watcher.email };
+}
+
+// Rows from before the enter link existed have no token; mint one the first time they are
+// about to be mailed, so every alert carries a working door.
+async function ensureEnterTokens(watchers: IWatcher[]): Promise<void> {
+  const missing = watchers.filter((watcher) => !watcher.enterToken);
+  if (missing.length === 0) return;
+  for (const watcher of missing) watcher.enterToken = token();
+  await Watcher.bulkWrite(
+    missing.map((watcher) => ({
+      updateOne: { filter: { _id: watcher._id }, update: { $set: { enterToken: watcher.enterToken } } },
+    }))
+  );
 }
 
 /**
@@ -168,11 +206,13 @@ export async function notifyWatchers(): Promise<number> {
       $or: [{ lastNotifiedAt: { $exists: false } }, { lastNotifiedAt: { $lt: cutoff } }],
     }).limit(MAX_ALERT_RECIPIENTS);
     if (watchers.length === 0) return 0;
+    await ensureEnterTokens(watchers);
 
     const delivered = new Set(
       await sendPassAlerts(
         watchers.map((watcher) => ({
           email: watcher.email,
+          enterUrl: enterUrl(watcher.enterToken!),
           stopUrl: stopUrl(watcher.stopToken),
         })),
         watchers.length

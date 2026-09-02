@@ -145,7 +145,7 @@ export default async function Home({
           ) : (
             <Board
               passes={passes}
-              signedIn={Boolean(user)}
+              onList={watching}
               maxClaims={MAX_CLAIMS_PER_PASS}
               dailyCap={UNLOCKS_PER_USER_PER_DAY}
             />

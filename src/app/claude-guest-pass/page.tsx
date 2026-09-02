@@ -165,11 +165,11 @@ export default function GuestPassPage() {
           costs them nothing.
         </li>
         <li>
-          <strong>Claim one from this board.</strong> Sign in, unlock a pass,
-          open the link on claude.ai. Signing in is what keeps bots from
-          scraping every link the minute it is posted, and the report-back
-          button is what retires spent links instead of leaving them to waste
-          the next person&rsquo;s time.{" "}
+          <strong>Claim one from this board.</strong> Join the list, unlock a
+          pass when one is listed, open the link on claude.ai. The list is
+          what keeps bots from scraping every link the minute it is posted,
+          and the report-back button is what retires spent links instead of
+          leaving them to waste the next person&rsquo;s time.{" "}
           <Link className="text-accent-dark underline" href="/">
             See what&rsquo;s available now
           </Link>

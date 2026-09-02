@@ -15,6 +15,10 @@ export interface IWatcher extends Document {
   confirmSentAt?: Date;
   confirmedAt?: Date;
   stopToken: string;
+  // Rides in the alert email as the link that both signs the address in and lands on the
+  // board. Separate from stopToken on purpose: a stop link must stay harmless if it leaks,
+  // and a link that starts a session is not harmless.
+  enterToken?: string;
   lastNotifiedAt?: Date;
   notifyCount: number;
   stoppedAt?: Date;
@@ -37,6 +41,7 @@ const WatcherSchema = new Schema<IWatcher>(
     // Long-lived on purpose: it rides in every alert as the one-click way out, so it has to
     // keep working months after it was issued.
     stopToken: { type: String, required: true, unique: true },
+    enterToken: { type: String, unique: true, sparse: true },
     lastNotifiedAt: { type: Date },
     notifyCount: { type: Number, default: 0 },
     // Soft delete. Keeping the row keeps the stop link idempotent and lets a returning

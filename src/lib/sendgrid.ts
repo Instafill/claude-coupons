@@ -138,6 +138,7 @@ export async function sendWatchConfirmation(email: string, confirmUrl: string): 
 
 export interface AlertRecipient {
   email: string;
+  enterUrl: string;
   stopUrl: string;
 }
 
@@ -154,7 +155,7 @@ const MAX_ALERT_BATCH = 25;
 export async function sendPassAlerts(recipients: AlertRecipient[], waiting: number): Promise<string[]> {
   if (!process.env.SENDGRID_API_KEY) {
     for (const recipient of recipients) {
-      console.log(`[pass-alert] ${recipient.email}: stop ${recipient.stopUrl}`);
+      console.log(`[pass-alert] ${recipient.email}: enter ${recipient.enterUrl} stop ${recipient.stopUrl}`);
     }
     return recipients.map((recipient) => recipient.email);
   }
@@ -174,11 +175,11 @@ export async function sendPassAlerts(recipients: AlertRecipient[], waiting: numb
   return delivered;
 }
 
-function sendOneAlert({ email, stopUrl }: AlertRecipient, waiting: number): Promise<unknown> {
+function sendOneAlert({ email, enterUrl, stopUrl }: AlertRecipient, waiting: number): Promise<unknown> {
   // The count is the honest form of urgency: it is how many people are opening this at the
   // same moment, and passes are gone once three of them get through.
   const crowd = waiting > 1 ? `${waiting} people got this email at the same moment. ` : "";
-  const rule = "First to sign in and unlock gets it. Three claims and it is finished.";
+  const rule = "First to unlock gets it. Three claims and it is finished.";
   return sgMail.send({
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
@@ -189,15 +190,15 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient, waiting: number): Prom
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `A Claude pass is on the board.\n\nhttps://claudecoupons.com/\n\n${crowd}${rule} Miss it and you stay on the list for the next one.\n\nStop these emails: ${stopUrl}`,
+    text: `A Claude pass is on the board.\n\nUnlock it: ${enterUrl}\n\n${crowd}${rule} The link above opens the board with you already signed in. Miss it and you stay on the list for the next one.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
         <h2 style="color: #c9642f;">A Claude pass is on the board</h2>
         <p>${crowd}${rule}</p>
         <p style="margin: 24px 0;">
-          <a href="https://claudecoupons.com/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
+          <a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Unlock it</a>
         </p>
-        <p style="color: #6e6a63; font-size: 14px;">Miss it and you stay on the list for the next one.</p>
+        <p style="color: #6e6a63; font-size: 14px;">The button opens the board with you already signed in. Miss it and you stay on the list for the next one.</p>
         <p style="color: #6e6a63; font-size: 13px;">
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
         </p>

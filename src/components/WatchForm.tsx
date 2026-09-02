@@ -1,6 +1,7 @@
 "use client";
 
 import { track } from "@vercel/analytics";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 // The email capture on the empty board. Follows SignInForm: a plain fetch, state in place,
@@ -17,6 +18,7 @@ export default function WatchForm({
 }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,6 +33,8 @@ export default function WatchForm({
       const data = await response.json().catch(() => ({}));
       track("watch_requested", { signedIn });
       setState(data.watching ? "watching" : "sent");
+      // A pre-verified address is on the list now, so the board's unlock button is live.
+      if (data.watching) router.refresh();
     } else {
       const data = await response.json().catch(() => ({}));
       setError(data.error || "Could not save that. Try again.");

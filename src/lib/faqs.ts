@@ -19,7 +19,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do I redeem a Claude coupon?",
-    a: "Sign in here, unlock a pass to reveal its claude.ai invite link, then open it. You redeem the pass on claude.ai itself by creating your account there - nothing is entered on this site. Afterwards, tell us whether it worked so the board stays accurate.",
+    a: "Join the list on the home page and confirm your email - that is the only door, and confirming signs you in. When a pass is on the board, unlock it to reveal its claude.ai invite link, then open it. You redeem the pass on claude.ai itself by creating your account there; nothing is entered on this site. Afterwards, tell us whether it worked so the board stays accurate.",
   },
   {
     q: "Are Claude Code passes really free?",
@@ -34,8 +34,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "No - Groupon does not sell Claude subscriptions, and searches for a Claude Groupon are usually after a Claude coupon. Anthropic sells Claude Pro only at its own price, so a shared guest pass is the only free week available.",
   },
   {
-    q: "Why do I have to sign in to see a pass link?",
-    a: "Two reasons: it stops bots from scraping every link the moment it is listed, and it lets us log who unlocked each pass so exhausted links get retired quickly. One click with Google, or one email - no password to invent.",
+    q: "Why do I have to be on the list to see a pass link?",
+    a: "Because the list is the whole mechanism. Everyone on it gets the same email at the same moment when a pass is listed, and only people on it can unlock - that keeps bots from scraping every link the minute it is posted, and lets us log who unlocked each pass so spent links are retired quickly. Joining takes an email and one click on the confirmation; that click is also your sign-in.",
   },
   {
     q: "How do I share my own Claude Code passes?",

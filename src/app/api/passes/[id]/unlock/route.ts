@@ -11,16 +11,24 @@ import {
   passUrl,
   recordUnlock,
 } from "@/lib/passes";
+import { isWatching } from "@/lib/watchers";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 import Unlock from "@/models/Unlock";
 
-// Behind the signup wall, so every unlock lands in the log with a user attached.
+// Behind the list, not just a login: the session says who, the list says they played by
+// the rules. A confirmed address is a session already (the confirm link starts one), so a
+// person on the list never sees a sign-in screen; a person who is not on it gets told the
+// one thing that will let them in.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Join the list to unlock.", reason: "join" }, { status: 401 });
+  if (!(await isWatching(user.email))) {
+    logEvent("unlock_rejected", { reason: "not_on_list", user: user.id });
+    return NextResponse.json({ error: "Join the list to unlock.", reason: "join" }, { status: 403 });
+  }
 
   const { id } = await params;
   if (!Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Not found." }, { status: 404 });
