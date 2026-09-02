@@ -152,7 +152,11 @@ const MAX_ALERT_BATCH = 25;
 //
 // Returns the addresses that were actually accepted, so the caller only marks those as
 // notified and a failed send is retried on the next refill instead of being lost.
-export async function sendPassAlerts(recipients: AlertRecipient[], waiting: number): Promise<string[]> {
+export async function sendPassAlerts(
+  recipients: AlertRecipient[],
+  waiting: number,
+  wave: number
+): Promise<string[]> {
   if (!process.env.SENDGRID_API_KEY) {
     for (const recipient of recipients) {
       console.log(`[pass-alert] ${recipient.email}: enter ${recipient.enterUrl} stop ${recipient.stopUrl}`);
@@ -165,7 +169,7 @@ export async function sendPassAlerts(recipients: AlertRecipient[], waiting: numb
 
   for (let i = 0; i < recipients.length; i += MAX_ALERT_BATCH) {
     const chunk = recipients.slice(i, i + MAX_ALERT_BATCH);
-    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r, waiting)));
+    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r, waiting, wave)));
     results.forEach((result, index) => {
       if (result.status === "fulfilled") delivered.push(chunk[index].email);
       else console.error("Pass alert send failed:", result.reason);
@@ -175,30 +179,37 @@ export async function sendPassAlerts(recipients: AlertRecipient[], waiting: numb
   return delivered;
 }
 
-function sendOneAlert({ email, enterUrl, stopUrl }: AlertRecipient, waiting: number): Promise<unknown> {
-  // The count is the honest form of urgency: it is how many people are opening this at the
-  // same moment, and passes are gone once three of them get through.
-  const crowd = waiting > 1 ? `${waiting} people got this email at the same moment. ` : "";
-  const rule = "First to unlock gets it. Three claims and it is finished.";
+function sendOneAlert(
+  { email, enterUrl, stopUrl }: AlertRecipient,
+  waiting: number,
+  wave: number
+): Promise<unknown> {
+  // Honest urgency: this went to your wave only, and the wave behind you is minutes away.
+  const crowd = `Wave ${wave}: you and ${waiting - 1} other${waiting === 2 ? "" : "s"} at the front of the queue.`;
+  const rule = "Three unlocks and the pass is finished. The next wave opens in five minutes.";
   return sgMail.send({
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
-    subject: "A Claude guest pass is on the board",
+    subject: `Your turn: a Claude pass is on the board`,
     // One-click unsubscribe. The POST variant is what Gmail's own "unsubscribe" button
     // calls; the mailto-free header list is what marks this as bulk mail honestly.
     headers: {
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `A Claude pass is on the board.\n\nUnlock it: ${enterUrl}\n\n${crowd}${rule} The link above opens the board with you already signed in. Miss it and you stay on the list for the next one.\n\nStop these emails: ${stopUrl}`,
+    text: `It is your turn. A Claude pass is on the board.\n\nUnlock it: ${enterUrl}\n\n${crowd} ${rule} The link above opens the board with you already signed in. Let it go and you keep your place for the next pass; let three go and your number moves to the back.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
-        <h2 style="color: #c9642f;">A Claude pass is on the board</h2>
-        <p>${crowd}${rule}</p>
+        <h2 style="color: #c9642f;">It is your turn</h2>
+        <p>A Claude pass is on the board. ${crowd}</p>
+        <p>${rule}</p>
         <p style="margin: 24px 0;">
           <a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Unlock it</a>
         </p>
-        <p style="color: #6e6a63; font-size: 14px;">The button opens the board with you already signed in. Miss it and you stay on the list for the next one.</p>
+        <p style="color: #6e6a63; font-size: 14px;">
+          The button opens the board with you already signed in. Let this one go and you keep your place for
+          the next pass; let three go and your number moves to the back.
+        </p>
         <p style="color: #6e6a63; font-size: 13px;">
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
         </p>

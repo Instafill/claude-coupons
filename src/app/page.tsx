@@ -8,13 +8,8 @@ import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { FAQS } from "@/lib/faqs";
-import {
-  MAX_CLAIMS_PER_PASS,
-  UNLOCKS_PER_USER_PER_DAY,
-  claimSpeed,
-  getBoard,
-} from "@/lib/passes";
-import { countWaiting, isWatching } from "@/lib/watchers";
+import { UNLOCKS_PER_PASS, claimSpeed, getBoard } from "@/lib/passes";
+import { queueSize, servedThisWeek, standingFor, waveForNewcomer } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -67,12 +62,14 @@ export default async function Home({
 }) {
   const { watch } = await searchParams;
   const user = await getUser();
-  // The list card's numbers all come from here. Nothing on it is a constant.
-  const [passes, waiting, speed, watching] = await Promise.all([
+  // Every number the card shows comes from here. Nothing on it is a constant.
+  const [passes, inLine, joinWave, served, speed, standing] = await Promise.all([
     getBoard(user?.id ?? null),
-    countWaiting(),
+    queueSize(),
+    waveForNewcomer(),
+    servedThisWeek(),
     claimSpeed(),
-    user ? isWatching(user.email) : Promise.resolve(false),
+    user ? standingFor(user.email) : Promise.resolve(null),
   ]);
 
   const schema = [
@@ -113,8 +110,9 @@ export default async function Home({
         {/* The promise and the rule of the board in four short sentences. */}
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
           A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
-          Subscribers list their spare passes here. Each one is gone within minutes. You will not
-          catch one by refreshing - the list catches it for you.
+          Subscribers list their spare passes here, and each one goes to the queue: the first ten
+          in line get it, then ten more every five minutes. Take a number and it only gets better
+          as the people ahead of you are served.
         </p>
       </section>
 
@@ -124,11 +122,14 @@ export default async function Home({
       <div className="mt-8">
         <PassListCard
           livePasses={passes.length}
-          waiting={waiting}
+          inLine={inLine}
+          joinWave={joinWave}
+          served={served}
+          standing={standing}
+          openWave={passes[0]?.openWave ?? 0}
           speed={speed}
           signedIn={Boolean(user)}
           email={user?.email}
-          watching={watching}
           confirmed={watch === "confirmed"}
         />
       </div>
@@ -145,9 +146,8 @@ export default async function Home({
           ) : (
             <Board
               passes={passes}
-              onList={watching}
-              maxClaims={MAX_CLAIMS_PER_PASS}
-              dailyCap={UNLOCKS_PER_USER_PER_DAY}
+              myWave={standing?.wave ?? null}
+              unlocksPerPass={UNLOCKS_PER_PASS}
             />
           )}
         </section>

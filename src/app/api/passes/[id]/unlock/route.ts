@@ -11,23 +11,20 @@ import {
   passUrl,
   recordUnlock,
 } from "@/lib/passes";
-import { isWatching } from "@/lib/watchers";
+import { leaveQueue, mayUnlock } from "@/lib/queue";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 import Unlock from "@/models/Unlock";
 
-// Behind the list, not just a login: the session says who, the list says they played by
-// the rules. A confirmed address is a session already (the confirm link starts one), so a
-// person on the list never sees a sign-in screen; a person who is not on it gets told the
-// one thing that will let them in.
+// The queue is the gate. A session says who you are; your place in line says whether the
+// pass has been offered to you yet. Both have to hold, and a person whose turn has not
+// come is told when it will rather than being let through.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUser();
-  if (!user) return NextResponse.json({ error: "Join the list to unlock.", reason: "join" }, { status: 401 });
-  if (!(await isWatching(user.email))) {
-    logEvent("unlock_rejected", { reason: "not_on_list", user: user.id });
-    return NextResponse.json({ error: "Join the list to unlock.", reason: "join" }, { status: 403 });
+  if (!user) {
+    return NextResponse.json({ error: "Take a number to unlock.", reason: "join" }, { status: 401 });
   }
 
   const { id } = await params;
@@ -38,6 +35,22 @@ export async function POST(
   if (!pass || pass.status !== PASS_STATUS.live) {
     logEvent("unlock_rejected", { reason: "gone", user: user.id });
     return NextResponse.json({ error: "This pass is no longer available." }, { status: 404 });
+  }
+
+  const { ok, standing } = await mayUnlock(user.email, pass);
+  if (!standing) {
+    logEvent("unlock_rejected", { reason: "no_number", user: user.id });
+    return NextResponse.json({ error: "Take a number to unlock.", reason: "join" }, { status: 403 });
+  }
+  if (!ok) {
+    logEvent("unlock_rejected", { reason: "wave_closed", user: user.id, wave: standing.wave });
+    return NextResponse.json(
+      {
+        error: `Wave ${standing.wave} hasn't opened yet. A new wave opens every five minutes.`,
+        reason: "wave",
+      },
+      { status: 403 }
+    );
   }
 
   const already = await Unlock.findOne({
@@ -58,7 +71,9 @@ export async function POST(
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     request.headers.get("x-real-ip");
   await recordUnlock(id, user.id, hashIp(ip));
-  logEvent("pass_unlocked", { pass: id, user: user.id });
+  // Their turn is spent: out of the queue, and everyone behind them moves up one.
+  await leaveQueue(user.email);
+  logEvent("pass_unlocked", { pass: id, user: user.id, wave: standing.wave });
 
   return NextResponse.json({ url: passUrl(pass.code), code: pass.code });
 }

@@ -28,9 +28,19 @@ drives the lifecycle.
 
 ## How it works
 
-- **The list is the only door** (`lib/watchers.ts`, `api/passes/[id]/unlock`): unlocking a
-  pass requires a session *and* a confirmed, active place on the watch list; a session on its
-  own gets `403 join`. Confirming the watch link starts the session (`api/watch/confirm`),
+- **The queue** (`lib/queue.ts`): confirming hands out a number from an atomic counter
+  (`models/Counter.ts`); numbers are never reused. A listed pass is offered to the first
+  `WAVE_SIZE` (10) people, then ten more every `WAVE_MINUTES` (5), until `UNLOCKS_PER_PASS`
+  (3) unlocks retire it. Rank is recomputed from *active* members, so the line shortens as
+  people are served. Unlocking sets `leftQueueAt` (their turn is spent); a "didn't work"
+  report puts them back at the end; three offers ignored reissues the number at the back,
+  evaluated when the next pass is listed so it never lands mid-offer. Waves advance lazily
+  from `POST /api/waves`, which the open board polls every 30s - wave 1's recipients are the
+  ones who turn the clock for the waves behind them. The lifecycle keys on **unlocks, never
+  claims**: whether a link was redeemed on claude.ai is invisible to this server.
+- **The queue is the only door** (`api/passes/[id]/unlock`): unlocking needs a session *and*
+  a number whose wave has opened; a session on its own gets `403 join`, a number too far back
+  gets `403 wave`. Confirming the watch link starts the session (`api/watch/confirm`),
   and the alert email's button carries a long-lived `enterToken` (`api/watch/enter`) that
   signs the address in on any device and lands on the board - no sign-in screen between the
   email and the pass. `stopToken` stays separate so a leaked stop link remains harmless.

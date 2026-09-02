@@ -4,7 +4,7 @@ import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
-import { MAX_CLAIMS_PER_PASS } from "@/lib/passes";
+import { UNLOCKS_PER_PASS } from "@/lib/passes";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +82,7 @@ export default async function ManagePage() {
             </table>
           </div>
           <p className="mt-4 text-sm text-muted">
-            A listing hides itself after {MAX_CLAIMS_PER_PASS} reported claims, after repeated
+            A listing hides itself after {UNLOCKS_PER_PASS} unlocks, after repeated
             &ldquo;didn&rsquo;t work&rdquo; reports, or 21 days on the board. Still have passes
             on a link that stopped showing?{" "}
             <a className="text-accent-dark underline" href="/submit">

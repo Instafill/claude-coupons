@@ -14,8 +14,8 @@ import {
   hashIp,
   parseOfficialReferralUrl,
 } from "@/lib/passes";
+import { advanceWaves, demoteNoShows } from "@/lib/queue";
 import { notifyNewPass } from "@/lib/sendgrid";
-import { notifyWatchers } from "@/lib/watchers";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 import RejectedSubmission from "@/models/RejectedSubmission";
 
@@ -93,11 +93,6 @@ export async function submitPass(
   }
 
   await dbConnect();
-  // Read before the write, not after. Two people listing to an empty board at the same
-  // moment then both see zero and both try to alert, and the per-address cooldown in
-  // notifyWatchers collapses that to one email. Reading afterwards would let the same race
-  // show each of them a count of two and send nothing at all, which is the worse failure.
-  const wasEmpty = (await countLivePasses()) === 0;
   const submitterUserId = user ? new Types.ObjectId(user.id) : undefined;
   const existing = await Pass.findOne({ code });
 
@@ -115,16 +110,20 @@ export async function submitPass(
       return { error: "This pass link is already on the board." };
     }
     // Back on the board, with the expiry clock and the dead-report count reset - the
-    // claims it already served still stand against the sender's allotment.
+    // unlocks it already served still stand against the sender's allotment. The wave clock
+    // restarts too, so a relisted pass is offered from the front of the queue again.
     existing.status = PASS_STATUS.live;
     existing.lastRefreshedAt = new Date();
+    existing.waveStartedAt = new Date();
+    existing.wavesNotified = 0;
+    existing.waveCursor = 0;
     existing.deadCount = 0;
     await existing.save();
     logEvent("pass_relisted", {
       pass: existing._id.toString(),
       user: user?.id || "anonymous",
     });
-    await notify(code, user, "back on the board", wasEmpty);
+    await notify(code, user, "back on the board");
   } else {
     if (!user) {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -144,7 +143,7 @@ export async function submitPass(
       pass: created._id.toString(),
       user: user?.id || "anonymous",
     });
-    await notify(code, user, "listed", wasEmpty);
+    await notify(code, user, "listed");
   }
 
   revalidatePath("/");
@@ -154,13 +153,12 @@ export async function submitPass(
 }
 
 // Awaited rather than fired and forgotten: a serverless function can be frozen the moment
-// it responds, which would drop a pending send. Both calls swallow their own failures, so
+// it responds, which would drop a pending send. Every call swallows its own failures, so
 // this can never cost the submitter their listing.
 async function notify(
   code: string,
   user: { email: string; name?: string } | null,
-  what: string,
-  wasEmpty: boolean
+  what: string
 ): Promise<void> {
   const livePasses = await countLivePasses();
   await notifyNewPass({
@@ -170,8 +168,8 @@ async function notify(
     livePasses,
   });
 
-  // The watch list hears only about the empty-to-not-empty transition. Someone signed up
-  // because there was nothing to claim, so a listing that joins passes already on the board
-  // is not news to them - it is just mail.
-  if (wasEmpty) await notifyWatchers();
+  // Numbers first, then the offer: anyone who has let three turns go by is moved to the
+  // back before wave 1 is drawn, so a demotion never lands underneath a live offer.
+  await demoteNoShows();
+  await advanceWaves();
 }

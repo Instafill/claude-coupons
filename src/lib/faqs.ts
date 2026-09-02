@@ -19,7 +19,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do I redeem a Claude coupon?",
-    a: "Join the list on the home page and confirm your email - that is the only door, and confirming signs you in. When a pass is on the board, unlock it to reveal its claude.ai invite link, then open it. You redeem the pass on claude.ai itself by creating your account there; nothing is entered on this site. Afterwards, tell us whether it worked so the board stays accurate.",
+    a: "Take a number on the home page: leave your email and confirm it once, which is also your sign-in. When a pass is listed it is offered to the first ten in the queue, then ten more every five minutes. When your wave opens, unlock the pass to reveal its claude.ai invite link and open it. You redeem it on claude.ai itself by creating your account there; nothing is entered on this site.",
   },
   {
     q: "Are Claude Code passes really free?",
@@ -34,8 +34,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "No - Groupon does not sell Claude subscriptions, and searches for a Claude Groupon are usually after a Claude coupon. Anthropic sells Claude Pro only at its own price, so a shared guest pass is the only free week available.",
   },
   {
-    q: "Why do I have to be on the list to see a pass link?",
-    a: "Because the list is the whole mechanism. Everyone on it gets the same email at the same moment when a pass is listed, and only people on it can unlock - that keeps bots from scraping every link the minute it is posted, and lets us log who unlocked each pass so spent links are retired quickly. Joining takes an email and one click on the confirmation; that click is also your sign-in.",
+    q: "How does the queue work?",
+    a: "You get a number when you confirm your email, and numbers are never reused. A new pass is offered to the first ten people in the queue; five minutes later to the next ten, and so on until three people have unlocked it and it comes off the board. Unlock one and you leave the queue, so everyone behind you moves up. Let three turns go by without unlocking and your number moves to the back, which keeps a sleeping front row from holding up the people behind it.",
   },
   {
     q: "How do I share my own Claude Code passes?",

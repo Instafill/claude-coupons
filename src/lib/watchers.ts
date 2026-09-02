@@ -4,8 +4,8 @@ import { Types } from "mongoose";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { SITE_URL } from "@/lib/seo";
-import { sendPassAlerts, sendWatchConfirmation } from "@/lib/sendgrid";
-import Watcher, { IWatcher } from "@/models/Watcher";
+import { sendWatchConfirmation } from "@/lib/sendgrid";
+import Watcher from "@/models/Watcher";
 
 // The watch list: everything that decides whether an address is on it, and everything that
 // decides whether it receives mail. The routes below this only translate HTTP into these
@@ -20,10 +20,6 @@ const CONFIRM_WINDOW_DAYS = 7;
 const RESEND_COOLDOWN_MINUTES = 10;
 // Bounds how many strangers one connection can put a confirmation request in front of.
 const CONFIRMATIONS_PER_IP_PER_DAY = 5;
-// The floor between two alerts to the same address, whatever the board does.
-const ALERT_COOLDOWN_HOURS = 12;
-// The fan-out runs inside the submitter's request, so the list has to have a ceiling.
-const MAX_ALERT_RECIPIENTS = 500;
 
 function token(): string {
   return crypto.randomBytes(24).toString("hex");
@@ -80,6 +76,9 @@ export async function subscribe(input: {
     watcher.confirmedAt = now;
     watcher.confirmToken = undefined;
     await watcher.save();
+    // Their place in line is the whole product, so it is handed out the moment they are in.
+    const { takeNumber } = await import("@/lib/queue");
+    if (!watcher.position) await takeNumber(watcher._id as Types.ObjectId);
     logEvent("watch_confirmed", { via: "session" });
     return { watching: true };
   }
@@ -126,6 +125,8 @@ export async function confirm(value: string): Promise<{ email: string } | null> 
     logEvent("watch_confirm_rejected");
     return null;
   }
+  const { takeNumber } = await import("@/lib/queue");
+  if (!watcher.position) await takeNumber(watcher._id as Types.ObjectId);
   logEvent("watch_confirmed", { via: "email" });
   return { email: watcher.email };
 }
@@ -144,19 +145,6 @@ export async function enter(value: string): Promise<{ email: string } | null> {
   }
   logEvent("watch_entered");
   return { email: watcher.email };
-}
-
-// Rows from before the enter link existed have no token; mint one the first time they are
-// about to be mailed, so every alert carries a working door.
-async function ensureEnterTokens(watchers: IWatcher[]): Promise<void> {
-  const missing = watchers.filter((watcher) => !watcher.enterToken);
-  if (missing.length === 0) return;
-  for (const watcher of missing) watcher.enterToken = token();
-  await Watcher.bulkWrite(
-    missing.map((watcher) => ({
-      updateOne: { filter: { _id: watcher._id }, update: { $set: { enterToken: watcher.enterToken } } },
-    }))
-  );
 }
 
 /**
@@ -180,59 +168,10 @@ export async function countWaiting(): Promise<number> {
   return Watcher.countDocuments({ confirmedAt: { $exists: true }, stoppedAt: { $exists: false } });
 }
 
-/** Whether one address is on the list, for a signed-in visitor who already joined. */
+/** Whether one address is on the list at all, served or still waiting. */
 export async function isWatching(email: string): Promise<boolean> {
   await dbConnect();
   return Boolean(
     await Watcher.exists({ email: email.toLowerCase(), confirmedAt: { $exists: true }, stoppedAt: { $exists: false } })
   );
-}
-
-/**
- * Tells the list the board has passes again. Called only on the empty-to-not-empty
- * transition, which is the event people signed up for; the per-address cooldown is the
- * second guard, in case that transition happens twice in a day.
- *
- * Swallows its own failures for the same reason notifyNewPass does: a mail problem must
- * never cost the submitter their listing.
- */
-export async function notifyWatchers(): Promise<number> {
-  try {
-    await dbConnect();
-    const cutoff = new Date(Date.now() - ALERT_COOLDOWN_HOURS * 60 * 60 * 1000);
-    const watchers = await Watcher.find({
-      confirmedAt: { $exists: true },
-      stoppedAt: { $exists: false },
-      $or: [{ lastNotifiedAt: { $exists: false } }, { lastNotifiedAt: { $lt: cutoff } }],
-    }).limit(MAX_ALERT_RECIPIENTS);
-    if (watchers.length === 0) return 0;
-    await ensureEnterTokens(watchers);
-
-    const delivered = new Set(
-      await sendPassAlerts(
-        watchers.map((watcher) => ({
-          email: watcher.email,
-          enterUrl: enterUrl(watcher.enterToken!),
-          stopUrl: stopUrl(watcher.stopToken),
-        })),
-        watchers.length
-      )
-    );
-
-    // Only what actually went out is marked sent, so a failed send is retried on the next
-    // refill rather than quietly counted as delivered.
-    const sent = watchers.filter((watcher) => delivered.has(watcher.email));
-    await Watcher.updateMany(
-      { _id: { $in: sent.map((watcher) => watcher._id) } },
-      { $set: { lastNotifiedAt: new Date() }, $inc: { notifyCount: 1 } }
-    );
-    logEvent("watch_alerts_sent", {
-      recipients: sent.length,
-      failed: watchers.length - sent.length,
-    });
-    return sent.length;
-  } catch (error) {
-    console.error("Watcher fan-out failed:", error);
-    return 0;
-  }
 }

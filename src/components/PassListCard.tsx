@@ -1,62 +1,69 @@
 import WatchForm from "@/components/WatchForm";
 import type { ClaimSpeed } from "@/lib/passes";
+import type { Standing } from "@/lib/queue";
 
-// The first screen's one ask, and the rules of the board, stated once and short. Passes
-// are gone within minutes of being listed, so the list is how anyone gets one; this card
-// says so and asks for the email before the board does its proving underneath. Every
-// number here was read from the database by the page; a line with no data is left out.
-
-// Under this many, the count is a reason to leave rather than to join.
-const SHOW_COUNT_FROM = 10;
+// The first screen: your place in the queue, the rules that decide it, and the form. A
+// queue, not a scramble - the number of people ahead of you is the reason to join now
+// rather than the reason to give up, because every one of them joined before you did and
+// nobody behind you can get in front. Every figure here was read from the database.
 
 export default function PassListCard({
   livePasses,
-  waiting,
+  inLine,
+  joinWave,
+  served,
+  standing,
+  openWave,
   speed,
   signedIn,
   email,
-  watching,
   confirmed,
 }: {
   livePasses: number;
-  waiting: number;
+  inLine: number;
+  joinWave: number;
+  served: number;
+  standing: Standing | null;
+  openWave: number;
   speed: ClaimSpeed | null;
   signedIn: boolean;
   email?: string;
-  watching: boolean;
   confirmed: boolean;
 }) {
-  const showCount = waiting >= SHOW_COUNT_FROM;
+  const myTurn = standing !== null && openWave > 0 && standing.wave <= openWave;
 
   let heading: string;
   let body: string;
-  if (livePasses > 0 && watching) {
-    heading = `${livePasses} ${livePasses === 1 ? "pass is" : "passes are"} live. Unlock now or lose it.`;
-    body = "You're on the list. The unlock button is below; use it before someone else does.";
+  if (standing && livePasses > 0 && myTurn) {
+    heading = "Your turn. Unlock it now.";
+    body = `Wave ${openWave} is open and you are in wave ${standing.wave}. The button is below.`;
+  } else if (standing && livePasses > 0) {
+    heading = `You are wave ${standing.wave}. Wave ${openWave} is unlocking now.`;
+    body = "A new wave opens every five minutes while the pass lasts. Stay on this page.";
+  } else if (standing) {
+    heading = `You are wave ${standing.wave} in the queue.`;
+    body = `${standing.ahead} ${standing.ahead === 1 ? "person is" : "people are"} ahead of you. The next pass goes to wave 1 first, then a wave every five minutes.`;
   } else if (livePasses > 0) {
-    heading = `${livePasses} ${livePasses === 1 ? "pass is" : "passes are"} live. Join the list to unlock.`;
-    body = `Email, one click in the confirmation, and the unlock button is yours. It takes a minute; the pass may not wait that long${showCount ? `. ${waiting} people are already in` : ""}.`;
-  } else if (showCount) {
-    heading = `No passes. ${waiting} people are waiting for the next one.`;
-    body = "Join them. The email goes to everyone at the same moment; refreshing this page gets you nothing.";
+    heading = `A pass is live. Join and you are wave ${joinWave}.`;
+    body = "Waves open five minutes apart, so a queue this short can still reach you. Every person who joins before you pushes you further back.";
   } else {
-    heading = "No passes. The list gets the next one first.";
-    body = "Join it. When a pass is listed, the email goes out the same minute; refreshing this page gets you nothing.";
+    heading = `Take a number. You would be wave ${joinWave}.`;
+    body = `${inLine} ${inLine === 1 ? "person is" : "people are"} in the queue. Numbers are handed out in order and never reused, so the only way your place gets better is joining now.`;
   }
 
   const rules: string[] = [
-    "The list is the only door. Not on it, no unlock.",
-    "Join with an email and confirm it once. Confirming signs you in; there is no other sign-in step.",
-    "When a pass lands on an empty board, everyone on the list gets one email at the same moment.",
-    "First to open the email and unlock gets the pass. Three claims and a pass is finished.",
-    "Miss it and you stay on the list. Next email at the next pass, never more than one per 12 hours. Nothing else is ever sent; one click stops it.",
+    "Join with an email and confirm it once. That confirmation is your number, and your sign-in.",
+    "A new pass goes to the first 10 in the queue. Five minutes later the next 10, and so on.",
+    "Three unlocks and the pass is finished, so the front of the queue usually takes it.",
+    "Unlock one and you leave the queue - you had your turn. Everyone behind you moves up.",
+    "Let three turns pass without unlocking and your number goes to the back.",
   ];
 
   return (
     <section className="rounded-2xl border border-line bg-surface px-6 py-6">
-      {confirmed && (
+      {confirmed && standing && (
         <p className="mb-4 rounded-lg bg-[#eaf6ef] px-3 py-2 text-sm font-semibold text-good">
-          Confirmed. You&rsquo;re on the list.
+          You&rsquo;re in. Number {standing.position}, wave {standing.wave}.
         </p>
       )}
 
@@ -65,36 +72,50 @@ export default function PassListCard({
 
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="rounded-xl border border-line bg-paper px-5 py-4">
-          <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">The rules</p>
+          <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
+            How the queue works
+          </p>
           <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[14px]">
             {rules.map((rule) => (
               <li key={rule}>{rule}</li>
             ))}
           </ol>
-          {speed && (
+          {(served > 0 || speed) && (
             <p className="mt-3 border-t border-line pt-3 text-[13px] text-muted">
-              The last {speed.sample} passes were unlocked within {speed.medianMinutes} minute
-              {speed.medianMinutes === 1 ? "" : "s"} of being listed (median). That is your window.
+              {served > 0 && (
+                <>
+                  The queue moved {served} {served === 1 ? "place" : "places"} this week.{" "}
+                </>
+              )}
+              {speed && (
+                <>
+                  The last {speed.sample} passes were unlocked within {speed.medianMinutes} minute
+                  {speed.medianMinutes === 1 ? "" : "s"} of being listed.
+                </>
+              )}
             </p>
           )}
         </div>
 
-        <div>
-          {watching || confirmed ? (
+        <div id="join">
+          {standing ? (
             <div className="rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
-              <p className="font-semibold">You&rsquo;re on the list.</p>
+              <p className="font-semibold">
+                Number {standing.position} &middot; wave {standing.wave}
+              </p>
               <p className="mt-1 text-sm">
-                Next pass, you get the email. The button in it opens the board with the unlock
-                already yours to press.
+                {standing.ahead === 0
+                  ? "You are first in line. The next pass is offered to you before anyone else."
+                  : `${standing.ahead} ahead of you. Each one who unlocks a pass leaves the queue and you move up.`}
               </p>
             </div>
           ) : (
-            <div id="join">
+            <>
               <p className="text-[15px] font-semibold">
-                {livePasses > 0 ? "Get in and unlock it." : "Get in."}
+                {livePasses > 0 ? "Take your number now." : "Take a number."}
               </p>
-              <WatchForm signedIn={signedIn} email={email} buttonLabel="Put me on the list" />
-            </div>
+              <WatchForm signedIn={signedIn} email={email} buttonLabel="Give me my number" />
+            </>
           )}
         </div>
       </div>

@@ -5,9 +5,16 @@ import { dbConnect } from "@/lib/mongodb";
 import Pass, { IPass, PASS_STATUS } from "@/models/Pass";
 import Unlock, { IUnlock, UNLOCK_OUTCOME, UnlockOutcome } from "@/models/Unlock";
 
-// A Pro/Max subscriber holds at most this many guest passes, so after this many reported
-// claims the listing cannot have anything left to give.
-export const MAX_CLAIMS_PER_PASS = 3;
+// A Pro/Max subscriber holds at most this many guest passes, so after this many unlocks
+// the listing has nothing left to give. Unlocks, not claims: whether someone redeemed a
+// link on claude.ai is invisible to us and always will be, so the lifecycle turns on the
+// one thing this server actually observes.
+export const UNLOCKS_PER_PASS = 3;
+
+// The queue is offered a pass ten people at a time, five minutes apart. Wave 1 is open the
+// moment a pass is listed; wave 2 five minutes later, and so on until the pass runs out.
+export const WAVE_SIZE = 10;
+export const WAVE_MINUTES = 5;
 const DEAD_REPORTS_TO_HIDE = 2;
 const LISTING_LIFETIME_DAYS = 21;
 
@@ -99,16 +106,32 @@ export interface BoardPass {
   id: string;
   code: string | null; // present only when this viewer has unlocked it
   maskedCode: string;
-  claimedCount: number;
+  unlockCount: number;
   createdAt: string;
   unlockedOutcome: UnlockOutcome | null;
+  /** Waves open on this pass right now. Everyone up to openWave * WAVE_SIZE may unlock. */
+  openWave: number;
+  /** Seconds until the next wave opens, for the countdown on the card. */
+  nextWaveInSeconds: number;
+}
+
+/** How many waves a pass has opened by now. Pure arithmetic on the listing time. */
+export function openWaveCount(waveStartedAt: Date, now: Date = new Date()): number {
+  const elapsed = now.getTime() - waveStartedAt.getTime();
+  return Math.max(1, Math.floor(elapsed / (WAVE_MINUTES * 60 * 1000)) + 1);
+}
+
+export function secondsToNextWave(waveStartedAt: Date, now: Date = new Date()): number {
+  const period = WAVE_MINUTES * 60 * 1000;
+  const elapsed = Math.max(0, now.getTime() - waveStartedAt.getTime());
+  return Math.ceil((period - (elapsed % period)) / 1000);
 }
 
 // The hiding rules, evaluated lazily on read. Writes back only on a transition, so the
 // board self-maintains without a cron job.
 function nextStatus(pass: IPass): string | null {
   if (pass.status !== PASS_STATUS.live) return null;
-  if (pass.claimedCount >= MAX_CLAIMS_PER_PASS) return PASS_STATUS.exhausted;
+  if (pass.unlockCount >= UNLOCKS_PER_PASS) return PASS_STATUS.exhausted;
   if (pass.deadCount >= DEAD_REPORTS_TO_HIDE && pass.deadCount > pass.claimedCount)
     // Hidden either way, but the label matters: "dead" accuses the submitter of listing a
     // broken link. A pass somebody has actually claimed demonstrably worked, so later dead
@@ -142,10 +165,11 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
     : [];
   const mine = new Map(unlocks.map((u) => [u.passId.toString(), u]));
 
+  const now = new Date();
   return live
     .sort(
       (a, b) =>
-        a.claimedCount - b.claimedCount ||
+        a.unlockCount - b.unlockCount ||
         b.createdAt.getTime() - a.createdAt.getTime()
     )
     .map((pass) => {
@@ -154,9 +178,11 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
         id: pass._id.toString(),
         code: unlock ? pass.code : null,
         maskedCode: maskCode(pass.code),
-        claimedCount: pass.claimedCount,
+        unlockCount: pass.unlockCount,
         createdAt: pass.createdAt.toISOString(),
         unlockedOutcome: unlock ? unlock.outcome : null,
+        openWave: openWaveCount(pass.waveStartedAt, now),
+        nextWaveInSeconds: secondsToNextWave(pass.waveStartedAt, now),
       };
     });
 }

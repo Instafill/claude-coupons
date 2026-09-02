@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { recordOutcome } from "@/lib/passes";
+import { rejoinAtBack } from "@/lib/queue";
 
 // The visitor who just tried the link is the only validity check that exists, so this is
 // where "did it work?" is recorded - once per unlock.
@@ -22,6 +23,9 @@ export async function POST(
   await dbConnect();
   const result = String(body.result || "");
   const recorded = await recordOutcome(id, user.id, result);
+  // A spent link is not a turn taken. They go back in the queue - at the end, because the
+  // number they held was given up when they unlocked. Costs a liar nothing worth having.
+  if (recorded && result === "dead") await rejoinAtBack(user.email);
   // The whole lifecycle turns on these answers, so record both the ones that counted and
   // the ones that arrived too late to.
   logEvent(recorded ? "pass_outcome" : "pass_outcome_ignored", {
