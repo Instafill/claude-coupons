@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 
+import { isAdmin } from "@/lib/admin";
 import { getUser } from "@/lib/auth";
 
 import "./globals.css";
@@ -46,6 +47,11 @@ export default async function RootLayout({
             <Link href="/claude-free-trial" className="hover:text-accent-dark">
               Free trial
             </Link>
+            {/* The marketplace hub: every product page links up to it, and it needs the
+                sitewide link so those pages inherit weight from the rest of the site. */}
+            <Link href="/coupons" className="hover:text-accent-dark">
+              Coupons
+            </Link>
             <Link href="/submit" className="hover:text-accent-dark">
               Share a pass
             </Link>
@@ -67,6 +73,14 @@ export default async function RootLayout({
                 <Link href="/manage" className="hover:text-accent-dark">
                   My passes
                 </Link>
+                <Link href="/founders" className="hover:text-accent-dark">
+                  Founders
+                </Link>
+                {isAdmin(user) && (
+                  <Link href="/admin" className="hover:text-accent-dark">
+                    Admin
+                  </Link>
+                )}
                 <form
                   action="/api/auth/signout"
                   method="post"
@@ -109,6 +123,15 @@ export default async function RootLayout({
           <p className="mt-2">
             Not affiliated with or endorsed by Anthropic. Claude is a trademark
             of Anthropic, PBC.
+          </p>
+          <p className="mt-2">
+            <Link className="text-accent-dark underline" href="/coupons">
+              Coupon drops
+            </Link>{" "}
+            for other software come straight from each product&rsquo;s makers.
+            A page marked unofficial was set up here to collect requests and
+            promises no codes until its makers claim it; product names and
+            logos belong to their owners.
           </p>
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             <a

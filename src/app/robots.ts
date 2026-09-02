@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/signin", "/manage", "/watch"],
+      disallow: ["/api/", "/signin", "/manage", "/watch", "/founders", "/admin"],
     },
     sitemap: "https://claudecoupons.com/sitemap.xml",
   };

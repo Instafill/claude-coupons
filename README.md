@@ -51,6 +51,44 @@ drives the lifecycle.
   address, and every message carries a one-click stop link (`List-Unsubscribe`, RFC 8058).
   Rows are soft-deleted on stop, so a stop link stays valid and idempotent.
 
+## Coupon marketplace
+
+Beyond the pass board, any software product can have a page at `/coupons/{slug}` (hub at
+`/coupons`). The mechanic is a threshold-gated drop:
+
+- **Page states**, derived on read (`lib/products.ts`): *Wanted* (nobody from the product
+  has claimed it; the hero says "Not an official page"), *Armed* (claimed), *Live* (a drop
+  has codes left), *Sold out*, and *Archived* (the admin kill switch: 404, out of the
+  sitemap).
+- **Disclosed scarcity.** The drop contract sits above the email box: how many codes, how
+  many people, how winners are chosen, what happens if you miss. Every number on the page
+  is a counter on the `products` row; there is no constant anywhere in the rendering path.
+- **Subscribers** (`lib/subscribers.ts`, `models/Subscriber.ts`) follow the watcher
+  pattern: confirmed opt-in with a 7-day single-use token, a signed-in address is
+  pre-verified, per-IP throttles, disposable domains refused, consent sentence and time
+  stored on the row. Confirmation hands out a place in line from an atomic counter.
+- **Goal** = `baseline + threshold`. Reaching it opens a *pending* drop and emails the
+  owner (or the operator for an unclaimed page). Nothing is sent to the list until a person
+  presses Release on `/founders/{slug}`.
+- **Release** (`lib/drops.ts`) attaches every pooled code to the drop and emails the list,
+  500 per press, marking only delivered rows; pressing again continues and never re-mails.
+- **Claims** (`lib/coupons.ts`) are single-document atomics: one `findOneAndUpdate` on
+  `remaining > 0`, and the unique index on `(dropId, subscriberId)` is the one-code-per-
+  person rule. Identity for a claim is the token in the email link (kept in localStorage)
+  or the session; never a typed address.
+- **Ownership** (`lib/ownership.ts`): a sign-in address on the product's own domain claims
+  the page on the spot; anything else waits for the admin on `/admin`.
+- **Founders see aggregates** and masked addresses only. We do the sending.
+
+Seed pages for products whose makers haven't joined:
+
+```bash
+node --require ./dns-fix.cjs --env-file=.env.local scripts/import-products.mjs data/products.json
+```
+
+Entries need `name`, `websiteUrl`, `tagline` and a `description` of at least 60 words;
+thinner pages are refused. The script also creates every unique index.
+
 ## Run locally
 
 ```bash
@@ -61,7 +99,9 @@ node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our
 
 `.env.local` keys - `MONGODB_URI` (the `claudecoupons` database), `SENDGRID_API_KEY` (omit and
 every email prints to the console instead of sending), `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`.
+`GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`,
+`ADMIN_EMAILS` (comma-separated; unlocks `/admin` and lets those accounts manage every
+product page), `MAIL_POSTAL_ADDRESS` (printed at the foot of bulk mail, CAN-SPAM).
 
 The sender address is pinned in `lib/sendgrid.ts` rather than configurable: it has to stay on
 `claudecoupons.com`, which is the domain SendGrid signs for, or DKIM alignment breaks and

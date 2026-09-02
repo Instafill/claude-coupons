@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import Board from "@/components/Board";
+import ProductCard from "@/components/coupons/ProductCard";
 import EmptyBoard from "@/components/EmptyBoard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
@@ -12,6 +13,7 @@ import {
   UNLOCKS_PER_USER_PER_DAY,
   getBoard,
 } from "@/lib/passes";
+import { listPublished } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,9 @@ const GUEST_PASS_DOC =
 export default async function Home() {
   const user = await getUser();
   const passes = await getBoard(user?.id ?? null);
+  // Up to six product pages, live drops first. The section is the home page's internal
+  // link into the marketplace; a product page with no inbound links ranks for nothing.
+  const products = (await listPublished()).slice(0, 6);
 
   const schema = [
     {
@@ -133,6 +138,27 @@ export default async function Home() {
       </div>
 
       <ShareCta />
+
+      {products.length > 0 && (
+        <section className="mt-14">
+          <h2 className="text-[23px] font-semibold">Coupon drops for other tools</h2>
+          <p className="mt-2 max-w-2xl text-muted">
+            The same idea for any software product: leave an email, the page shows how many
+            people are waiting, and when the makers release codes everyone on the list hears
+            at the same second. Fewer codes than people, first come first served.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((e) => (
+              <ProductCard key={e.product.id} product={e.product} drop={e.drop} state={e.state} />
+            ))}
+          </div>
+          <p className="mt-3 text-[15px]">
+            <Link className="text-accent-dark underline" href="/coupons">
+              All coupon drops
+            </Link>
+          </p>
+        </section>
+      )}
 
       <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
         <h2>What you get with a Claude Code pass</h2>
