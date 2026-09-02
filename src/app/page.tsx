@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import Board from "@/components/Board";
 import EmptyBoard from "@/components/EmptyBoard";
+import PassListCard from "@/components/PassListCard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
@@ -10,8 +11,10 @@ import { FAQS } from "@/lib/faqs";
 import {
   MAX_CLAIMS_PER_PASS,
   UNLOCKS_PER_USER_PER_DAY,
+  claimSpeed,
   getBoard,
 } from "@/lib/passes";
+import { countWaiting, isWatching } from "@/lib/watchers";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +60,20 @@ export const metadata: Metadata = {
 const GUEST_PASS_DOC =
   "https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ watch?: string }>;
+}) {
+  const { watch } = await searchParams;
   const user = await getUser();
-  const passes = await getBoard(user?.id ?? null);
+  // The list card's numbers all come from here. Nothing on it is a constant.
+  const [passes, waiting, speed, watching] = await Promise.all([
+    getBoard(user?.id ?? null),
+    countWaiting(),
+    claimSpeed(),
+    user ? isWatching(user.email) : Promise.resolve(false),
+  ]);
 
   const schema = [
     {
@@ -96,29 +110,40 @@ export default async function Home() {
         <h1 className="text-[38px] leading-tight font-bold">
           Claude Code Passes | Claude.ai Coupons
         </h1>
+        {/* The promise, in the first breath: what a pass is, why the board is usually
+            empty, and that the list is how you actually get one. */}
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
-          A Claude pass gives you <strong>7 days of Claude Pro for free</strong>{" "}
-          - Claude Code and Cowork included. If you subscribe, sharing a pass
-          can give someone who cannot afford Claude Pro the chance to learn,
-          build, and experience what it can do. This board turns spare passes
-          into opportunities instead of letting them expire unused.
+          A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
+          and Cowork included. Subscribers list their spare passes here a few times a week, and
+          each one is unlocked within minutes. The list below is how you hear the moment one is
+          listed, before it is gone.
         </p>
       </section>
 
-      {/* Both sides of the exchange get the first screen: claimers on the left, the
-          subscribers who supply the passes on the right. */}
-      {/* Keep each panel at its natural height. The pass list can grow independently without
-          stretching the contributor card and leaving a large empty gap inside it. */}
-      <div className="mt-9 grid items-start gap-8 lg:grid-cols-2">
+      {/* The list is the ask; the board under it is the proof. When the board has passes
+          that shows the list works, and when it is empty the card says why joining is the
+          only move - so the card comes first in both cases. */}
+      <div className="mt-8">
+        <PassListCard
+          livePasses={passes.length}
+          waiting={waiting}
+          speed={speed}
+          signedIn={Boolean(user)}
+          email={user?.email}
+          watching={watching}
+          confirmed={watch === "confirmed"}
+        />
+      </div>
+
+      <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
           <h2 className="mb-4 text-2xl font-semibold">
             Available Claude passes
           </h2>
           {/* Branched here rather than inside Board: an empty board needs none of the
-              carousel, unlock or outcome machinery, and this keeps the viewer's address out
-              of the client bundle on every request that does have passes to show. */}
+              carousel, unlock or outcome machinery. */}
           {passes.length === 0 ? (
-            <EmptyBoard signedIn={Boolean(user)} email={user?.email} />
+            <EmptyBoard />
           ) : (
             <Board
               passes={passes}

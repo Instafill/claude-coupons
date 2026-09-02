@@ -135,6 +135,21 @@ export async function stop(value: string): Promise<void> {
   logEvent("watch_stopped", { matched: result.matchedCount });
 }
 
+/** How many addresses would get the next alert. Shown on the page, so it has to be this
+    exact predicate and not a count of rows. */
+export async function countWaiting(): Promise<number> {
+  await dbConnect();
+  return Watcher.countDocuments({ confirmedAt: { $exists: true }, stoppedAt: { $exists: false } });
+}
+
+/** Whether one address is on the list, for a signed-in visitor who already joined. */
+export async function isWatching(email: string): Promise<boolean> {
+  await dbConnect();
+  return Boolean(
+    await Watcher.exists({ email: email.toLowerCase(), confirmedAt: { $exists: true }, stoppedAt: { $exists: false } })
+  );
+}
+
 /**
  * Tells the list the board has passes again. Called only on the empty-to-not-empty
  * transition, which is the event people signed up for; the per-address cooldown is the
@@ -159,7 +174,8 @@ export async function notifyWatchers(): Promise<number> {
         watchers.map((watcher) => ({
           email: watcher.email,
           stopUrl: stopUrl(watcher.stopToken),
-        }))
+        })),
+        watchers.length
       )
     );
 

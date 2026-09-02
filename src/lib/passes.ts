@@ -226,3 +226,37 @@ export async function recordOutcome(
   await Pass.updateOne({ _id: new Types.ObjectId(passId) }, { $inc: { [field]: 1 } });
   return true;
 }
+
+export interface ClaimSpeed {
+  sample: number; // passes in the window that were unlocked at all
+  medianMinutes: number;
+}
+
+const SPEED_WINDOW_DAYS = 30;
+const SPEED_MIN_SAMPLE = 3;
+
+// How long a listed pass typically stays unclaimed: the median gap between a pass being
+// listed and its first unlock, over the last 30 days. Median rather than mean, so one pass
+// that sat overnight cannot turn "minutes" into "hours"; null under three data points, so
+// the page says nothing rather than something built on one pass.
+export async function claimSpeed(): Promise<ClaimSpeed | null> {
+  await dbConnect();
+  const since = new Date(Date.now() - SPEED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const passes = await Pass.find({ createdAt: { $gte: since } }).select("createdAt");
+  if (passes.length < SPEED_MIN_SAMPLE) return null;
+
+  const firstUnlocks = await Unlock.aggregate<{ _id: Types.ObjectId; first: Date }>([
+    { $match: { passId: { $in: passes.map((p) => p._id) } } },
+    { $group: { _id: "$passId", first: { $min: "$createdAt" } } },
+  ]);
+  const listedAt = new Map(passes.map((p) => [p._id.toString(), p.createdAt.getTime()]));
+  const gaps = firstUnlocks
+    .map((u) => (u.first.getTime() - (listedAt.get(u._id.toString()) ?? u.first.getTime())) / 60000)
+    .filter((m) => m >= 0)
+    .sort((a, b) => a - b);
+  if (gaps.length < SPEED_MIN_SAMPLE) return null;
+
+  const mid = Math.floor(gaps.length / 2);
+  const median = gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+  return { sample: gaps.length, medianMinutes: Math.max(1, Math.round(median)) };
+}

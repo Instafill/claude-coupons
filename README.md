@@ -43,8 +43,14 @@ drives the lifecycle.
 - **Anti-abuse**: unlocking is capped at 3 passes per account per rolling 24h; the sign-in form
   carries a honeypot field; magic-link tokens are single-use and expire in 30 minutes via a
   MongoDB TTL index.
-- **Watch list** (`watchers` collection, `lib/watchers.ts`): when the board is empty a visitor
-  can leave an email address and be told when passes return. Confirmed opt-in - nothing is
+- **Watch list** (`watchers` collection, `lib/watchers.ts`): the first screen of the home
+  page is the list, not the board - passes are unlocked within minutes of being listed, so
+  the list is how anyone actually gets one. `components/PassListCard.tsx` states the promise
+  and the rules above the form and shows only real numbers: how many are waiting (hidden
+  under ten, where a small count is a reason to leave), and how fast recent passes went
+  (`claimSpeed` in `lib/passes.ts`, the median gap from listing to first unlock over 30
+  days, omitted under three data points). A confirmed link lands back on the home page.
+  A visitor can leave an email address and be told when passes return. Confirmed opt-in - nothing is
   mailed to an address until a confirmation link is clicked, except for an address that came
   from the visitor's own signed-in session, which was already verified through Google or a
   magic link. The alert fires only on the empty-to-not-empty transition, with a 12h floor per

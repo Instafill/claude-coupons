@@ -151,7 +151,7 @@ const MAX_ALERT_BATCH = 25;
 //
 // Returns the addresses that were actually accepted, so the caller only marks those as
 // notified and a failed send is retried on the next refill instead of being lost.
-export async function sendPassAlerts(recipients: AlertRecipient[]): Promise<string[]> {
+export async function sendPassAlerts(recipients: AlertRecipient[], waiting: number): Promise<string[]> {
   if (!process.env.SENDGRID_API_KEY) {
     for (const recipient of recipients) {
       console.log(`[pass-alert] ${recipient.email}: stop ${recipient.stopUrl}`);
@@ -164,7 +164,7 @@ export async function sendPassAlerts(recipients: AlertRecipient[]): Promise<stri
 
   for (let i = 0; i < recipients.length; i += MAX_ALERT_BATCH) {
     const chunk = recipients.slice(i, i + MAX_ALERT_BATCH);
-    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r)));
+    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r, waiting)));
     results.forEach((result, index) => {
       if (result.status === "fulfilled") delivered.push(chunk[index].email);
       else console.error("Pass alert send failed:", result.reason);
@@ -174,7 +174,10 @@ export async function sendPassAlerts(recipients: AlertRecipient[]): Promise<stri
   return delivered;
 }
 
-function sendOneAlert({ email, stopUrl }: AlertRecipient): Promise<unknown> {
+function sendOneAlert({ email, stopUrl }: AlertRecipient, waiting: number): Promise<unknown> {
+  // The count is the honest form of urgency: it is how many people are opening this at the
+  // same moment, and passes are gone once three of them get through.
+  const crowd = waiting > 1 ? `${waiting} people got this email at the same moment. ` : "";
   return sgMail.send({
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
@@ -185,7 +188,7 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient): Promise<unknown> {
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `The board at claudecoupons.com has Claude guest passes again.\n\nhttps://claudecoupons.com/\n\nPasses are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
+    text: `The board at claudecoupons.com has Claude guest passes again.\n\nhttps://claudecoupons.com/\n\n${crowd}Passes are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
         <h2 style="color: #c9642f;">The board has passes again</h2>
@@ -194,8 +197,8 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient): Promise<unknown> {
           <a href="https://claudecoupons.com/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
         </p>
         <p style="color: #6e6a63; font-size: 14px;">
-          Passes are first-come, first-served and often go within minutes, so this one may already be gone by
-          the time you arrive. If it is, you stay on the list and we&rsquo;ll tell you about the next one.
+          ${crowd}Passes are first-come, first-served and often go within minutes, so this one may already be
+          gone by the time you arrive. If it is, you stay on the list and we&rsquo;ll tell you about the next one.
         </p>
         <p style="color: #6e6a63; font-size: 13px;">
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.

@@ -47,7 +47,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "The board is empty. Can you tell me when a pass appears?",
-    a: "Yes. When there are no passes left, the board shows a form where you can leave an email address. Confirm it once and we will email you the next time the board goes from empty to having passes - only then, never more than once every 12 hours, and never anything else. Every message carries a one-click link to stop.",
+    a: "Yes. Leave an email address in the list at the top of the board and confirm it once. Everyone on the list gets one email the moment the board goes from empty to having passes - only then, never more than once every 12 hours, and never anything else. Passes are first come, first served, so the email is worth opening quickly. Every message carries a one-click link to stop.",
   },
 ];
 

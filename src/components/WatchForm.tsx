@@ -9,9 +9,11 @@ import { useState } from "react";
 export default function WatchForm({
   signedIn,
   email,
+  buttonLabel = "Watch for passes",
 }: {
   signedIn: boolean;
   email?: string;
+  buttonLabel?: string;
 }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -90,11 +92,7 @@ export default function WatchForm({
         disabled={state === "sending"}
         className="cursor-pointer rounded-lg bg-accent px-4 py-2.5 font-semibold text-white hover:bg-accent-dark disabled:opacity-60"
       >
-        {state === "sending"
-          ? "Saving..."
-          : signedIn
-            ? "Email me when passes return"
-            : "Watch for passes"}
+        {state === "sending" ? "Saving..." : buttonLabel}
       </button>
       {signedIn && email && (
         <p className="text-[13px] text-muted">We&rsquo;ll write to {email}.</p>
