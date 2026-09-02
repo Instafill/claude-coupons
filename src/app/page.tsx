@@ -110,13 +110,11 @@ export default async function Home({
         <h1 className="text-[38px] leading-tight font-bold">
           Claude Code Passes | Claude.ai Coupons
         </h1>
-        {/* The promise, in the first breath: what a pass is, why the board is usually
-            empty, and that the list is how you actually get one. */}
+        {/* The promise and the rule of the board in four short sentences. */}
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
-          A Claude pass gives you <strong>7 days of Claude Pro for free</strong> - Claude Code
-          and Cowork included. Subscribers list their spare passes here a few times a week, and
-          each one is unlocked within minutes. The list below is how you hear the moment one is
-          listed, before it is gone.
+          A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
+          Subscribers list their spare passes here. Each one is gone within minutes. You will not
+          catch one by refreshing - the list catches it for you.
         </p>
       </section>
 

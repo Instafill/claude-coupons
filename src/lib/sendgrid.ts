@@ -178,6 +178,7 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient, waiting: number): Prom
   // The count is the honest form of urgency: it is how many people are opening this at the
   // same moment, and passes are gone once three of them get through.
   const crowd = waiting > 1 ? `${waiting} people got this email at the same moment. ` : "";
+  const rule = "First to sign in and unlock gets it. Three claims and it is finished.";
   return sgMail.send({
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
@@ -188,18 +189,15 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient, waiting: number): Prom
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `The board at claudecoupons.com has Claude guest passes again.\n\nhttps://claudecoupons.com/\n\n${crowd}Passes are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
+    text: `A Claude pass is on the board.\n\nhttps://claudecoupons.com/\n\n${crowd}${rule} Miss it and you stay on the list for the next one.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
-        <h2 style="color: #c9642f;">The board has passes again</h2>
-        <p>You asked to hear when claudecoupons.com had Claude guest passes. It does right now.</p>
+        <h2 style="color: #c9642f;">A Claude pass is on the board</h2>
+        <p>${crowd}${rule}</p>
         <p style="margin: 24px 0;">
           <a href="https://claudecoupons.com/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
         </p>
-        <p style="color: #6e6a63; font-size: 14px;">
-          ${crowd}Passes are first-come, first-served and often go within minutes, so this one may already be
-          gone by the time you arrive. If it is, you stay on the list and we&rsquo;ll tell you about the next one.
-        </p>
+        <p style="color: #6e6a63; font-size: 14px;">Miss it and you stay on the list for the next one.</p>
         <p style="color: #6e6a63; font-size: 13px;">
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
         </p>

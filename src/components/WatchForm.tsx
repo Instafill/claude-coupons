@@ -42,10 +42,7 @@ export default function WatchForm({
     return (
       <div className="mt-5 rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
         <p className="font-semibold">You&rsquo;re on the list.</p>
-        <p className="mt-1 text-sm">
-          We&rsquo;ll email you the next time the board goes from empty to having passes. Every
-          message carries a one-click link to stop.
-        </p>
+        <p className="mt-1 text-sm">Next pass, you get the email. One click in it stops them for good.</p>
       </div>
     );
   }
@@ -53,11 +50,10 @@ export default function WatchForm({
   if (state === "sent") {
     return (
       <div className="mt-5 rounded-xl border border-line bg-surface p-5">
-        <h3 className="font-semibold">Check your inbox</h3>
+        <h3 className="font-semibold">Check your inbox.</h3>
         <p className="mt-1 text-sm text-muted">
-          If that address is valid, we&rsquo;ve sent one email asking you to confirm. Click the
-          link in it and you&rsquo;re watching &mdash; until you do, we won&rsquo;t send you
-          anything else.
+          One email is waiting. Click the link in it or you are not on the list, and nothing else
+          is sent.
         </p>
       </div>
     );
