@@ -84,6 +84,23 @@ export async function waveForNewcomer(): Promise<number> {
   return waveOf((await queueSize()) + 1);
 }
 
+/**
+ * How many more people can join before a newcomer lands a wave further back. Real
+ * scarcity: wave N covers ranks (N-1)*10+1 to N*10, so this is simply what is left of it.
+ */
+export function spotsLeftInJoinWave(inLine: number): number {
+  return waveOf(inLine + 1) * WAVE_SIZE - inLine;
+}
+
+/** Numbers handed out in the last day - the pace someone is racing. */
+export async function joinedToday(): Promise<number> {
+  await dbConnect();
+  return Watcher.countDocuments({
+    ...ACTIVE,
+    confirmedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+  });
+}
+
 /** How many people the queue has served in the last week - the proof that it moves. */
 export async function servedThisWeek(): Promise<number> {
   await dbConnect();

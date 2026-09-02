@@ -9,7 +9,7 @@ import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { FAQS } from "@/lib/faqs";
 import { UNLOCKS_PER_PASS, claimSpeed, getBoard } from "@/lib/passes";
-import { queueSize, servedThisWeek, standingFor, waveForNewcomer } from "@/lib/queue";
+import { joinedToday, queueSize, servedThisWeek, standingFor, waveForNewcomer } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -63,11 +63,12 @@ export default async function Home({
   const { watch } = await searchParams;
   const user = await getUser();
   // Every number the card shows comes from here. Nothing on it is a constant.
-  const [passes, inLine, joinWave, served, speed, standing] = await Promise.all([
+  const [passes, inLine, joinWave, served, today, speed, standing] = await Promise.all([
     getBoard(user?.id ?? null),
     queueSize(),
     waveForNewcomer(),
     servedThisWeek(),
+    joinedToday(),
     claimSpeed(),
     user ? standingFor(user.email) : Promise.resolve(null),
   ]);
@@ -125,6 +126,7 @@ export default async function Home({
           inLine={inLine}
           joinWave={joinWave}
           served={served}
+          joinedToday={today}
           standing={standing}
           openWave={passes[0]?.openWave ?? 0}
           speed={speed}
