@@ -1,15 +1,21 @@
 import sgMail from "@sendgrid/mail";
 
-// Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
-// one domain arriving from another is the shape of a phishing mail and filters score it
-// that way; sending as alex@botmakers.net put the magic link in a user's spam folder, and
-// failed SPF besides, since botmakers.net authorises Google rather than SendGrid. This
-// address is only deliverable because claudecoupons.com is the domain SendGrid signs for,
-// so an env var pointing it elsewhere could only break DKIM alignment again.
+import { CONTACT_EMAIL, SITE_HOST, SITE_URL } from "@/lib/seo";
+
+// The sender is derived from the site's own domain and is deliberately not separately
+// configurable. A sign-in link for one domain arriving from another is the shape of a
+// phishing mail and filters score it that way; sending as alex@botmakers.net put the magic
+// link in a user's spam folder, and failed SPF besides, since botmakers.net authorises
+// Google rather than SendGrid. Tying the two together is what keeps that from happening
+// again: the address is deliverable only while its domain is the one SendGrid signs for.
+//
+// So moving to a new domain is two steps, in this order: verify the new domain in SendGrid
+// (domain authentication, DKIM and SPF records published), then point NEXT_PUBLIC_SITE_URL
+// at it. Doing it the other way round breaks DKIM alignment and buries the sign-in mail.
 //
 // It receives as well as sends: Cloudflare Email Routing forwards it to a real inbox, so
 // replies need no Reply-To pointing off the brand domain.
-const FROM_EMAIL = "hello@claudecoupons.com";
+const FROM_EMAIL = CONTACT_EMAIL;
 const FROM_NAME = "Claude Coupons";
 // Where operator alerts are delivered. A recipient only - it cannot affect authentication.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "alex@botmakers.net";
@@ -50,7 +56,7 @@ export async function notifyNewPass(pass: {
       to: NOTIFY_EMAIL,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `New Claude pass listed by ${pass.submitterEmail || "an anonymous contributor"}`,
-      text: `${who} listed a pass.\n\n${url}\n\nLive passes on the board: ${pass.livePasses}\nhttps://claudecoupons.com/`,
+      text: `${who} listed a pass.\n\n${url}\n\nLive passes on the board: ${pass.livePasses}\n${SITE_URL}/`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f; margin-bottom: 4px;">New pass on the board</h2>
@@ -60,7 +66,7 @@ export async function notifyNewPass(pass: {
           </p>
           <p style="color: #6e6a63; font-size: 14px;">
             Live passes on the board: <strong>${pass.livePasses}</strong> &middot;
-            <a href="https://claudecoupons.com/" style="color: #a94f20;">open the board</a>
+            <a href="${SITE_URL}/" style="color: #a94f20;">open the board</a>
           </p>
         </div>`,
     });
@@ -83,8 +89,8 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: "Your sign-in link for claudecoupons.com",
-      text: `Click to sign in to claudecoupons.com:\n\n${link}\n\nThe link works once and expires in 30 minutes. If you didn't request it, ignore this email.`,
+      subject: `Your sign-in link for ${SITE_HOST}`,
+      text: `Click to sign in to ${SITE_HOST}:\n\n${link}\n\nThe link works once and expires in 30 minutes. If you didn't request it, ignore this email.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">Sign in to ClaudeCoupons</h2>
@@ -115,11 +121,11 @@ export async function sendWatchConfirmation(email: string, confirmUrl: string): 
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: "Confirm you want Claude pass alerts",
-      text: `Someone asked us to email this address when claudecoupons.com has Claude guest passes again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
+      text: `Someone asked us to email this address when ${SITE_HOST} has Claude guest passes again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
-          <p>Someone asked us to email this address when the board at claudecoupons.com has Claude guest passes again.</p>
+          <p>Someone asked us to email this address when the board at ${SITE_HOST} has Claude guest passes again.</p>
           <p style="margin: 24px 0;">
             <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Confirm and start watching</a>
           </p>
@@ -210,13 +216,13 @@ function sendOneAlert({ email, stopUrl }: AlertRecipient): Promise<unknown> {
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `The board at claudecoupons.com has Claude guest passes again.\n\nhttps://claudecoupons.com/\n\nPasses are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
+    text: `The board at ${SITE_HOST} has Claude guest passes again.\n\n${SITE_URL}/\n\nPasses are first-come, first-served and often go within minutes, so this one may already be gone by the time you get there. If it is, you stay on the list and we'll tell you about the next one.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
         <h2 style="color: #c9642f;">The board has passes again</h2>
-        <p>You asked to hear when claudecoupons.com had Claude guest passes. It does right now.</p>
+        <p>You asked to hear when ${SITE_HOST} had Claude guest passes. It does right now.</p>
         <p style="margin: 24px 0;">
-          <a href="https://claudecoupons.com/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
+          <a href="${SITE_URL}/" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the board</a>
         </p>
         <p style="color: #6e6a63; font-size: 14px;">
           Passes are first-come, first-served and often go within minutes, so this one may already be gone by
@@ -250,7 +256,7 @@ export async function sendSubscribeConfirmation(
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `Confirm: ${productName} drop list`,
-      text: `Someone asked us to add this address to the list waiting for ${productName} coupon codes on claudecoupons.com.\n\nConfirm here to hold your place in line:\n${confirmUrl}\n\nWhat follows: one email when the codes drop, and nothing else. There are fewer codes than people on the list, so the drop is first come, first served. We never share your address. If this wasn't you, ignore this email and nothing further will be sent.`,
+      text: `Someone asked us to add this address to the list waiting for ${productName} coupon codes on ${SITE_HOST}.\n\nConfirm here to hold your place in line:\n${confirmUrl}\n\nWhat follows: one email when the codes drop, and nothing else. There are fewer codes than people on the list, so the drop is first come, first served. We never share your address. If this wasn't you, ignore this email and nothing further will be sent.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">One click and you&rsquo;re in line</h2>
@@ -335,7 +341,7 @@ export async function sendGoalReached(
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `${waiting} people are waiting for ${productName} codes`,
-      text: `Your ${productName} list on claudecoupons.com reached its goal: ${waiting} people are waiting for codes.\n\nLoad codes and press Release, and everyone on the list is emailed at the same moment:\n${dashboardUrl}\n\nYou get this because you manage the ${productName} page.`,
+      text: `Your ${productName} list on ${SITE_HOST} reached its goal: ${waiting} people are waiting for codes.\n\nLoad codes and press Release, and everyone on the list is emailed at the same moment:\n${dashboardUrl}\n\nYou get this because you manage the ${productName} page.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">${waiting} people are waiting for ${escapeHtml(productName)} codes</h2>
@@ -343,7 +349,7 @@ export async function sendGoalReached(
           <p style="margin: 24px 0;">
             <a href="${dashboardUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the dashboard</a>
           </p>
-          <p style="color: #6e6a63; font-size: 13px;">You get this because you manage the ${escapeHtml(productName)} page on claudecoupons.com.</p>
+          <p style="color: #6e6a63; font-size: 13px;">You get this because you manage the ${escapeHtml(productName)} page on ${SITE_HOST}.</p>
         </div>`,
     });
   } catch (error) {

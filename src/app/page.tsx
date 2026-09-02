@@ -14,6 +14,7 @@ import {
   getBoard,
 } from "@/lib/passes";
 import { listPublished } from "@/lib/products";
+import { SITE_URL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "https://claudecoupons.com" },
+  alternates: { canonical: SITE_URL },
   keywords: [
     "claude coupons",
     "claude coupon",
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    url: "https://claudecoupons.com/",
+    url: `${SITE_URL}/`,
     siteName: "Claude Coupons",
     title: TITLE,
     description: DESCRIPTION,
@@ -71,7 +72,7 @@ export default async function Home() {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "Claude Coupons",
-      url: "https://claudecoupons.com",
+      url: SITE_URL,
       description: DESCRIPTION,
     },
     {

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
 import { FRIENDS } from "@/lib/friends";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Our Friends - Claude Coupons",
   description:
     "The people and tools behind ClaudeCoupons.com. Some we built, some belong to friends - all of them worth a look.",
-  alternates: { canonical: "https://claudecoupons.com/friends" },
+  alternates: { canonical: `${SITE_URL}/friends` },
 };
 
 export default function FriendsPage() {

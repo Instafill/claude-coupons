@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin";
 import { emailDomain, isFreemail, registrableDomain } from "@/lib/domains";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
+import { CONTACT_EMAIL } from "@/lib/seo";
 import { notifyAdmin, sendOwnershipDecision } from "@/lib/sendgrid";
 import { baseUrl } from "@/lib/watchers";
 import OwnershipRequest, { IOwnershipRequest, OWNERSHIP_STATUS } from "@/models/OwnershipRequest";
@@ -58,7 +59,10 @@ export async function requestOwnership(product: IProduct, user: SessionUser, not
   const existing = await OwnershipRequest.findOne({ productId: product._id, userId: new Types.ObjectId(user.id) });
   if (existing?.status === OWNERSHIP_STATUS.pending) return { status: "pending" };
   if (existing?.status === OWNERSHIP_STATUS.rejected)
-    return { status: "error", error: "A previous request from this account was declined. Email hello@claudecoupons.com from an address on the product's domain." };
+    return {
+      status: "error",
+      error: `A previous request from this account was declined. Email ${CONTACT_EMAIL} from an address on the product's domain.`,
+    };
 
   const request =
     existing ??

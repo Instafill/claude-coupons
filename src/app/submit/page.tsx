@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 
 import SubmitForm from "@/components/SubmitForm";
 import { getUser } from "@/lib/auth";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Share Your Claude Code Passes - Claude Coupons",
   description:
     "List your spare Claude Code guest passes so someone actually uses them. Paste your claude.ai invite link - no account required.",
-  alternates: { canonical: "https://claudecoupons.com/submit" },
+  alternates: { canonical: `${SITE_URL}/submit` },
 };
 
 export default async function SubmitPage() {

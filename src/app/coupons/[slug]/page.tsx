@@ -20,6 +20,7 @@ import {
   toPublicDrop,
   toPublicProduct,
 } from "@/lib/products";
+import { CONTACT_EMAIL } from "@/lib/seo";
 import { consentText } from "@/lib/subscribers";
 import { DROP_STATUS } from "@/models/Drop";
 
@@ -183,7 +184,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </>
           )}
           Something wrong here?{" "}
-          <a className="text-accent-dark underline" href={`mailto:hello@claudecoupons.com?subject=${encodeURIComponent(`Report: /coupons/${product.slug}`)}`}>
+          <a className="text-accent-dark underline" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Report: /coupons/${product.slug}`)}`}>
             Report this page
           </a>
           . Product names and logos belong to their owners.

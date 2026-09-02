@@ -1,6 +1,28 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = "https://claudecoupons.com";
+/**
+ * The canonical origin, and the one place a domain move happens. Everything that has to
+ * name the site - canonicals, the sitemap, robots, JSON-LD, absolute links and the address
+ * mail is sent from - derives from this, so moving the project to a new domain is one
+ * environment variable rather than a search and replace across thirty files.
+ *
+ * Set NEXT_PUBLIC_SITE_URL to the new origin (scheme and host, no trailing slash). It is
+ * NEXT_PUBLIC_ so a client component can use it too; nothing secret lives here.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://claudecoupons.com").replace(
+  /\/+$/,
+  ""
+);
+
+/** The bare host, for prose that names the site rather than linking it. */
+export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
+
+/**
+ * The address that both sends and receives. It has to stay on SITE_HOST - see the comment
+ * in lib/sendgrid.ts - so it is derived rather than configured separately: a sender on one
+ * domain and a site on another is the shape of a phishing mail, and filters score it that way.
+ */
+export const CONTACT_EMAIL = `hello@${SITE_HOST}`;
 
 // Anthropic's guest pass article. Every page that makes a claim about the programme links
 // it, so it lives here rather than being re-typed per page.

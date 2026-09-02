@@ -101,11 +101,35 @@ node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our
 every email prints to the console instead of sending), `GOOGLE_CLIENT_ID`,
 `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`,
 `ADMIN_EMAILS` (comma-separated; unlocks `/admin` and lets those accounts manage every
-product page), `MAIL_POSTAL_ADDRESS` (printed at the foot of bulk mail, CAN-SPAM).
+product page), `MAIL_POSTAL_ADDRESS` (printed at the foot of bulk mail, CAN-SPAM),
+`NEXT_PUBLIC_SITE_URL` (the canonical origin - see below; defaults to
+`https://claudecoupons.com`).
 
-The sender address is pinned in `lib/sendgrid.ts` rather than configurable: it has to stay on
-`claudecoupons.com`, which is the domain SendGrid signs for, or DKIM alignment breaks and
-sign-in links land in spam.
+The sender address is derived from the site's own domain in `lib/sendgrid.ts` rather than
+configured separately: a sender on one domain and a site on another is the shape of a
+phishing mail, filters score it that way, and DKIM alignment breaks unless the sending
+domain is the one SendGrid signs for.
+
+## Moving to a new domain
+
+Everything that names the site - canonicals, the sitemap, `robots.txt`, JSON-LD, absolute
+links in email, and the address mail is sent from - derives from `SITE_URL` in
+`lib/seo.ts`, which reads `NEXT_PUBLIC_SITE_URL`. Moving is one variable, in this order:
+
+1. **Verify the new domain in SendGrid** (domain authentication; publish its DKIM and SPF
+   records). The sender becomes `hello@{new host}` automatically, so doing this second
+   would bury the sign-in mail.
+2. Point the domain at Vercel and set `NEXT_PUBLIC_SITE_URL=https://newdomain.com` (no
+   trailing slash). Set `NEXT_PUBLIC_BASE_URL` to the same value, or leave it unset and it
+   falls back to `SITE_URL`.
+3. Route `hello@{new host}` to a real inbox (Cloudflare Email Routing does this today), so
+   replies to drop and sign-in mail land somewhere.
+4. Redirect the old domain and resubmit `sitemap.xml`. Links already sent - confirmation,
+   stop and claim links - carry the old origin, so keep the redirect for as long as those
+   can still be clicked.
+
+The visible brand ("ClaudeCoupons.com" in the header and footer) is deliberately *not*
+derived from the domain: renaming is a separate decision from moving.
 
 `dns-fix.cjs` exists because Node 24's c-ares resolver defaults to 127.0.0.1 when it can't detect
 system DNS, which breaks the `mongodb+srv` lookup.

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { dbConnect } from "@/lib/mongodb";
+import { SITE_URL } from "@/lib/seo";
 import Product, { PRODUCT_STATUS } from "@/models/Product";
 
 // Metadata routes sit outside the cookie-reading layout, so this one can cache.
@@ -12,32 +13,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // (trailingSlash defaults to false), so a slash here submits one URL while the page
     // canonicalises to another - which is why the home page alone was reported twice.
     {
-      url: "https://claudecoupons.com",
+      url: `${SITE_URL}`,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: "https://claudecoupons.com/claude-guest-pass",
+      url: `${SITE_URL}/claude-guest-pass`,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: "https://claudecoupons.com/claude-free-trial",
+      url: `${SITE_URL}/claude-free-trial`,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: "https://claudecoupons.com/coupons",
+      url: `${SITE_URL}/coupons`,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://claudecoupons.com/submit",
+      url: `${SITE_URL}/submit`,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: "https://claudecoupons.com/friends",
+      url: `${SITE_URL}/friends`,
       changeFrequency: "monthly",
       priority: 0.4,
     },
@@ -59,7 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...fixed,
     ...products.map((product) => ({
-      url: `https://claudecoupons.com/coupons/${product.slug}`,
+      url: `${SITE_URL}/coupons/${product.slug}`,
       lastModified: product.updatedAt,
       changeFrequency: "daily" as const,
       priority: 0.7,

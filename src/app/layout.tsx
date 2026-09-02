@@ -5,12 +5,13 @@ import { Analytics } from "@vercel/analytics/next";
 
 import { isAdmin } from "@/lib/admin";
 import { getUser } from "@/lib/auth";
+import { SITE_URL } from "@/lib/seo";
 
 import "./globals.css";
 
 // Fallback only - every page sets its own title; the home page owns the one that matters.
 export const metadata = {
-  metadataBase: new URL("https://claudecoupons.com"),
+  metadataBase: new URL(SITE_URL),
   title: "Claude Code Passes | Claude Coupons",
   description:
     "Claim a free Claude Code pass or share yours. Every Claude pass gives a new user 7 days of Claude Pro - Claude Code and Cowork included.",

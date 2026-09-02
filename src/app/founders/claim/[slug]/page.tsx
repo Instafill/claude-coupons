@@ -7,6 +7,7 @@ import { getUser } from "@/lib/auth";
 import { emailDomain, isFreemail, registrableDomain } from "@/lib/domains";
 import { isOwner } from "@/lib/ownership";
 import { getProductBySlug, progress } from "@/lib/products";
+import { CONTACT_EMAIL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,8 @@ export default async function ClaimPage({ params }: { params: Promise<{ slug: st
       {product.ownerUserId ? (
         <p className="mt-3">
           This page already has an owner. If that&rsquo;s wrong, email{" "}
-          <a className="text-accent-dark underline" href="mailto:hello@claudecoupons.com">
-            hello@claudecoupons.com
+          <a className="text-accent-dark underline" href={`mailto:${CONTACT_EMAIL}`}>
+            {CONTACT_EMAIL}
           </a>{" "}
           from an address on {product.websiteDomain}.
         </p>
