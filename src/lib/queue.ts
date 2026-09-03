@@ -30,6 +30,13 @@ const ACTIVE = {
   position: { $exists: true },
 } as const;
 
+/** Confirmed and waiting, whether or not the queue has noticed them yet. */
+const CONFIRMED = {
+  confirmedAt: { $exists: true },
+  stoppedAt: { $exists: false },
+  leftQueueAt: { $exists: false },
+} as const;
+
 async function nextPosition(): Promise<number> {
   const counter = await Counter.findByIdAndUpdate(
     "queue",
@@ -209,6 +216,24 @@ async function sendWave(pass: IPass, wave: number): Promise<number> {
   return sent.length;
 }
 
+/**
+ * Rows that confirmed before the queue existed hold no number, and every walk in this file
+ * goes by number - so they get no alert, no standing on the card, and no unlock, while the
+ * list still counts them as members. Nothing else brings them back: takeNumber runs on
+ * confirmation and on a rejoin, and neither happens again to someone already confirmed.
+ *
+ * They are adopted in the order they confirmed, so the line among them is the order they
+ * joined it. Numbers already handed out are never touched.
+ */
+async function adoptUnnumbered(): Promise<number> {
+  const unnumbered = await Watcher.find({ ...CONFIRMED, position: { $exists: false } }).sort({
+    confirmedAt: 1,
+  });
+  for (const watcher of unnumbered) await takeNumber(watcher._id as Types.ObjectId);
+  if (unnumbered.length) logEvent("queue_adopted", { people: unnumbered.length });
+  return unnumbered.length;
+}
+
 // Rows from before the enter link existed have no token; mint one before they are mailed.
 async function ensureEnterTokens(): Promise<void> {
   const missing = await Watcher.find({ ...ACTIVE, enterToken: { $exists: false } });
@@ -235,6 +260,9 @@ async function ensureEnterTokens(): Promise<void> {
 export async function advanceWaves(): Promise<number> {
   try {
     await dbConnect();
+    // Before the tokens, and before any wave is picked: an unnumbered member is invisible
+    // to both, and this is the last moment to notice them without skipping their turn.
+    await adoptUnnumbered();
     await ensureEnterTokens();
     const passes = await Pass.find({ status: PASS_STATUS.live }).sort({ waveStartedAt: 1 });
     let sent = 0;
