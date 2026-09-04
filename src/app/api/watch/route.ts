@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { hashIp } from "@/lib/passes";
+import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import { EMAIL_SHAPE, subscribe } from "@/lib/watchers";
 
 // POST: ask to be told when the board has passes again.
@@ -23,9 +24,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const user = await getUser();
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ipHash = hashIp(forwarded || request.headers.get("x-real-ip") || "unknown");
+  const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
+
+  // Every subscribe pays the captcha, signed in or not: this endpoint puts mail in an
+  // inbox, and the confirmation step only protects addresses, not our sending domain.
+  if (!(await verifyTurnstile(String(form.get(TURNSTILE_FIELD) || ""), ip))) {
+    logEvent("captcha_failed", { where: "watch" });
+    return NextResponse.json(
+      { error: "The captcha didn't verify. Reload the page and try again." },
+      { status: 400 }
+    );
+  }
+
+  const user = await getUser();
+  const ipHash = hashIp(ip);
 
   const { watching } = await subscribe({
     email,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { submitPass, type SubmitState } from "@/app/actions";
+import Turnstile from "@/components/Turnstile";
 
 export default function SubmitForm() {
   const [state, formAction, pending] = useActionState<SubmitState, FormData>(submitPass, {});
@@ -42,6 +43,7 @@ export default function SubmitForm() {
         <label htmlFor="website">Leave this field empty</label>
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
+      <Turnstile />
       {state.error && <p className="text-sm text-bad">{state.error}</p>}
       <button
         type="submit"

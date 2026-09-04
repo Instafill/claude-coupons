@@ -4,6 +4,8 @@ import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import Turnstile from "@/components/Turnstile";
+
 // The email capture on the empty board. Follows SignInForm: a plain fetch, state in place,
 // the form replaced by its own answer. The three end states say different things on purpose
 // - "check your inbox" and "you're on the list" are not the same promise.
@@ -86,6 +88,7 @@ export default function WatchForm({
           />
         </>
       )}
+      <Turnstile />
       {error && <p className="text-sm text-bad">{error}</p>}
       <button
         type="submit"

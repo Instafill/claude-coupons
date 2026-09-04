@@ -16,6 +16,7 @@ import {
 } from "@/lib/passes";
 import { advanceWaves, demoteNoShows } from "@/lib/queue";
 import { notifyNewPass } from "@/lib/sendgrid";
+import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import Pass, { PASS_STATUS } from "@/models/Pass";
 import RejectedSubmission from "@/models/RejectedSubmission";
 
@@ -56,10 +57,10 @@ async function recordRejection(
   }
 }
 
-async function getSubmitterIpHash(): Promise<string> {
+async function getSubmitterIp(): Promise<string> {
   const requestHeaders = await headers();
   const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return hashIp(forwarded || requestHeaders.get("x-real-ip") || "unknown");
+  return forwarded || requestHeaders.get("x-real-ip") || "unknown";
 }
 
 // Contributing is deliberately account-free. Signed-in contributors retain dashboard
@@ -71,12 +72,20 @@ export async function submitPass(
 ): Promise<SubmitState> {
   const user = await getUser();
   const raw = String(formData.get("link") || "");
-  const ipHash = await getSubmitterIpHash();
+  const ip = await getSubmitterIp();
+  const ipHash = hashIp(ip);
 
   // Hidden from people, commonly filled by automated form spam.
   if (String(formData.get("website") || "")) {
     logEvent("submit_rejected", { reason: "honeypot" });
     return { error: "That submission could not be accepted." };
+  }
+
+  // Everyone pays the captcha, signed in or not - a stolen session scripting submissions
+  // is rarer than a bot, but not rare enough to leave the door open.
+  if (!(await verifyTurnstile(String(formData.get(TURNSTILE_FIELD) || ""), ip))) {
+    logEvent("captcha_failed", { where: "submit" });
+    return { error: "The captcha didn't verify. Reload the page and try again." };
   }
 
   const code = parseOfficialReferralUrl(raw);

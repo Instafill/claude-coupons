@@ -58,7 +58,10 @@ drives the lifecycle.
   or 21 days after its last refresh. Submitters can refresh / mark exhausted / remove.
 - **Anti-abuse**: unlocking is capped at 3 passes per account per rolling 24h; the sign-in form
   carries a honeypot field; magic-link tokens are single-use and expire in 30 minutes via a
-  MongoDB TTL index.
+  MongoDB TTL index. Listing a pass and joining the watch list both sit behind Cloudflare
+  Turnstile (`lib/turnstile.ts`, verified server-side) on top of their honeypots; the
+  widget's allowed domains include localhost, so development renders and verifies the real
+  challenge.
 - **Watch list** (`watchers` collection, `lib/watchers.ts`): the first screen of the home
   page is the list, not the board - passes are unlocked within minutes of being listed, so
   the list is how anyone actually gets one. `components/PassListCard.tsx` states the promise
@@ -69,9 +72,9 @@ drives the lifecycle.
   A visitor can leave an email address and be told when passes return. Confirmed opt-in - nothing is
   mailed to an address until a confirmation link is clicked, except for an address that came
   from the visitor's own signed-in session, which was already verified through Google or a
-  magic link. Alerts go out per pass in queue order, one wave at a time, never twice about
-  the same pass - and anyone alerted within the last wave period is passed over entirely, no
-  second mail and no charged offer, so two passes listed together read as one turn, not two.
+  magic link. Alerts go out per pass in queue order, one wave at a time, never twice about the same
+  pass - and anyone alerted within the last wave period is passed over entirely, no second
+  mail and no charged offer, so two passes listed together read as one turn, not two.
   Every message carries a one-click stop link (`List-Unsubscribe`, RFC 8058).
   Rows are soft-deleted on stop, so a stop link stays valid and idempotent.
 
@@ -85,7 +88,9 @@ node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our
 
 `.env.local` keys - `MONGODB_URI` (the `claudecoupons` database), `SENDGRID_API_KEY` (omit and
 every email prints to the console instead of sending), `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`.
+`GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_BASE_URL`,
+`TURNSTILE_SECRET_KEY` (omit and development waves the captcha through while production
+refuses the post - it fails closed on purpose).
 
 The sender address is pinned in `lib/sendgrid.ts` rather than configurable: it has to stay on
 `claudecoupons.com`, which is the domain SendGrid signs for, or DKIM alignment breaks and
