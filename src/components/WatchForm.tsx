@@ -4,6 +4,7 @@ import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import InterestsStep from "@/components/InterestsStep";
 import Turnstile from "@/components/Turnstile";
 
 const INTENTS = [
@@ -26,6 +27,8 @@ export default function WatchForm({
 }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
+  // Authorises the follow-up answer for this row only. There is no session yet.
+  const [answerToken, setAnswerToken] = useState<string | null>(null);
   const router = useRouter();
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -40,6 +43,7 @@ export default function WatchForm({
     if (response.ok) {
       const data = await response.json().catch(() => ({}));
       track("watch_requested", { signedIn });
+      setAnswerToken(data.answerToken ?? null);
       setState(data.watching ? "watching" : "sent");
       // A pre-verified address is on the list now, so the board's unlock button is live.
       if (data.watching) router.refresh();
@@ -55,6 +59,7 @@ export default function WatchForm({
       <div className="mt-5 rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
         <p className="font-semibold">You&rsquo;re on the list.</p>
         <p className="mt-1 text-sm">Next pass, you get the email. One click in it stops them for good.</p>
+        {answerToken && <InterestsStep answerToken={answerToken} />}
       </div>
     );
   }
@@ -67,6 +72,7 @@ export default function WatchForm({
           One email is waiting. Click the link in it or you are not on the list, and nothing else
           is sent.
         </p>
+        {answerToken && <InterestsStep answerToken={answerToken} />}
       </div>
     );
   }
@@ -114,7 +120,7 @@ export default function WatchForm({
           ))}
         </div>
         <p className="mt-1.5 text-[13px] text-muted">
-          Honest answers only help. This does not affect your place in line.
+          Does not affect your place in line.
         </p>
       </fieldset>
       <Turnstile />

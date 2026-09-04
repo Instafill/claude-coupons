@@ -58,16 +58,22 @@ export async function subscribe(input: {
   userId?: string;
   preVerified: boolean;
   intent?: WatchIntent;
-}): Promise<{ watching: boolean }> {
+}): Promise<{ watching: boolean; answerToken: string }> {
   await dbConnect();
   const now = new Date();
   const existing = await Watcher.findOne({ email: input.email });
 
+  // Minted every time, because the screen that follows this call is where the rest of the
+  // questions are asked and it has no session to prove who is answering.
+  const answerToken = token();
+  const answers: Record<string, unknown> = { answerToken, answerTokenAt: now };
+  if (input.intent) answers.intent = input.intent;
+
   // Already watching: nothing to change, and nothing to send. The answer is still worth
   // keeping - it is the same person telling us the same thing a second time.
   if (existing?.confirmedAt && !existing.stoppedAt) {
-    if (input.intent) await Watcher.updateOne({ _id: existing._id }, { $set: { intent: input.intent } });
-    return { watching: true };
+    await Watcher.updateOne({ _id: existing._id }, { $set: answers });
+    return { watching: true, answerToken };
   }
 
   const watcher = existing ?? new Watcher({ email: input.email, stopToken: token() });
@@ -76,7 +82,7 @@ export async function subscribe(input: {
   watcher.stoppedAt = undefined;
   watcher.ipHash = input.ipHash;
   if (input.userId) watcher.userId = new Types.ObjectId(input.userId);
-  if (input.intent) watcher.intent = input.intent;
+  watcher.set(answers);
 
   if (input.preVerified) {
     watcher.confirmedAt = now;
@@ -86,7 +92,7 @@ export async function subscribe(input: {
     const { takeNumber } = await import("@/lib/queue");
     if (!watcher.position) await takeNumber(watcher._id as Types.ObjectId);
     logEvent("watch_confirmed", { via: "session" });
-    return { watching: true };
+    return { watching: true, answerToken };
   }
 
   const resendBlocked = Boolean(
@@ -101,7 +107,7 @@ export async function subscribe(input: {
   if (resendBlocked || fromThisConnection >= CONFIRMATIONS_PER_IP_PER_DAY) {
     await watcher.save();
     logEvent("watch_throttled", { reason: resendBlocked ? "resend" : "ip" });
-    return { watching: false };
+    return { watching: false, answerToken };
   }
 
   watcher.confirmToken = token();
@@ -109,15 +115,38 @@ export async function subscribe(input: {
   await watcher.save();
   await sendWatchConfirmation(watcher.email, confirmUrl(watcher.confirmToken));
   logEvent("watch_subscribed", { returning: Boolean(existing) });
-  return { watching: false };
+  return { watching: false, answerToken };
 }
 
-/** Whether this address has already been asked what else it wants. Asked once, never twice. */
-export async function hasAnsweredInterests(email: string): Promise<boolean> {
+// A token only opens the answer window for as long as someone is plausibly still on the
+// screen that issued it.
+const ANSWER_WINDOW_HOURS = 6;
+
+/**
+ * Records the second round of answers against the row that was just subscribed. The token is
+ * the authority: it names one row, it expires, and without it a stranger who guessed a fresh
+ * address could set that address's opt-in - which is a permission, not an opinion.
+ */
+export async function recordAnswers(input: {
+  answerToken: string;
+  interests: string[];
+  interestsOther: string;
+  interestsOptIn: boolean;
+}): Promise<boolean> {
   await dbConnect();
-  return Boolean(
-    await Watcher.exists({ email: email.toLowerCase(), interestsAt: { $exists: true } })
+  const cutoff = new Date(Date.now() - ANSWER_WINDOW_HOURS * 60 * 60 * 1000);
+  const result = await Watcher.updateOne(
+    { answerToken: input.answerToken, answerTokenAt: { $gte: cutoff } },
+    {
+      $set: {
+        interests: input.interests.length ? input.interests : undefined,
+        interestsOther: input.interestsOther || undefined,
+        interestsOptIn: input.interestsOptIn,
+        interestsAt: new Date(),
+      },
+    }
   );
+  return Boolean(result.matchedCount);
 }
 
 /**

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     ? (answer as WatchIntent)
     : undefined;
 
-  const { watching } = await subscribe({
+  const { watching, answerToken } = await subscribe({
     email,
     ipHash,
     intent,
@@ -58,5 +58,6 @@ export async function POST(request: NextRequest) {
     preVerified: user?.email === email,
   });
 
-  return NextResponse.json({ ok: true, watching });
+  // The token rides back so the screen that follows can record the rest of the answers.
+  return NextResponse.json({ ok: true, watching, answerToken });
 }

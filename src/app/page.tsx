@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import Board from "@/components/Board";
 import EmptyBoard from "@/components/EmptyBoard";
-import InterestsForm from "@/components/InterestsForm";
 import PassListCard from "@/components/PassListCard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
@@ -11,7 +10,6 @@ import { getUser } from "@/lib/auth";
 import { FAQS } from "@/lib/faqs";
 import { UNLOCKS_PER_PASS, claimSpeed, getBoard } from "@/lib/passes";
 import { joinedToday, queueSize, servedThisWeek, standingFor, waveForNewcomer } from "@/lib/queue";
-import { hasAnsweredInterests } from "@/lib/watchers";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +73,6 @@ export default async function Home({
     user ? standingFor(user.email) : Promise.resolve(null),
   ]);
 
-  const askInterests =
-    watch === "confirmed" && user ? !(await hasAnsweredInterests(user.email)) : false;
-
   const schema = [
     {
       "@context": "https://schema.org",
@@ -126,9 +121,6 @@ export default async function Home({
           that shows the list works, and when it is empty the card says why joining is the
           only move - so the card comes first in both cases. */}
       <div className="mt-8">
-        {/* Only on the hop straight out of the confirmation link, and only once. They are on
-            the list already, so asking here costs the queue nothing. */}
-        {askInterests && <InterestsForm />}
         <PassListCard
           livePasses={passes.length}
           inLine={inLine}
