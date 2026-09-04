@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { hashIp } from "@/lib/passes";
+import { readForm } from "@/lib/request";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import { EMAIL_SHAPE, subscribe } from "@/lib/watchers";
 import { WATCH_INTENT, WatchIntent } from "@/models/Watcher";
 
 // POST: ask to be told when the board has passes again.
 export async function POST(request: NextRequest) {
-  const form = await request.formData();
+  const form = await readForm(request);
   // Same honeypot as the sign-in form: humans never see it, bots fill it. Answer normally so
   // the bot cannot tell it was caught.
   if (form.get("website")) {

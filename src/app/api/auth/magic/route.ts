@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOrCreateUser, safeReturnTo, setSessionCookie } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
+import { readForm } from "@/lib/request";
 import { sendMagicLink } from "@/lib/sendgrid";
 import LoginToken from "@/models/LoginToken";
 
@@ -11,7 +12,7 @@ const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // POST: issue a one-time sign-in link.
 export async function POST(request: NextRequest) {
-  const form = await request.formData();
+  const form = await readForm(request);
   // "website" is a honeypot - humans never see it, bots fill it. Answer normally so the
   // bot cannot tell it was caught.
   if (form.get("website")) {

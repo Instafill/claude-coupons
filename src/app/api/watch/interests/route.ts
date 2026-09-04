@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { logEvent } from "@/lib/events";
 import { MAX_OTHER_LENGTH, cleanInterests } from "@/lib/interests";
+import { readForm } from "@/lib/request";
 import { recordAnswers } from "@/lib/watchers";
 
 /**
@@ -18,7 +19,7 @@ import { recordAnswers } from "@/lib/watchers";
  * at this point there is no session - they have not opened the email yet.
  */
 export async function POST(request: NextRequest) {
-  const form = await request.formData();
+  const form = await readForm(request);
   const answerToken = String(form.get("answerToken") || "");
   if (!answerToken) return NextResponse.json({ error: "Nothing to answer." }, { status: 400 });
 
