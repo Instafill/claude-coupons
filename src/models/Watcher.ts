@@ -50,11 +50,6 @@ export interface IWatcher extends Document {
   // - and even then, not from this list.
   interestsOptIn?: boolean;
   interestsAt?: Date;
-  // Lets the "check your inbox" screen record an answer for this row and no other. Minted on
-  // every subscribe and short-lived: at that moment there is no session yet, and without it
-  // anyone who guessed a fresh address could flip that address's opt-in.
-  answerToken?: string;
-  answerTokenAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,8 +93,6 @@ const WatcherSchema = new Schema<IWatcher>(
     interestsOther: { type: String, maxlength: 200 },
     interestsOptIn: { type: Boolean },
     interestsAt: { type: Date },
-    answerToken: { type: String, index: true, sparse: true },
-    answerTokenAt: { type: Date },
   },
   { timestamps: true }
 );

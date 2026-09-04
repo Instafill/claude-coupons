@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
+import { MAX_OTHER_LENGTH, cleanInterests } from "@/lib/interests";
 import { hashIp } from "@/lib/passes";
 import { readForm } from "@/lib/request";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
@@ -49,16 +50,20 @@ export async function POST(request: NextRequest) {
     ? (answer as WatchIntent)
     : undefined;
 
-  const { watching, answerToken } = await subscribe({
+  // Research, and separately the one box that is permission to write. Both ride in with the
+  // subscription: there is one submit, so there is one request.
+  const { watching } = await subscribe({
     email,
     ipHash,
     intent,
+    interests: cleanInterests(form.getAll("tools").map(String)),
+    interestsOther: String(form.get("other") || "").trim().slice(0, MAX_OTHER_LENGTH),
+    interestsOptIn: Boolean(form.get("optIn")),
     userId: user?.id,
     // Their own session address arrived through Google or a magic link, so it is already
     // proven. Any other address they type still has to be confirmed.
     preVerified: user?.email === email,
   });
 
-  // The token rides back so the screen that follows can record the rest of the answers.
-  return NextResponse.json({ ok: true, watching, answerToken });
+  return NextResponse.json({ ok: true, watching });
 }
