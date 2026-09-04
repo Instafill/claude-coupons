@@ -73,6 +73,24 @@ console.log(
   inLineNotFirst ? ((probed / inLineNotFirst) * 100).toFixed(1) : "0"
 );
 
+// Which other tools the list wants, asked once someone has confirmed. The opt-in is counted
+// apart from the answers because it is a separate permission, not a stronger answer.
+const asked = await W.countDocuments({ interestsAt: { $exists: true } });
+if (asked) {
+  const tools = await W.aggregate([
+    { $unwind: "$interests" },
+    { $group: { _id: "$interests", n: { $sum: 1 } } },
+    { $sort: { n: -1 } },
+  ]).toArray();
+  const optIn = await W.countDocuments({ interestsOptIn: true });
+  console.log("\ntools wanted (%d answered, %d opted in to hear about them):", asked, optIn);
+  for (const t of tools) console.log(`  ${String(t.n).padStart(3)}  ${t._id}`);
+  const others = await W.find({ interestsOther: { $exists: true } }, { interestsOther: 1 }).toArray();
+  if (others.length) console.log("  write-ins:", others.map((o) => o.interestsOther).join(" | "));
+} else {
+  console.log("\ntools wanted: nobody asked yet (shown once, right after confirming)");
+}
+
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
   await db.collection("users").countDocuments(),
   await db.collection("passes").countDocuments(),

@@ -112,6 +112,14 @@ export async function subscribe(input: {
   return { watching: false };
 }
 
+/** Whether this address has already been asked what else it wants. Asked once, never twice. */
+export async function hasAnsweredInterests(email: string): Promise<boolean> {
+  await dbConnect();
+  return Boolean(
+    await Watcher.exists({ email: email.toLowerCase(), interestsAt: { $exists: true } })
+  );
+}
+
 /**
  * Spends a confirmation token. Clearing it is what makes a replayed link find nothing.
  * Returns the address so the caller can start its session: clicking the link proved the

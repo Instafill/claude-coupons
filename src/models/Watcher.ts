@@ -40,6 +40,16 @@ export interface IWatcher extends Document {
   // record of the press, which is the only thing being measured.
   skipProbeAt?: Date;
   skipProbeCount: number;
+  // Which other tools they said they would want a drop for, asked once they were already
+  // on the list. Research only: this list is what decides which pages get built, and it
+  // grants no permission to write to anyone.
+  interests?: string[];
+  interestsOther?: string;
+  // The separate, unticked opt-in. The confirmation mail promises pass alerts and never a
+  // newsletter, so nothing but an explicit yes here may ever put other mail in their inbox
+  // - and even then, not from this list.
+  interestsOptIn?: boolean;
+  interestsAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +89,10 @@ const WatcherSchema = new Schema<IWatcher>(
     intent: { type: String, enum: Object.values(WATCH_INTENT), index: true },
     skipProbeAt: { type: Date },
     skipProbeCount: { type: Number, default: 0 },
+    interests: { type: [String], default: undefined },
+    interestsOther: { type: String, maxlength: 200 },
+    interestsOptIn: { type: Boolean },
+    interestsAt: { type: Date },
   },
   { timestamps: true }
 );
