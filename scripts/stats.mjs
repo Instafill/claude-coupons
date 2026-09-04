@@ -73,7 +73,7 @@ console.log(
   inLineNotFirst ? ((probed / inLineNotFirst) * 100).toFixed(1) : "0"
 );
 
-// Which other tools the list wants, asked once someone has confirmed. The opt-in is counted
+// Which other tools the list wants, asked as chips on the join form. The opt-in is counted
 // apart from the answers because it is a separate permission, not a stronger answer.
 const asked = await W.countDocuments({ interestsAt: { $exists: true } });
 if (asked) {
@@ -88,7 +88,7 @@ if (asked) {
   const others = await W.find({ interestsOther: { $exists: true } }, { interestsOther: 1 }).toArray();
   if (others.length) console.log("  write-ins:", others.map((o) => o.interestsOther).join(" | "));
 } else {
-  console.log("\ntools wanted: nobody asked yet (shown once, right after confirming)");
+  console.log("\ntools wanted: nobody has picked a chip yet");
 }
 
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
