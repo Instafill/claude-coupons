@@ -31,9 +31,26 @@ export interface IWatcher extends Document {
   lastNotifiedAt?: Date;
   notifyCount: number;
   stoppedAt?: Date;
+  // What they said they would do after the free week, asked when they took their number.
+  // Deliberately does not affect their place in line - the form says so, because an answer
+  // that buys position is an answer everyone gives.
+  intent?: WatchIntent;
+  // The price probe: they pressed a button offering to skip the line, and were told on the
+  // spot that it does not exist. Nothing is charged and the queue does not move. This is a
+  // record of the press, which is the only thing being measured.
+  skipProbeAt?: Date;
+  skipProbeCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const WATCH_INTENT = {
+  subscribe: "subscribe", // expects to pay for Pro after the week
+  free: "free", // wants the free week only
+  unsure: "unsure",
+} as const;
+
+export type WatchIntent = (typeof WATCH_INTENT)[keyof typeof WATCH_INTENT];
 
 const WatcherSchema = new Schema<IWatcher>(
   {
@@ -59,6 +76,9 @@ const WatcherSchema = new Schema<IWatcher>(
     // Soft delete. Keeping the row keeps the stop link idempotent and lets a returning
     // subscriber reuse it instead of colliding with the unique index on email.
     stoppedAt: { type: Date },
+    intent: { type: String, enum: Object.values(WATCH_INTENT), index: true },
+    skipProbeAt: { type: Date },
+    skipProbeCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

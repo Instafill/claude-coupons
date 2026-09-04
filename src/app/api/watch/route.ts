@@ -5,6 +5,7 @@ import { logEvent } from "@/lib/events";
 import { hashIp } from "@/lib/passes";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import { EMAIL_SHAPE, subscribe } from "@/lib/watchers";
+import { WATCH_INTENT, WatchIntent } from "@/models/Watcher";
 
 // POST: ask to be told when the board has passes again.
 export async function POST(request: NextRequest) {
@@ -40,9 +41,17 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   const ipHash = hashIp(ip);
 
+  // Unrecognised or absent answers are dropped rather than rejected: the question is a
+  // measurement, and a missing measurement must never cost someone their place in line.
+  const answer = String(form.get("intent") || "");
+  const intent = (Object.values(WATCH_INTENT) as string[]).includes(answer)
+    ? (answer as WatchIntent)
+    : undefined;
+
   const { watching } = await subscribe({
     email,
     ipHash,
+    intent,
     userId: user?.id,
     // Their own session address arrived through Google or a magic link, so it is already
     // proven. Any other address they type still has to be confirmed.

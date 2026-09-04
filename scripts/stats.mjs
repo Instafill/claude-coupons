@@ -48,6 +48,31 @@ const inQueue = await W.countDocuments({ ...active, position: { $exists: true } 
 const orphaned = await W.countDocuments({ ...active, position: { $exists: false } });
 console.log("queue: %d holding a number, %d confirmed WITHOUT one (cannot be alerted or unlock)", inQueue, orphaned);
 
+// Test 1: what people say they will do after the free week. Only rows created after the
+// question shipped can answer it, so the unanswered count is the pre-test population and
+// not a response rate.
+const intents = await W.aggregate([
+  { $group: { _id: "$intent", n: { $sum: 1 } } },
+  { $sort: { n: -1 } },
+]).toArray();
+const answered = intents.filter((i) => i._id).reduce((sum, i) => sum + i.n, 0);
+console.log(
+  "\nintent: %s  (%d answered, %d from before the question)",
+  intents.filter((i) => i._id).map((i) => `${i._id}=${i.n}`).join(" ") || "none yet",
+  answered,
+  intents.find((i) => !i._id)?.n ?? 0
+);
+
+// Test 2: the price probe. Pressed, never charged.
+const probed = await W.countDocuments({ skipProbeCount: { $gt: 0 } });
+const inLineNotFirst = await W.countDocuments({ ...active, position: { $exists: true } });
+console.log(
+  "skip probe: %d pressed of %d in line (%s%%)",
+  probed,
+  inLineNotFirst,
+  inLineNotFirst ? ((probed / inLineNotFirst) * 100).toFixed(1) : "0"
+);
+
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
   await db.collection("users").countDocuments(),
   await db.collection("passes").countDocuments(),

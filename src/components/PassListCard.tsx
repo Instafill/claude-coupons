@@ -1,3 +1,4 @@
+import SkipProbe from "@/components/SkipProbe";
 import WatchForm from "@/components/WatchForm";
 import type { ClaimSpeed } from "@/lib/passes";
 import type { Standing } from "@/lib/queue";
@@ -166,6 +167,7 @@ export default function PassListCard({
                   ? "You are first in line. The next pass is offered to you before anyone else."
                   : `${standing.ahead} ahead of you. Each one who unlocks a pass leaves the queue and you move up.`}
               </p>
+              {standing.ahead > 0 && <SkipProbe />}
             </div>
           ) : (
             <>

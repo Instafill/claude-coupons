@@ -6,6 +6,12 @@ import { useState } from "react";
 
 import Turnstile from "@/components/Turnstile";
 
+const INTENTS = [
+  { value: "subscribe", label: "Subscribe to Pro if it works out" },
+  { value: "free", label: "Just try it for the free week" },
+  { value: "unsure", label: "Not sure yet" },
+];
+
 // The email capture on the empty board. Follows SignInForm: a plain fetch, state in place,
 // the form replaced by its own answer. The three end states say different things on purpose
 // - "check your inbox" and "you're on the list" are not the same promise.
@@ -88,6 +94,29 @@ export default function WatchForm({
           />
         </>
       )}
+      {/* Asked to find out who is here for a week and who is here for a subscription. It is
+          stated plainly that the answer changes nothing, because an answer that buys a
+          better place is an answer everybody gives. */}
+      <fieldset className="mt-1">
+        <legend className="text-sm font-semibold">After the free week, do you expect to</legend>
+        <div className="mt-1.5 flex flex-col gap-1.5">
+          {INTENTS.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-start gap-2 text-[14px]">
+              <input
+                type="radio"
+                name="intent"
+                value={option.value}
+                required
+                className="mt-1 accent-[var(--accent)]"
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[13px] text-muted">
+          Honest answers only help. This does not affect your place in line.
+        </p>
+      </fieldset>
       <Turnstile />
       {error && <p className="text-sm text-bad">{error}</p>}
       <button

@@ -5,7 +5,7 @@ import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { SITE_URL } from "@/lib/seo";
 import { sendWatchConfirmation } from "@/lib/sendgrid";
-import Watcher from "@/models/Watcher";
+import Watcher, { WatchIntent } from "@/models/Watcher";
 
 // The watch list: everything that decides whether an address is on it, and everything that
 // decides whether it receives mail. The routes below this only translate HTTP into these
@@ -57,13 +57,18 @@ export async function subscribe(input: {
   ipHash: string;
   userId?: string;
   preVerified: boolean;
+  intent?: WatchIntent;
 }): Promise<{ watching: boolean }> {
   await dbConnect();
   const now = new Date();
   const existing = await Watcher.findOne({ email: input.email });
 
-  // Already watching: nothing to change, and nothing to send.
-  if (existing?.confirmedAt && !existing.stoppedAt) return { watching: true };
+  // Already watching: nothing to change, and nothing to send. The answer is still worth
+  // keeping - it is the same person telling us the same thing a second time.
+  if (existing?.confirmedAt && !existing.stoppedAt) {
+    if (input.intent) await Watcher.updateOne({ _id: existing._id }, { $set: { intent: input.intent } });
+    return { watching: true };
+  }
 
   const watcher = existing ?? new Watcher({ email: input.email, stopToken: token() });
   // Re-subscribing after stopping reuses the row - the unique index on email means there is
@@ -71,6 +76,7 @@ export async function subscribe(input: {
   watcher.stoppedAt = undefined;
   watcher.ipHash = input.ipHash;
   if (input.userId) watcher.userId = new Types.ObjectId(input.userId);
+  if (input.intent) watcher.intent = input.intent;
 
   if (input.preVerified) {
     watcher.confirmedAt = now;
