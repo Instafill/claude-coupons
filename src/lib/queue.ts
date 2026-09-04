@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
-import { UNLOCKS_PER_PASS, WAVE_SIZE, openWaveCount } from "@/lib/passes";
+import { UNLOCKS_PER_PASS, WAVE_MINUTES, WAVE_SIZE, openWaveCount } from "@/lib/passes";
 import { sendPassAlerts } from "@/lib/sendgrid";
 import { enterUrl, stopUrl } from "@/lib/watchers";
 import Counter from "@/models/Counter";
@@ -21,6 +21,13 @@ const OFFERS_BEFORE_DEMOTION = 3;
 // Waves fire as people load the page, and a burst of arrivals must not become a burst of
 // duplicate sends, so one advance run has a ceiling.
 const MAX_WAVES_PER_RUN = 12;
+
+// Two passes listed within a minute walk the same front row, and the alert is "come to
+// the board" - the board shows every live pass, so a second mail inside one wave period
+// says nothing new and its charged offer burns a turn nobody really got. Anyone alerted
+// more recently than this is passed over: the cursor still moves so this pass never
+// revisits them, but no mail goes out and no offer is charged.
+const ALERT_COOLDOWN_MS = WAVE_MINUTES * 60 * 1000;
 
 /** Everyone currently in line: confirmed, not stopped, not already served. */
 const ACTIVE = {
@@ -187,22 +194,30 @@ async function sendWave(pass: IPass, wave: number): Promise<number> {
     .limit(WAVE_SIZE);
   if (batch.length === 0) return 0;
 
+  // Best effort, not an invariant: the per-pass claim above still lets two passes advance
+  // in the same instant, but waves claim seconds apart in practice and each send stamps
+  // lastNotifiedAt before the next wave reads it.
+  const cutoff = new Date(Date.now() - ALERT_COOLDOWN_MS);
+  const fresh = batch.filter((watcher) => !watcher.lastNotifiedAt || watcher.lastNotifiedAt < cutoff);
+
   const delivered = new Set(
-    await sendPassAlerts(
-      batch.map((watcher) => ({
-        email: watcher.email,
-        enterUrl: enterUrl(watcher.enterToken!),
-        stopUrl: stopUrl(watcher.stopToken),
-      })),
-      batch.length,
-      wave
-    )
+    fresh.length
+      ? await sendPassAlerts(
+          fresh.map((watcher) => ({
+            email: watcher.email,
+            enterUrl: enterUrl(watcher.enterToken!),
+            stopUrl: stopUrl(watcher.stopToken),
+          })),
+          batch.length,
+          wave
+        )
+      : []
   );
 
   // The cursor moves past everyone in the batch whether or not their mail landed: a
   // bouncing address must not pin the queue and re-receive every later wave.
   await Pass.updateOne({ _id: claimed._id }, { $set: { waveCursor: batch[batch.length - 1].position! } });
-  const sent = batch.filter((watcher) => delivered.has(watcher.email));
+  const sent = fresh.filter((watcher) => delivered.has(watcher.email));
   await Watcher.updateMany(
     { _id: { $in: sent.map((watcher) => watcher._id) } },
     { $set: { lastNotifiedAt: new Date() }, $inc: { notifyCount: 1, offersSinceUnlock: 1 } }
@@ -211,7 +226,8 @@ async function sendWave(pass: IPass, wave: number): Promise<number> {
     pass: claimed._id.toString(),
     wave,
     recipients: sent.length,
-    failed: batch.length - sent.length,
+    skipped: batch.length - fresh.length,
+    failed: fresh.length - sent.length,
   });
   return sent.length;
 }

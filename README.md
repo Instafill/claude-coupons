@@ -69,8 +69,10 @@ drives the lifecycle.
   A visitor can leave an email address and be told when passes return. Confirmed opt-in - nothing is
   mailed to an address until a confirmation link is clicked, except for an address that came
   from the visitor's own signed-in session, which was already verified through Google or a
-  magic link. The alert fires only on the empty-to-not-empty transition, with a 12h floor per
-  address, and every message carries a one-click stop link (`List-Unsubscribe`, RFC 8058).
+  magic link. Alerts go out per pass in queue order, one wave at a time, never twice about
+  the same pass - and anyone alerted within the last wave period is passed over entirely, no
+  second mail and no charged offer, so two passes listed together read as one turn, not two.
+  Every message carries a one-click stop link (`List-Unsubscribe`, RFC 8058).
   Rows are soft-deleted on stop, so a stop link stays valid and idempotent.
 
 ## Run locally
