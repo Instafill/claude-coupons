@@ -133,34 +133,38 @@ export default function PassListCard({
       {/* The widget draws in the left column but proves the form in the right one, so
           the two are wrapped together and the token is handed across. */}
       <CaptchaBridge className="mt-5 grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
-        <div className="rounded-xl border border-line bg-paper px-5 py-4">
-          <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-            How the queue works
-          </p>
-          <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[14px]">
-            {rules.map((rule) => (
-              <li key={rule}>{rule}</li>
-            ))}
-          </ol>
-          {(served > 0 || speed) && (
-            <p className="mt-3 border-t border-line pt-3 text-[13px] text-muted">
-              {served > 0 && (
-                <>
-                  The queue moved {served} {served === 1 ? "place" : "places"} this week.{" "}
-                </>
-              )}
-              {speed && (
-                <>
-                  The last {speed.sample} passes were unlocked within {speed.medianMinutes} minute
-                  {speed.medianMinutes === 1 ? "" : "s"} of being listed.
-                </>
-              )}
+        <div>
+          <div className="rounded-xl border border-line bg-paper px-5 py-4">
+            <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
+              How the queue works
             </p>
-          )}
-          {/* Only where there is a form to prove. Someone already holding a number is shown
-              their standing instead, and a challenge guarding nothing is just a box. */}
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[14px]">
+              {rules.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ol>
+            {(served > 0 || speed) && (
+              <p className="mt-3 border-t border-line pt-3 text-[13px] text-muted">
+                {served > 0 && (
+                  <>
+                    The queue moved {served} {served === 1 ? "place" : "places"} this week.{" "}
+                  </>
+                )}
+                {speed && (
+                  <>
+                    The last {speed.sample} passes were unlocked within {speed.medianMinutes} minute
+                    {speed.medianMinutes === 1 ? "" : "s"} of being listed.
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+
+          {/* Under the rules rather than in them: the rules are what the queue promises, and
+              a challenge is not one of them. Only where there is a form to prove, too -
+              somebody already holding a number is shown their standing instead. */}
           {!standing && (
-            <div className="mt-3 border-t border-line pt-3">
+            <div className="mt-3">
               <CaptchaSlot />
             </div>
           )}
@@ -181,9 +185,8 @@ export default function PassListCard({
             </div>
           ) : (
             <>
-              <p className="text-[15px] font-semibold">
-                {livePasses > 0 ? "Take your number before this one goes." : "Take your number now."}
-              </p>
+              {/* No heading here: the card's own already says take a number and which wave
+                  it would be, and saying it twice on one screen makes neither louder. */}
               <WatchForm signedIn={signedIn} email={email} buttonLabel={`Take my number - wave ${joinWave}`} />
               <p className="mt-2 text-[13px] text-muted">
                 One click in the confirmation email holds your place. Nothing else is ever sent, and one
