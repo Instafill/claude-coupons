@@ -7,9 +7,11 @@ import { useState } from "react";
 import Turnstile from "@/components/Turnstile";
 import { MAX_WANTS_LENGTH } from "@/lib/wants";
 
+// The stem carries the product so the options stay short and parallel. Values never change
+// with the wording - they are what the answers from before this edit are counted as.
 const INTENTS = [
-  { value: "subscribe", label: "Subscribe to Pro if it works out" },
-  { value: "free", label: "Just try it for the free week" },
+  { value: "subscribe", label: "Subscribe if it works out" },
+  { value: "free", label: "Just use the free week" },
   { value: "unsure", label: "Not sure yet" },
 ];
 
@@ -106,7 +108,9 @@ export default function WatchForm({
           stated plainly that the answer changes nothing, because an answer that buys a
           better place is an answer everybody gives. */}
       <fieldset className="mt-1">
-        <legend className="text-sm font-semibold">After the free week, do you expect to</legend>
+        <legend className="text-sm font-semibold">
+          After your free week of Claude Pro, do you expect to
+        </legend>
         <div className="mt-1.5 flex flex-col gap-1.5">
           {INTENTS.map((option) => (
             <label key={option.value} className="flex cursor-pointer items-start gap-2 text-[14px]">
