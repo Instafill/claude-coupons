@@ -108,19 +108,12 @@ export default async function Home({
         <h1 className="text-[38px] leading-tight font-bold">
           Claude Code Passes | Claude.ai Coupons
         </h1>
-        {/* The promise and the rule of the board in four short sentences. */}
-        <p className="mt-3 max-w-2xl text-[19px] text-muted">
-          A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
-          Subscribers list their spare passes here, and each one goes to the queue: the first ten
-          in line get it, then ten more every five minutes. Take a number and it only gets better
-          as the people ahead of you are served.
-        </p>
       </section>
 
       {/* The list is the ask; the board under it is the proof. When the board has passes
           that shows the list works, and when it is empty the card says why joining is the
           only move - so the card comes first in both cases. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <PassListCard
           livePasses={passes.length}
           inLine={inLine}
@@ -135,6 +128,17 @@ export default async function Home({
           confirmed={watch === "confirmed"}
         />
       </div>
+
+      {/* The promise and the rule of the board in four short sentences. Under the card
+          rather than above it: someone who arrived to take a number should reach the form
+          without reading first, and someone who wants to know what a pass is finds this
+          exactly where they start looking. */}
+      <p className="mt-6 max-w-2xl text-[19px] text-muted">
+        A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
+        Subscribers list their spare passes here, and each one goes to the queue: the first ten
+        in line get it, then ten more every five minutes. Take a number and it only gets better
+        as the people ahead of you are served.
+      </p>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
