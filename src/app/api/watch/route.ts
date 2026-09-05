@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
-import { MAX_OTHER_LENGTH, cleanInterests } from "@/lib/interests";
 import { hashIp } from "@/lib/passes";
 import { readForm } from "@/lib/request";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
+import { MAX_WANTS_LENGTH } from "@/lib/wants";
 import { EMAIL_SHAPE, subscribe } from "@/lib/watchers";
 import { WATCH_INTENT, WatchIntent } from "@/models/Watcher";
 
@@ -56,9 +56,8 @@ export async function POST(request: NextRequest) {
     email,
     ipHash,
     intent,
-    interests: cleanInterests(form.getAll("tools").map(String)),
-    interestsOther: String(form.get("other") || "").trim().slice(0, MAX_OTHER_LENGTH),
-    interestsOptIn: Boolean(form.get("optIn")),
+    wants: String(form.get("wants") || "").trim().slice(0, MAX_WANTS_LENGTH),
+    wantsOptIn: Boolean(form.get("optIn")),
     userId: user?.id,
     // Their own session address arrived through Google or a magic link, so it is already
     // proven. Any other address they type still has to be confirmed.

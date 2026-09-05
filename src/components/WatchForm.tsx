@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import Turnstile from "@/components/Turnstile";
-import { MAX_OTHER_LENGTH, TOOLS } from "@/lib/interests";
+import { MAX_WANTS_LENGTH } from "@/lib/wants";
 
 const INTENTS = [
   { value: "subscribe", label: "Subscribe to Pro if it works out" },
@@ -13,17 +13,14 @@ const INTENTS = [
   { value: "unsure", label: "Not sure yet" },
 ];
 
-const OTHER = "__other__";
-
 // The email capture on the empty board. Follows SignInForm: a plain fetch, state in place,
 // the form replaced by its own answer. The three end states say different things on purpose
 // - "check your inbox" and "you're on the list" are not the same promise.
 //
 // One screen and one submit. The form's only job is to get someone a number, so the two
-// questions riding along with it have to be nearly free to skip: the tools are chips rather
-// than a checkbox grid - the same question at a fraction of the weight - and the consent
-// line appears only once something is picked, because with nothing selected there is
-// nothing to consent to and it would just be a sentence in the way.
+// questions riding along with it have to be nearly free to skip: one line each, and the
+// consent line appears only once something has been typed - with the box empty there is
+// nothing to consent to, and it would just be a sentence in the way.
 export default function WatchForm({
   signedIn,
   email,
@@ -35,13 +32,8 @@ export default function WatchForm({
 }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [wants, setWants] = useState("");
   const router = useRouter();
-
-  const toggle = (tool: string) =>
-    setPicked((current) =>
-      current.includes(tool) ? current.filter((t) => t !== tool) : [...current, tool]
-    );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,60 +124,37 @@ export default function WatchForm({
         <p className="mt-1.5 text-[13px] text-muted">Does not affect your place in line.</p>
       </fieldset>
 
-      <fieldset className="mt-1">
-        <legend className="text-sm font-semibold">
+      {/* Typed, not picked. A list of tools tells people what to want and collects the
+          answer we already thought of; the whole reason to ask is the one we did not. */}
+      <div className="mt-1">
+        <label htmlFor="watch-wants" className="text-sm font-semibold">
           Want a deal on anything else? <span className="font-normal text-muted">Optional</span>
-        </legend>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {[...TOOLS, OTHER].map((tool) => {
-            const on = picked.includes(tool);
-            return (
-              <button
-                key={tool}
-                type="button"
-                aria-pressed={on}
-                onClick={() => toggle(tool)}
-                className={`cursor-pointer rounded-full border px-2.5 py-1 text-[13px] transition-colors ${
-                  on
-                    ? "border-accent bg-[#f4e4da] font-semibold text-accent-dark"
-                    : "border-line bg-surface text-muted hover:border-accent"
-                }`}
-              >
-                {tool === OTHER ? "Other" : tool}
-              </button>
-            );
-          })}
-        </div>
-        {/* Only real names travel - "Other" is a prompt for the box, not an answer. */}
-        {picked
-          .filter((tool) => tool !== OTHER)
-          .map((tool) => (
-            <input key={tool} type="hidden" name="tools" value={tool} />
-          ))}
-        {picked.includes(OTHER) && (
-          <input
-            name="other"
-            type="text"
-            maxLength={MAX_OTHER_LENGTH}
-            placeholder="Which one?"
-            className="mt-1.5 w-full rounded-lg border border-line bg-surface px-3 py-2 text-[14px] outline-accent"
-          />
-        )}
+        </label>
+        <input
+          id="watch-wants"
+          name="wants"
+          type="text"
+          maxLength={MAX_WANTS_LENGTH}
+          value={wants}
+          onChange={(event) => setWants(event.target.value)}
+          placeholder="Cursor, Perplexity, anything"
+          className="mt-1.5 w-full rounded-lg border border-line bg-surface px-3 py-2.5 outline-accent"
+        />
         {/* Unticked, and only present once there is something to be told about. The
             confirmation email promises pass alerts and never a newsletter, so this box is
             the only thing that may ever change that. */}
-        {picked.length > 0 && (
+        {wants.trim() !== "" && (
           <label className="mt-2 flex cursor-pointer items-start gap-2 text-[14px]">
             <input type="checkbox" name="optIn" value="1" className="mt-1 accent-[var(--accent)]" />
             <span>
-              Email me if one of these gets a deal.
+              Email me if that gets a deal.
               <span className="block text-[13px] text-muted">
                 A separate list. Pass alerts don&rsquo;t change.
               </span>
             </span>
           </label>
         )}
-      </fieldset>
+      </div>
 
       <Turnstile />
       {error && <p className="text-sm text-bad">{error}</p>}

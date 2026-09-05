@@ -58,9 +58,8 @@ export async function subscribe(input: {
   userId?: string;
   preVerified: boolean;
   intent?: WatchIntent;
-  interests?: string[];
-  interestsOther?: string;
-  interestsOptIn?: boolean;
+  wants?: string;
+  wantsOptIn?: boolean;
 }): Promise<{ watching: boolean }> {
   await dbConnect();
   const now = new Date();
@@ -70,10 +69,9 @@ export async function subscribe(input: {
   // than blanking an earlier one.
   const answers: Record<string, unknown> = {};
   if (input.intent) answers.intent = input.intent;
-  if (input.interests?.length) answers.interests = input.interests;
-  if (input.interestsOther) answers.interestsOther = input.interestsOther;
-  if (input.interestsOptIn !== undefined) answers.interestsOptIn = input.interestsOptIn;
-  if (Object.keys(answers).length) answers.interestsAt = now;
+  if (input.wants) answers.wants = input.wants;
+  if (input.wantsOptIn !== undefined) answers.wantsOptIn = input.wantsOptIn;
+  if (Object.keys(answers).length) answers.wantsAt = now;
 
   // Already watching: nothing to change, and nothing to send. The answer is still worth
   // keeping - it is the same person telling us the same thing a second time.

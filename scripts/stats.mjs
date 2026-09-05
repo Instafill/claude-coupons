@@ -73,22 +73,23 @@ console.log(
   inLineNotFirst ? ((probed / inLineNotFirst) * 100).toFixed(1) : "0"
 );
 
-// Which other tools the list wants, asked as chips on the join form. The opt-in is counted
-// apart from the answers because it is a separate permission, not a stronger answer.
-const asked = await W.countDocuments({ interestsAt: { $exists: true } });
+// What the list asks for, typed rather than picked. Free text, so it is grouped case- and
+// space-insensitively before counting - "cursor" and "Cursor " are one answer, and the raw
+// spelling is kept for the ones only said once, which is where the discovery is.
+const asked = await W.countDocuments({ wants: { $exists: true, $ne: "" } });
+const optedIn = await W.countDocuments({ wantsOptIn: true });
 if (asked) {
-  const tools = await W.aggregate([
-    { $unwind: "$interests" },
-    { $group: { _id: "$interests", n: { $sum: 1 } } },
-    { $sort: { n: -1 } },
-  ]).toArray();
-  const optIn = await W.countDocuments({ interestsOptIn: true });
-  console.log("\ntools wanted (%d answered, %d opted in to hear about them):", asked, optIn);
-  for (const t of tools) console.log(`  ${String(t.n).padStart(3)}  ${t._id}`);
-  const others = await W.find({ interestsOther: { $exists: true } }, { interestsOther: 1 }).toArray();
-  if (others.length) console.log("  write-ins:", others.map((o) => o.interestsOther).join(" | "));
+  const rows = await W.find({ wants: { $exists: true, $ne: "" } }, { wants: 1 }).toArray();
+  const groups = new Map();
+  for (const row of rows) {
+    const key = row.wants.toLowerCase().replace(/\s+/g, " ").trim();
+    groups.set(key, (groups.get(key) ?? 0) + 1);
+  }
+  const ranked = [...groups].sort((a, b) => b[1] - a[1]);
+  console.log("\nwants (%d answered, %d opted in to hear about it):", asked, optedIn);
+  for (const [text, n] of ranked) console.log(`  ${String(n).padStart(3)}  ${text}`);
 } else {
-  console.log("\ntools wanted: nobody has picked a chip yet");
+  console.log("\nwants: nobody has typed one yet");
 }
 
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
