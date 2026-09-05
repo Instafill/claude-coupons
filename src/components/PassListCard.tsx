@@ -1,3 +1,4 @@
+import { CaptchaBridge, CaptchaSlot } from "@/components/CaptchaBridge";
 import SkipProbe from "@/components/SkipProbe";
 import WatchForm from "@/components/WatchForm";
 import type { ClaimSpeed } from "@/lib/passes";
@@ -129,7 +130,9 @@ export default function PassListCard({
         </p>
       )}
 
-      <div className="mt-5 grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
+      {/* The widget draws in the left column but proves the form in the right one, so
+          the two are wrapped together and the token is handed across. */}
+      <CaptchaBridge className="mt-5 grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="rounded-xl border border-line bg-paper px-5 py-4">
           <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
             How the queue works
@@ -153,6 +156,13 @@ export default function PassListCard({
                 </>
               )}
             </p>
+          )}
+          {/* Only where there is a form to prove. Someone already holding a number is shown
+              their standing instead, and a challenge guarding nothing is just a box. */}
+          {!standing && (
+            <div className="mt-3 border-t border-line pt-3">
+              <CaptchaSlot />
+            </div>
           )}
         </div>
 
@@ -182,7 +192,7 @@ export default function PassListCard({
             </>
           )}
         </div>
-      </div>
+      </CaptchaBridge>
     </section>
   );
 }

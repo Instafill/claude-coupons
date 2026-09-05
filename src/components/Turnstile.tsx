@@ -10,7 +10,13 @@ declare global {
     turnstile?: {
       render: (
         element: HTMLElement,
-        options: { sitekey: string; theme?: "light" | "dark" | "auto" }
+        options: {
+          sitekey: string;
+          theme?: "light" | "dark" | "auto";
+          callback?: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+        }
       ) => string;
     };
   }
@@ -19,7 +25,12 @@ declare global {
 // The captcha element. Dropped inside a <form>, it injects a hidden cf-turnstile-response
 // input into that form on its own, so the forms here need no token state - FormData picks
 // it up and the server verifies it (src/lib/turnstile.ts). Tokens auto-refresh on expiry.
-export default function Turnstile() {
+//
+// `onToken` is for the one case that injection cannot serve: a widget sitting outside the
+// form it guards, where there is no enclosing form to inject into. The caller then carries
+// the token itself. It is told when the token expires or errors too - a stale token fails
+// verification, and a form that still holds one would submit a proof the server rejects.
+export default function Turnstile({ onToken }: { onToken?: (token: string | null) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   // Starts true when the script already survived a client-side navigation - onLoad alone
@@ -31,7 +42,17 @@ export default function Turnstile() {
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: turnstileSiteKey(),
       theme: "light",
+      ...(onToken
+        ? {
+            callback: (token: string) => onToken(token),
+            "expired-callback": () => onToken(null),
+            "error-callback": () => onToken(null),
+          }
+        : {}),
     });
+    // Deliberately not re-running on a changed onToken: re-rendering the widget would
+    // throw away a solved challenge and make the visitor do it again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   return (

@@ -4,7 +4,9 @@ import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useCaptchaToken } from "@/components/CaptchaBridge";
 import Turnstile from "@/components/Turnstile";
+import { TURNSTILE_FIELD } from "@/lib/turnstile";
 import { MAX_WANTS_LENGTH } from "@/lib/wants";
 
 // The stem carries the product so the options stay short and parallel. Values never change
@@ -35,6 +37,9 @@ export default function WatchForm({
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
   const [wants, setWants] = useState("");
+  // Inside the queue card the widget lives in the other column, so the proof is carried
+  // here instead of injected. Everywhere else this is empty and the widget renders below.
+  const { bridged, token } = useCaptchaToken();
   const router = useRouter();
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -160,7 +165,11 @@ export default function WatchForm({
         )}
       </div>
 
-      <Turnstile />
+      {bridged ? (
+        token && <input type="hidden" name={TURNSTILE_FIELD} value={token} />
+      ) : (
+        <Turnstile />
+      )}
       {error && <p className="text-sm text-bad">{error}</p>}
       <button
         type="submit"
