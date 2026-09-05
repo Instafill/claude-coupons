@@ -132,6 +132,36 @@ export async function subscribe(input: {
 }
 
 /**
+ * Records where someone is, on any request that already knows who they are.
+ *
+ * There is no way to place the people who joined before this was captured: the IP that
+ * implies a location is hashed on arrival and never stored, the event log deliberately holds
+ * no address to join on, and analytics only counts countries in aggregate. So the list fills
+ * in as people come back - a confirmation click, an alert link, a board left open.
+ *
+ * The filter is the point: an unchanged location matches nothing and writes nothing, which
+ * matters because the board polls every thirty seconds from every open tab.
+ */
+export async function placeWatcher(email: string, geo: Geo): Promise<void> {
+  const fields = Object.fromEntries(Object.entries(geo).filter(([, value]) => value));
+  if (!Object.keys(fields).length) return;
+  await dbConnect();
+  await Watcher.updateOne(
+    {
+      email: email.toLowerCase(),
+      $or: [
+        { country: { $exists: false } },
+        { country: { $ne: geo.country } },
+        // Only when we have one to compare: a $ne against undefined would match every row
+        // that has a city and write on every poll.
+        ...(geo.city ? [{ city: { $ne: geo.city } }] : []),
+      ],
+    },
+    { $set: fields }
+  );
+}
+
+/**
  * Spends a confirmation token. Clearing it is what makes a replayed link find nothing.
  * Returns the address so the caller can start its session: clicking the link proved the
  * mailbox, which is exactly what a magic link proves, and the list is the door.

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { findOrCreateUser, setSessionCookie } from "@/lib/auth";
-import { baseUrl, enter } from "@/lib/watchers";
+import { readGeo } from "@/lib/geo";
+import { baseUrl, enter, placeWatcher } from "@/lib/watchers";
 
 // GET: the button in an alert email. Someone on the list, on any device, presses it and
 // lands on the board already able to unlock - no sign-in screen between the email and the
@@ -11,6 +12,9 @@ export async function GET(request: NextRequest) {
   const result = token ? await enter(token) : null;
   if (!result) return NextResponse.redirect(`${baseUrl()}/watch?state=invalid`);
 
+  // Reaches people who joined long before any of this was captured, and on whichever
+  // device actually opened the alert.
+  await placeWatcher(result.email, readGeo(request.headers));
   const user = await findOrCreateUser(result.email);
   const response = NextResponse.redirect(`${baseUrl()}/`);
   setSessionCookie(response, user);
