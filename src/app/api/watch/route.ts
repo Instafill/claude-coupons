@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
+import { readGeo } from "@/lib/geo";
 import { hashIp } from "@/lib/passes";
 import { readForm } from "@/lib/request";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
     email,
     ipHash,
     intent,
+    geo: readGeo(request.headers),
     wants: String(form.get("wants") || "").trim().slice(0, MAX_WANTS_LENGTH),
     wantsOptIn: Boolean(form.get("optIn")),
     userId: user?.id,

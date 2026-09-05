@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Types } from "mongoose";
 
 import { logEvent } from "@/lib/events";
+import { Geo } from "@/lib/geo";
 import { dbConnect } from "@/lib/mongodb";
 import { SITE_URL } from "@/lib/seo";
 import { sendWatchConfirmation } from "@/lib/sendgrid";
@@ -60,6 +61,7 @@ export async function subscribe(input: {
   intent?: WatchIntent;
   wants?: string;
   wantsOptIn?: boolean;
+  geo?: Geo;
 }): Promise<{ watching: boolean }> {
   await dbConnect();
   const now = new Date();
@@ -69,9 +71,14 @@ export async function subscribe(input: {
   // than blanking an earlier one.
   const answers: Record<string, unknown> = {};
   if (input.intent) answers.intent = input.intent;
+  // Refreshed on every subscribe: people move, and the last place we saw them is more
+  // useful than the first. Absent fields are left alone rather than blanking what we had.
+  for (const [field, value] of Object.entries(input.geo ?? {})) {
+    if (value) answers[field] = value;
+  }
   if (input.wants) answers.wants = input.wants;
   if (input.wantsOptIn !== undefined) answers.wantsOptIn = input.wantsOptIn;
-  if (Object.keys(answers).length) answers.wantsAt = now;
+  if (input.wants || input.wantsOptIn !== undefined) answers.wantsAt = now;
 
   // Already watching: nothing to change, and nothing to send. The answer is still worth
   // keeping - it is the same person telling us the same thing a second time.

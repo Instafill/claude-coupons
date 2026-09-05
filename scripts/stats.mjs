@@ -92,6 +92,34 @@ if (asked) {
   console.log("\nwants: nobody has typed one yet");
 }
 
+// Where the list is, as the edge placed people when they joined. Cloudflare sends the
+// country on every request; city needs the zone's visitor-location transform, so a run with
+// countries but no cities means that transform is still off.
+const placed = await W.countDocuments({ country: { $exists: true } });
+if (placed) {
+  const countries = await W.aggregate([
+    { $match: { country: { $exists: true } } },
+    { $group: { _id: "$country", n: { $sum: 1 } } },
+    { $sort: { n: -1 } },
+    { $limit: 12 },
+  ]).toArray();
+  console.log("\nlocation (%d of %d placed):", placed, await W.countDocuments());
+  console.log("  " + countries.map((c) => `${c._id}=${c.n}`).join("  "));
+  const cities = await W.aggregate([
+    { $match: { city: { $exists: true } } },
+    { $group: { _id: { city: "$city", country: "$country" }, n: { $sum: 1 } } },
+    { $sort: { n: -1 } },
+    { $limit: 8 },
+  ]).toArray();
+  console.log(
+    cities.length
+      ? "  top cities: " + cities.map((c) => `${c._id.city} (${c._id.country}) ${c.n}`).join(", ")
+      : "  no cities yet - the zone's visitor-location transform is probably off"
+  );
+} else {
+  console.log("\nlocation: nobody placed yet");
+}
+
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
   await db.collection("users").countDocuments(),
   await db.collection("passes").countDocuments(),

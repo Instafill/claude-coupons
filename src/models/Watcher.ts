@@ -50,6 +50,13 @@ export interface IWatcher extends Document {
   // - and even then, not from this list.
   wantsOptIn?: boolean;
   wantsAt?: Date;
+  // Where the edge placed them when they joined. Country and city only - the IP that
+  // implies it is hashed and never stored, and the finer coordinates the edge offers say
+  // more about a person than a list of subscribers needs to know.
+  country?: string;
+  region?: string;
+  city?: string;
+  timezone?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +99,10 @@ const WatcherSchema = new Schema<IWatcher>(
     wants: { type: String, maxlength: MAX_WANTS_LENGTH },
     wantsOptIn: { type: Boolean },
     wantsAt: { type: Date },
+    country: { type: String, index: true },
+    region: { type: String },
+    city: { type: String },
+    timezone: { type: String },
   },
   { timestamps: true }
 );
