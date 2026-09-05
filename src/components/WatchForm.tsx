@@ -124,8 +124,9 @@ export default function WatchForm({
         <p className="mt-1.5 text-[13px] text-muted">Does not affect your place in line.</p>
       </fieldset>
 
-      {/* Typed, not picked. A list of tools tells people what to want and collects the
-          answer we already thought of; the whole reason to ask is the one we did not. */}
+      {/* Typed, not picked, and with no placeholder: a list of tools tells people what to
+          want and collects back the answers we already thought of, and two example names in
+          grey text do exactly the same thing more quietly. The label is the whole prompt. */}
       <div className="mt-1">
         <label htmlFor="watch-wants" className="text-sm font-semibold">
           Want a deal on anything else? <span className="font-normal text-muted">Optional</span>
@@ -137,7 +138,6 @@ export default function WatchForm({
           maxLength={MAX_WANTS_LENGTH}
           value={wants}
           onChange={(event) => setWants(event.target.value)}
-          placeholder="Cursor, Perplexity, anything"
           className="mt-1.5 w-full rounded-lg border border-line bg-surface px-3 py-2.5 outline-accent"
         />
         {/* Unticked, and only present once there is something to be told about. The
