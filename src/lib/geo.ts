@@ -42,11 +42,35 @@ function read(headers: Headers, ...names: string[]): string | undefined {
   return undefined;
 }
 
+/**
+ * One source per request, never a field from each.
+ *
+ * Falling back field by field looked harmless and was not: Cloudflare sends cf-ipcountry on
+ * every request but only sends a city when the zone's visitor-location transform is on, so
+ * the country came from Cloudflare and the city from Vercel - two different databases
+ * resolving one address, and they disagree. That is what "Amsterdam (IN)" and "Miami (CO)"
+ * were. A record that mixes them is worse than one missing half its fields.
+ */
 export function readGeo(headers: Headers): Geo {
-  return {
-    country: read(headers, "cf-ipcountry", "x-vercel-ip-country"),
-    region: read(headers, "cf-region", "x-vercel-ip-country-region"),
-    city: read(headers, "cf-ipcity", "x-vercel-ip-city"),
-    timezone: read(headers, "cf-timezone", "x-vercel-ip-timezone"),
+  const city = read(headers, "cf-ipcity");
+  if (city) {
+    return {
+      country: read(headers, "cf-ipcountry"),
+      region: read(headers, "cf-region"),
+      city,
+      timezone: read(headers, "cf-timezone"),
+    };
+  }
+
+  const vercel: Geo = {
+    country: read(headers, "x-vercel-ip-country"),
+    region: read(headers, "x-vercel-ip-country-region"),
+    city: read(headers, "x-vercel-ip-city"),
+    timezone: read(headers, "x-vercel-ip-timezone"),
   };
+  if (vercel.country || vercel.city) return vercel;
+
+  // Neither edge placed them fully. Cloudflare's country alone is still a true fact, and it
+  // is the one field that arrives without any configuration.
+  return { country: read(headers, "cf-ipcountry") };
 }
