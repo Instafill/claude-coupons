@@ -6,7 +6,6 @@ import { readGeo } from "@/lib/geo";
 import { hashIp } from "@/lib/passes";
 import { readForm } from "@/lib/request";
 import { TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
-import { MAX_WANTS_LENGTH } from "@/lib/wants";
 import { EMAIL_SHAPE, subscribe } from "@/lib/watchers";
 import { WATCH_INTENT, WatchIntent } from "@/models/Watcher";
 
@@ -51,15 +50,12 @@ export async function POST(request: NextRequest) {
     ? (answer as WatchIntent)
     : undefined;
 
-  // Research, and separately the one box that is permission to write. Both ride in with the
-  // subscription: there is one submit, so there is one request.
+  // The answer rides in with the subscription: there is one submit, so there is one request.
   const { watching } = await subscribe({
     email,
     ipHash,
     intent,
     geo: readGeo(request.headers),
-    wants: String(form.get("wants") || "").trim().slice(0, MAX_WANTS_LENGTH),
-    wantsOptIn: Boolean(form.get("optIn")),
     userId: user?.id,
     // Their own session address arrived through Google or a magic link, so it is already
     // proven. Any other address they type still has to be confirmed.

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useCaptchaToken } from "@/components/CaptchaBridge";
 import Turnstile from "@/components/Turnstile";
 import { TURNSTILE_FIELD } from "@/lib/turnstile";
-import { MAX_WANTS_LENGTH } from "@/lib/wants";
 
 // The stem carries the product so the options stay short and parallel. Values never change
 // with the wording - they are what the answers from before this edit are counted as.
@@ -21,10 +20,12 @@ const INTENTS = [
 // the form replaced by its own answer. The three end states say different things on purpose
 // - "check your inbox" and "you're on the list" are not the same promise.
 //
-// One screen and one submit. The form's only job is to get someone a number, so the two
-// questions riding along with it have to be nearly free to skip: one line each, and the
-// consent line appears only once something has been typed - with the box empty there is
-// nothing to consent to, and it would just be a sentence in the way.
+// One screen and one submit. The form's only job is to get someone a number, so anything
+// riding along with it has to be nearly free to skip.
+//
+// A free-text "want a deal on anything else?" box rode here for four days and was removed:
+// 3 answers in 60 joins, and two of those were questions about Claude Pro rather than the
+// name of another product. It was asking people to do the hard half of the thinking.
 export default function WatchForm({
   signedIn,
   email,
@@ -36,7 +37,6 @@ export default function WatchForm({
 }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "watching">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [wants, setWants] = useState("");
   // Inside the queue card the widget lives in the other column, so the proof is carried
   // here instead of injected. Everywhere else this is empty and the widget renders below.
   const { bridged, token } = useCaptchaToken();
@@ -132,38 +132,6 @@ export default function WatchForm({
         </div>
         <p className="mt-1.5 text-[13px] text-muted">Does not affect your place in line.</p>
       </fieldset>
-
-      {/* Typed, not picked, and with no placeholder: a list of tools tells people what to
-          want and collects back the answers we already thought of, and two example names in
-          grey text do exactly the same thing more quietly. The label is the whole prompt. */}
-      <div className="mt-1">
-        <label htmlFor="watch-wants" className="text-sm font-semibold">
-          Want a deal on anything else? <span className="font-normal text-muted">Optional</span>
-        </label>
-        <input
-          id="watch-wants"
-          name="wants"
-          type="text"
-          maxLength={MAX_WANTS_LENGTH}
-          value={wants}
-          onChange={(event) => setWants(event.target.value)}
-          className="mt-1.5 w-full rounded-lg border border-line bg-surface px-3 py-2.5 outline-accent"
-        />
-        {/* Unticked, and only present once there is something to be told about. The
-            confirmation email promises pass alerts and never a newsletter, so this box is
-            the only thing that may ever change that. */}
-        {wants.trim() !== "" && (
-          <label className="mt-2 flex cursor-pointer items-start gap-2 text-[14px]">
-            <input type="checkbox" name="optIn" value="1" className="mt-1 accent-[var(--accent)]" />
-            <span>
-              Email me if that gets a deal.
-              <span className="block text-[13px] text-muted">
-                A separate list. Pass alerts don&rsquo;t change.
-              </span>
-            </span>
-          </label>
-        )}
-      </div>
 
       {bridged ? (
         token && <input type="hidden" name={TURNSTILE_FIELD} value={token} />

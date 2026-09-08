@@ -59,8 +59,6 @@ export async function subscribe(input: {
   userId?: string;
   preVerified: boolean;
   intent?: WatchIntent;
-  wants?: string;
-  wantsOptIn?: boolean;
   geo?: Geo;
 }): Promise<{ watching: boolean }> {
   await dbConnect();
@@ -76,9 +74,6 @@ export async function subscribe(input: {
   for (const [field, value] of Object.entries(input.geo ?? {})) {
     if (value) answers[field] = value;
   }
-  if (input.wants) answers.wants = input.wants;
-  if (input.wantsOptIn !== undefined) answers.wantsOptIn = input.wantsOptIn;
-  if (input.wants || input.wantsOptIn !== undefined) answers.wantsAt = now;
 
   // Already watching: nothing to change, and nothing to send. The answer is still worth
   // keeping - it is the same person telling us the same thing a second time.
