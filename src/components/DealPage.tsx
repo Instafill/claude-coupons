@@ -191,6 +191,23 @@ export default async function DealPage({ deal }: { deal: Deal }) {
           </div>
         ))}
 
+        {/* The conditions that decide whether the offer pays out at all, stated before
+            somebody signs up rather than discovered afterwards. Every line is the
+            program's own rule; the site's own promise is the last one. */}
+        <h2 id="terms">
+          {deal.name} referral terms, limits and who is eligible
+        </h2>
+        <ul className="mt-3 list-disc space-y-1.5 pl-6">
+          {article.terms.map((term) => (
+            <li key={term}>{term}</li>
+          ))}
+        </ul>
+        <p className="text-sm text-muted">
+          All program rules are {deal.name}&rsquo;s and can change without notice. The
+          binding version is the one in the app: {article.termsSource} Where this page and
+          that screen disagree, that screen is right.
+        </p>
+
         <h2 id="faq">{article.faqHeading}</h2>
         <dl>
           {article.faqs.map(({ q, a }) => (

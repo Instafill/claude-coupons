@@ -37,6 +37,13 @@ export interface DealArticle {
   facts: DealFact[];
   factsNote: string;
   sections: DealSection[];
+  /** The conditions that decide whether the offer actually pays out, and to whom.
+      Every line is the program's own rule, not ours - the ones a person would otherwise
+      discover after signing up, when it is too late to act on them. */
+  terms: string[];
+  /** Where the binding version lives, named by the screen it is on rather than by a URL
+      we would be guessing at. The terms someone is held to are the ones in their app. */
+  termsSource: string;
   faqHeading: string;
   faqs: { q: string; a: string }[];
 }
@@ -107,6 +114,18 @@ const WAYMO: DealArticle = {
       ],
     },
   ],
+  terms: [
+    "New riders only. The $10 applies to a first Waymo ride; on an account that has already ridden, the code is refused.",
+    "Waymo's own wording: subject to availability and while supplies last, non-transferable, and not redeemable for cash.",
+    "Offers cannot be combined. The app automatically applies whichever promo discounts your trip most, so a $10 referral can be superseded by a larger one rather than added to it.",
+    "The discount is capped at $10 and applies to the fare. A longer trip pays the difference.",
+    "A rider's code carries ten uses a month and the count resets monthly - a code that worked last month may have nothing left this month.",
+    "The sharer's half, up to $10 off their next ride, only lands once the new rider actually takes a ride. Redeeming the code is not enough.",
+    "Usable only where Waymo operates - currently Phoenix, San Francisco, Los Angeles, Austin and Atlanta, with more cities opening.",
+    "Nothing is redeemed on this site. Every rule above is Waymo's, and this site is not affiliated with Waymo.",
+  ],
+  termsSource:
+    "Waymo app -> Offers & promotions -> Terms apply, and See promo details on the offer itself.",
   faqHeading: "Waymo promo code questions",
   faqs: [
     {
@@ -199,6 +218,16 @@ const UBER: DealArticle = {
       ],
     },
   ],
+  terms: [
+    "New riders only. The 50% applies to a first Uber trip; an account with trip history gets nothing from an invite code.",
+    "The discount is capped: 50% off each of two trips, up to USD 10 off per trip. A larger fare pays the balance.",
+    "The inviter's half - 50% off two trips - is valid for 30 days after the new rider takes their first ride, and expires unused after that.",
+    "The inviter is credited only when the invited rider completes a first trip, not when the code is entered.",
+    "Codes are personal, one per rider, not transferable, and have no cash value.",
+    "Amounts and availability vary by city and can change. The figures on Uber's own invite screen are the ones in force for that account.",
+    "Nothing is redeemed on this site. Every rule above is Uber's, and this site is not affiliated with Uber.",
+  ],
+  termsSource: "The read FAQs link on Uber's own Invite friends screen.",
   faqHeading: "Uber promo code questions",
   faqs: [
     {
@@ -284,6 +313,16 @@ const MUSE: DealArticle = {
       ],
     },
   ],
+  terms: [
+    "The 48-hour window runs from when the account was created, not from when you received the code. Get the code first, then sign up.",
+    "The code is redeemed in Settings on the new account. There is no field for it during signup, so signing up and looking for a code afterwards usually misses the window.",
+    "Both sides are paid only on a redemption inside the window. A late redemption pays neither of you.",
+    "New accounts only.",
+    "A code carries thirty uses, counted down on the sharer's own invite screen, so a widely shared code can be spent before you reach it.",
+    "Muse tokens are account credit for muse.ai's own features. They are not cash, not transferable, and not redeemable for anything outside the product.",
+    "Nothing is redeemed on this site. Every rule above is muse.ai's, and this site is not affiliated with muse.ai.",
+  ],
+  termsSource: "The invite screen in muse.ai, and muse.ai's own terms.",
   faqHeading: "muse.ai invite code questions",
   faqs: [
     {
@@ -374,6 +413,18 @@ const POKEMON_GO: DealArticle = {
       ],
     },
   ],
+  terms: [
+    "Written for new Trainers. Niantic's own rule, printed on the invite screen: referring someone who has already started earns rewards only if that Trainer has not logged in for over 90 days.",
+    "The code has to be entered while the Trainer account is being set up. An account already running cannot apply one afterwards.",
+    "Rewards arrive in stages as the new Trainer passes milestones - logging in, defeating three Team GO Rocket grunts, completing 25 Field Research tasks, and further goals - not all at once.",
+    "The sharer is paid only as the new Trainer actually reaches those milestones. A Trainer who installs and stops earns them little or nothing.",
+    "A Trainer can refresh their referral code whenever they like, which replaces the old one - so a code copied from a forum can simply have ceased to exist.",
+    "This is not a Niantic promo code (those are redeemed on the Pokémon GO web store and expire) and not a Trainer friend code (which pays neither side).",
+    "Rewards are in-game items. They have no cash value and are not transferable.",
+    "Nothing is redeemed on this site. Every rule above is Niantic's, and this site is not affiliated with Niantic or Pokémon.",
+  ],
+  termsSource:
+    "The Invite to Pokémon GO screen in game, and Niantic's own terms of service.",
   faqHeading: "Pokémon GO referral code questions",
   faqs: [
     {
@@ -460,6 +511,16 @@ const FIREFLIES: DealArticle = {
       ],
     },
   ],
+  terms: [
+    "The 10% is attached to the link, not to a code. The account has to be created from the page the link lands on, or the discount is not applied and cannot be added afterwards.",
+    "Use a work email address. Fireflies states on its own Refer screen that personal email domains are no longer eligible for referral credits, so a gmail.com or outlook.com signup can leave the sharer with nothing even though you used their link.",
+    "New Fireflies.ai accounts only.",
+    "The sharer receives $5 in credit towards renewing a Pro plan - credit inside the product, not a cash payout.",
+    "That credit is paid on a successful signup as Fireflies counts one. Their definition governs, not ours.",
+    "Plan prices and the discount can change. What the checkout page shows at the moment you subscribe is what applies.",
+    "Nothing is redeemed on this site. Every rule above is Fireflies' own, and this site is not affiliated with Fireflies.ai.",
+  ],
+  termsSource: "The Refer screen in Fireflies.ai, and Fireflies' own terms.",
   faqHeading: "Fireflies.ai referral questions",
   faqs: [
     {

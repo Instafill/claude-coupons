@@ -132,6 +132,16 @@ export default async function ReferralCodesPage() {
             <li>Each board has its own line. Unlocking a Waymo code costs you nothing on the Claude one.</li>
           </ol>
 
+          <h2>Whose terms apply</h2>
+          <p>
+            Every offer here belongs to the company that runs it, not to this site. Each
+            board sets out that program&rsquo;s own conditions in full - who is eligible,
+            what the discount is capped at, what has to happen before either side is paid,
+            and how long a code lasts - because those are the rules that decide whether an
+            offer is worth your time, and they are easier to read before you sign up than
+            after. Nothing is ever redeemed on this site.
+          </p>
+
           <h2>Have a code of your own?</h2>
           <p>
             Most referral codes expire unused. If you hold one,{" "}
