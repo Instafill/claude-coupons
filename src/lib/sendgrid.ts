@@ -1,5 +1,7 @@
 import sgMail from "@sendgrid/mail";
 
+import { Deal, capitalize, dealLink, numberWord } from "@/lib/deals";
+
 // Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
 // one domain arriving from another is the shape of a phishing mail and filters score it
 // that way; sending as alex@botmakers.net put the magic link in a user's spam folder, and
@@ -27,12 +29,14 @@ function init() {
 // carries the full referral link on purpose: the point is to be able to check the pass is
 // real from the phone that got the alert. It goes to one fixed inbox, never to a user.
 export async function notifyNewPass(pass: {
+  deal: Deal;
   code: string;
   submitterEmail?: string;
   submitterName?: string;
   livePasses: number;
 }): Promise<void> {
-  const url = `https://claude.ai/referral/${pass.code}`;
+  const { deal } = pass;
+  const url = dealLink(deal, pass.code);
   const who = pass.submitterName
     ? pass.submitterEmail
       ? `${pass.submitterName} (${pass.submitterEmail})`
@@ -40,7 +44,7 @@ export async function notifyNewPass(pass: {
     : pass.submitterEmail || "an anonymous contributor";
 
   if (!process.env.SENDGRID_API_KEY) {
-    console.log(`[notify] new pass ${pass.code} from ${who}`);
+    console.log(`[notify] new ${deal.slug} ${deal.noun} ${pass.code} from ${who}`);
     return;
   }
 
@@ -49,18 +53,19 @@ export async function notifyNewPass(pass: {
     await sgMail.send({
       to: NOTIFY_EMAIL,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: `New Claude pass listed by ${pass.submitterEmail || "an anonymous contributor"}`,
-      text: `${who} listed a pass.\n\n${url}\n\nLive passes on the board: ${pass.livePasses}\nhttps://claudecoupons.com/`,
+      subject: `New ${deal.name} ${deal.noun} listed by ${pass.submitterEmail || "an anonymous contributor"}`,
+      text: `${who} listed a ${deal.noun}.\n\n${pass.code}\n${url}\n\nLive ${deal.nounPlural} on the ${deal.name} board: ${pass.livePasses}\nhttps://claudecoupons.com${deal.path}`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d;">
-          <h2 style="color: #c9642f; margin-bottom: 4px;">New pass on the board</h2>
+          <h2 style="color: #c9642f; margin-bottom: 4px;">New ${deal.name} ${deal.noun} on the board</h2>
           <p style="color: #6e6a63; margin-top: 0;">Listed by ${who}</p>
           <p style="font-family: ui-monospace, Menlo, monospace; background: #f0ede6; padding: 10px 14px; border-radius: 8px; word-break: break-all;">
             <a href="${url}" style="color: #a94f20;">${url}</a>
           </p>
           <p style="color: #6e6a63; font-size: 14px;">
-            Live passes on the board: <strong>${pass.livePasses}</strong> &middot;
-            <a href="https://claudecoupons.com/" style="color: #a94f20;">open the board</a>
+            Code: <strong>${pass.code}</strong><br />
+            Live ${deal.nounPlural} on the board: <strong>${pass.livePasses}</strong> &middot;
+            <a href="https://claudecoupons.com${deal.path}" style="color: #a94f20;">open the board</a>
           </p>
         </div>`,
     });
@@ -103,7 +108,11 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
 // Asks someone to confirm they want alerts before a single one is sent. The confirmation
 // step is not ceremony: unconfirmed bulk mail from this domain would put the sign-in links
 // above at risk, and those are the one email this site cannot afford to have filtered.
-export async function sendWatchConfirmation(email: string, confirmUrl: string): Promise<void> {
+export async function sendWatchConfirmation(
+  email: string,
+  deal: Deal,
+  confirmUrl: string
+): Promise<void> {
   if (!process.env.SENDGRID_API_KEY) {
     console.log(`[watch-confirm] ${email}: ${confirmUrl}`);
     return;
@@ -114,12 +123,12 @@ export async function sendWatchConfirmation(email: string, confirmUrl: string): 
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: "Confirm you want Claude pass alerts",
-      text: `Someone asked us to email this address when claudecoupons.com has Claude guest passes again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
+      subject: `Confirm you want ${deal.name} ${deal.noun} alerts`,
+      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription} again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
-          <p>Someone asked us to email this address when the board at claudecoupons.com has Claude guest passes again.</p>
+          <p>Someone asked us to email this address when the board at claudecoupons.com has ${deal.mailDescription} again.</p>
           <p style="margin: 24px 0;">
             <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Confirm and start watching</a>
           </p>
@@ -154,6 +163,7 @@ const MAX_ALERT_BATCH = 25;
 // notified and a failed send is retried on the next refill instead of being lost.
 export async function sendPassAlerts(
   recipients: AlertRecipient[],
+  deal: Deal,
   waiting: number,
   wave: number
 ): Promise<string[]> {
@@ -169,7 +179,9 @@ export async function sendPassAlerts(
 
   for (let i = 0; i < recipients.length; i += MAX_ALERT_BATCH) {
     const chunk = recipients.slice(i, i + MAX_ALERT_BATCH);
-    const results = await Promise.allSettled(chunk.map((r) => sendOneAlert(r, waiting, wave)));
+    const results = await Promise.allSettled(
+      chunk.map((r) => sendOneAlert(r, deal, waiting, wave))
+    );
     results.forEach((result, index) => {
       if (result.status === "fulfilled") delivered.push(chunk[index].email);
       else console.error("Pass alert send failed:", result.reason);
@@ -181,34 +193,37 @@ export async function sendPassAlerts(
 
 function sendOneAlert(
   { email, enterUrl, stopUrl }: AlertRecipient,
+  deal: Deal,
   waiting: number,
   wave: number
 ): Promise<unknown> {
   // Honest urgency: this went to your wave only, and the wave behind you is minutes away.
   const crowd = `Wave ${wave}: you and ${waiting - 1} other${waiting === 2 ? "" : "s"} at the front of the queue.`;
-  const rule = "Three unlocks and the pass is finished. The next wave opens in five minutes.";
+  const rule = `${capitalize(numberWord(deal.unlocksPerListing))} unlocks and the ${
+    deal.noun
+  } is finished. The next wave opens in five minutes.`;
   return sgMail.send({
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
-    subject: `Your turn: a Claude pass is on the board`,
+    subject: `Your turn: a ${deal.name} ${deal.noun} is on the board`,
     // One-click unsubscribe. The POST variant is what Gmail's own "unsubscribe" button
     // calls; the mailto-free header list is what marks this as bulk mail honestly.
     headers: {
       "List-Unsubscribe": `<${stopUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    text: `It is your turn. A Claude pass is on the board.\n\nUnlock it: ${enterUrl}\n\n${crowd} ${rule} The link above opens the board with you already signed in. Let it go and you keep your place for the next pass; let three go and your number moves to the back.\n\nStop these emails: ${stopUrl}`,
+    text: `It is your turn. A ${deal.name} ${deal.noun} is on the board.\n\nUnlock it: ${enterUrl}\n\n${crowd} ${rule} The link above opens the board with you already signed in. Let it go and you keep your place for the next ${deal.noun}; let three go and your number moves to the back.\n\nStop these emails: ${stopUrl}`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
         <h2 style="color: #c9642f;">It is your turn</h2>
-        <p>A Claude pass is on the board. ${crowd}</p>
+        <p>A ${deal.name} ${deal.noun} is on the board. ${crowd}</p>
         <p>${rule}</p>
         <p style="margin: 24px 0;">
           <a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Unlock it</a>
         </p>
         <p style="color: #6e6a63; font-size: 14px;">
           The button opens the board with you already signed in. Let this one go and you keep your place for
-          the next pass; let three go and your number moves to the back.
+          the next ${deal.noun}; let three go and your number moves to the back.
         </p>
         <p style="color: #6e6a63; font-size: 13px;">
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.

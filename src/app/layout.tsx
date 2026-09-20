@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 
 import { getUser } from "@/lib/auth";
+import { OTHER_DEALS } from "@/lib/deals";
 
 import "./globals.css";
 
@@ -43,11 +44,14 @@ export default async function RootLayout({
             <Link href="/claude-guest-pass" className="hover:text-accent-dark">
               Guest passes
             </Link>
-            <Link href="/claude-free-trial" className="hover:text-accent-dark">
-              Free trial
+            {/* The other boards reach every page through one link rather than six: the nav
+                is the wrong place to spend a reader's attention, and the hub is the page
+                built to hold that list. */}
+            <Link href="/referral-codes" className="hover:text-accent-dark">
+              All codes
             </Link>
             <Link href="/submit" className="hover:text-accent-dark">
-              Share a pass
+              Share a code
             </Link>
             {user ? (
               <>
@@ -65,7 +69,7 @@ export default async function RootLayout({
                   />
                 )}
                 <Link href="/manage" className="hover:text-accent-dark">
-                  My passes
+                  My codes
                 </Link>
                 <form
                   action="/api/auth/signout"
@@ -108,7 +112,22 @@ export default async function RootLayout({
           </p>
           <p className="mt-2">
             Not affiliated with or endorsed by Anthropic. Claude is a trademark
-            of Anthropic, PBC.
+            of Anthropic, PBC. The other programs listed here belong to their own
+            companies, are not affiliated with this site, and set their own terms; every
+            code is a personal referral shared by a user, and whoever shared one may earn a
+            credit or reward if you use it.
+          </p>
+          {/* Every board, from every page. Sitewide internal links are what make a new
+              board findable before anything links to it from outside. */}
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {OTHER_DEALS.map((deal) => (
+              <Link key={deal.slug} href={deal.path} className="hover:text-accent-dark">
+                {deal.name} {deal.nounPlural}
+              </Link>
+            ))}
+            <Link href="/elevenlabs-promo-code" className="hover:text-accent-dark">
+              ElevenLabs
+            </Link>
           </p>
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             <a

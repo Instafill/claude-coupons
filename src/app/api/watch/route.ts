@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUser } from "@/lib/auth";
+import { DEFAULT_DEAL, isDealSlug } from "@/lib/deals";
 import { logEvent } from "@/lib/events";
 import { readGeo } from "@/lib/geo";
 import { hashIp } from "@/lib/passes";
@@ -50,10 +51,17 @@ export async function POST(request: NextRequest) {
     ? (answer as WatchIntent)
     : undefined;
 
+  // Which board's form this was. Unknown values fall back to Claude rather than failing:
+  // the field arrived after the form did, and a lost subscription is worse than a wrong
+  // guess that the person can correct by using the board they meant.
+  const asked = String(form.get("deal") || "");
+  const deal = isDealSlug(asked) ? asked : DEFAULT_DEAL;
+
   // The answer rides in with the subscription: there is one submit, so there is one request.
   const { watching } = await subscribe({
     email,
     ipHash,
+    deal,
     intent,
     geo: readGeo(request.headers),
     userId: user?.id,

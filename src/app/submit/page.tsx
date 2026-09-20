@@ -2,40 +2,46 @@ import type { Metadata } from "next";
 
 import SubmitForm from "@/components/SubmitForm";
 import { getUser } from "@/lib/auth";
+import { DEFAULT_DEAL, isDealSlug } from "@/lib/deals";
 
 export const metadata: Metadata = {
-  title: "Share Your Claude Code Passes - Claude Coupons",
+  title: "Share a Referral Code - Claude Coupons",
   description:
-    "List your spare Claude Code guest passes so someone actually uses them. Paste your claude.ai invite link - no account required.",
+    "List a spare referral code so someone actually uses it: Claude Code passes, Waymo and Uber promo codes, muse.ai invites, Pokémon GO referrals, Fireflies.ai links. No account required.",
   alternates: { canonical: "https://claudecoupons.com/submit" },
 };
 
-export default async function SubmitPage() {
+export default async function SubmitPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ deal?: string }>;
+}) {
   const user = await getUser();
+  // The board someone arrived from, so a Waymo rider who pressed "share yours" is not made
+  // to pick Waymo again on the page that took them there.
+  const { deal } = await searchParams;
+  const initialDeal = deal && isDealSlug(deal) ? deal : DEFAULT_DEAL;
 
   return (
     <section className="mx-auto mt-8 max-w-md">
-      <h1 className="text-[28px] font-bold">Share your Claude Code passes</h1>
+      <h1 className="text-[28px] font-bold">Share a referral code</h1>
       <p className="mt-1 font-semibold text-good">No account or sign-in required.</p>
       <p className="mt-2">
-        Subscribed to Claude Pro or Max? You hold a few guest passes, each worth a free week of
-        Claude Pro to someone new. Sharing one gives someone who may not be able to afford it the
-        chance to learn, build, and experience Claude for themselves. If they stay subscribed,
-        Anthropic may also credit you $10 in usage. Find your invite link with{" "}
+        A code sitting unused in an app is worth nothing to anybody. Listed here it goes to a
+        queue of people waiting for exactly that one - and on most of these programs you are
+        paid when they use it. Subscribed to Claude Pro or Max? Your guest passes are each a
+        free week of Claude Pro for someone new; find one with{" "}
         <code className="rounded bg-[#f0ede6] px-1.5 py-0.5 text-sm">/passes</code> in Claude
-        Code or in the Claude app settings, and paste it below.
+        Code or in the Claude app settings.
       </p>
 
-      <SubmitForm />
+      <SubmitForm initialDeal={initialDeal} />
 
       <p className="mt-5 text-sm text-muted">
-        Only complete{" "}
-        <code className="rounded bg-[#f0ede6] px-1.5 py-0.5">
-          https://claude.ai/referral/...
-        </code>{" "}
-        links are accepted. Automated checks reject malformed or abusive submissions, and
-        anonymous submissions are rate-limited. Your listing is masked until a signed-in visitor
-        unlocks it and comes down once its passes run out.
+        Only the code is stored - where a program has a personal link, we rebuild it ourselves,
+        so an arbitrary link cannot reach the board. Automated checks reject malformed or
+        abusive submissions, and anonymous submissions are rate-limited. Your listing is masked
+        until a signed-in visitor unlocks it, and comes down once its uses run out.
       </p>
 
       {user ? (

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Types } from "mongoose";
 
+import { DEFAULT_DEAL, DealSlug, getDeal } from "@/lib/deals";
 import { logEvent } from "@/lib/events";
 import { Geo } from "@/lib/geo";
 import { dbConnect } from "@/lib/mongodb";
@@ -11,6 +12,10 @@ import Watcher, { WatchIntent } from "@/models/Watcher";
 // The watch list: everything that decides whether an address is on it, and everything that
 // decides whether it receives mail. The routes below this only translate HTTP into these
 // calls, so the rules live in one readable place.
+//
+// One row per address, however many boards it watches. The address is the identity - it is
+// what a confirmation proves and what a stop link silences - so the boards someone is
+// waiting on hang off it as Membership rows rather than multiplying it.
 
 export const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -39,8 +44,11 @@ export function stopUrl(value: string): string {
   return `${baseUrl()}/api/watch/stop?token=${value}`;
 }
 
-export function enterUrl(value: string): string {
-  return `${baseUrl()}/api/watch/enter?token=${value}`;
+/** The button in an alert. It carries the board the alert was about, so someone watching
+    two of them lands on the one that just filled rather than on the home page. */
+export function enterUrl(value: string, deal?: DealSlug): string {
+  const board = deal && deal !== DEFAULT_DEAL ? `&deal=${deal}` : "";
+  return `${baseUrl()}/api/watch/enter?token=${value}${board}`;
 }
 
 /**
@@ -58,12 +66,15 @@ export async function subscribe(input: {
   ipHash: string;
   userId?: string;
   preVerified: boolean;
+  /** The board they are joining. One submit, one queue - the form they used says which. */
+  deal: DealSlug;
   intent?: WatchIntent;
   geo?: Geo;
 }): Promise<{ watching: boolean }> {
   await dbConnect();
   const now = new Date();
   const existing = await Watcher.findOne({ email: input.email });
+  const { joinQueue } = await import("@/lib/queue");
 
   // What they answered, in the shape the row stores it. Absent answers stay absent rather
   // than blanking an earlier one.
@@ -75,16 +86,24 @@ export async function subscribe(input: {
     if (value) answers[field] = value;
   }
 
-  // Already watching: nothing to change, and nothing to send. The answer is still worth
-  // keeping - it is the same person telling us the same thing a second time.
+  // Already watching: the address is proven, so a second confirmation would be theatre.
+  // The board they just asked for is new information though - somebody waiting on Claude
+  // passes who now also wants Waymo codes gets their number on that line immediately, with
+  // no email in between.
   if (existing?.confirmedAt && !existing.stoppedAt) {
     if (Object.keys(answers).length) {
       await Watcher.updateOne({ _id: existing._id }, { $set: answers });
     }
+    await joinQueue(existing._id as Types.ObjectId, existing.email, input.deal);
     return { watching: true };
   }
 
-  const watcher = existing ?? new Watcher({ email: input.email, stopToken: token() });
+  // queueMigratedAt is stamped at creation, not because anything has been migrated, but
+  // because it marks a row whose queue places already live in the Membership collection.
+  // Without it the adoption pass would treat a brand-new Waymo subscriber as a legacy
+  // Claude one and hand them a number in a line they never asked to stand in.
+  const watcher =
+    existing ?? new Watcher({ email: input.email, stopToken: token(), queueMigratedAt: new Date() });
   // Re-subscribing after stopping reuses the row - the unique index on email means there is
   // only ever one, and the stop token stays valid so old alerts keep working.
   watcher.stoppedAt = undefined;
@@ -95,13 +114,19 @@ export async function subscribe(input: {
   if (input.preVerified) {
     watcher.confirmedAt = now;
     watcher.confirmToken = undefined;
+    watcher.pendingDeals = undefined;
+    watcher.queueMigratedAt = watcher.queueMigratedAt ?? new Date();
     await watcher.save();
     // Their place in line is the whole product, so it is handed out the moment they are in.
-    const { takeNumber } = await import("@/lib/queue");
-    if (!watcher.position) await takeNumber(watcher._id as Types.ObjectId);
-    logEvent("watch_confirmed", { via: "session" });
+    await joinQueue(watcher._id as Types.ObjectId, watcher.email, input.deal);
+    logEvent("watch_confirmed", { via: "session", deal: input.deal });
     return { watching: true };
   }
+
+  // Unproven, so nothing is joined yet: the board they asked for is remembered on the row
+  // and acted on when the link in the mail is clicked. A place in line is only ever handed
+  // to an address someone has shown they can read.
+  watcher.pendingDeals = [input.deal];
 
   const resendBlocked = Boolean(
     watcher.confirmSentAt &&
@@ -121,8 +146,12 @@ export async function subscribe(input: {
   watcher.confirmToken = token();
   watcher.confirmSentAt = now;
   await watcher.save();
-  await sendWatchConfirmation(watcher.email, confirmUrl(watcher.confirmToken));
-  logEvent("watch_subscribed", { returning: Boolean(existing) });
+  await sendWatchConfirmation(
+    watcher.email,
+    getDeal(input.deal),
+    confirmUrl(watcher.confirmToken)
+  );
+  logEvent("watch_subscribed", { deal: input.deal, returning: Boolean(existing) });
   return { watching: false };
 }
 
@@ -161,24 +190,38 @@ export async function placeWatcher(email: string, geo: Geo): Promise<void> {
  * Returns the address so the caller can start its session: clicking the link proved the
  * mailbox, which is exactly what a magic link proves, and the list is the door.
  */
-export async function confirm(value: string): Promise<{ email: string } | null> {
+export async function confirm(
+  value: string
+): Promise<{ email: string; deal: DealSlug } | null> {
   await dbConnect();
   const cutoff = new Date(Date.now() - CONFIRM_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const before = await Watcher.findOne({ confirmToken: value, confirmSentAt: { $gte: cutoff } });
   const watcher = await Watcher.findOneAndUpdate(
     { confirmToken: value, confirmSentAt: { $gte: cutoff } },
     // Clearing stoppedAt too: confirming is an unambiguous "yes", so it revives a row that
     // someone stopped and then signed up for again.
-    { $set: { confirmedAt: new Date() }, $unset: { confirmToken: "", stoppedAt: "" } },
+    {
+      $set: { confirmedAt: new Date(), queueMigratedAt: new Date() },
+      $unset: { confirmToken: "", stoppedAt: "", pendingDeals: "" },
+    },
     { returnDocument: "after" }
   );
   if (!watcher) {
     logEvent("watch_confirm_rejected");
     return null;
   }
-  const { takeNumber } = await import("@/lib/queue");
-  if (!watcher.position) await takeNumber(watcher._id as Types.ObjectId);
-  logEvent("watch_confirmed", { via: "email" });
-  return { email: watcher.email };
+  // What they asked for before the link was clicked. A row that predates the field is a
+  // Claude subscriber, which is what everyone on the list was at the time.
+  const deals = before?.pendingDeals?.length ? before.pendingDeals : [DEFAULT_DEAL];
+  // Only the boards they asked for are revived. A stop meant every board, so bringing all
+  // of them back on a confirmation for one would put mail in an inbox that did not ask for
+  // it - joinQueue lifts the stop on exactly the line being joined.
+  const { joinQueue } = await import("@/lib/queue");
+  for (const deal of deals) {
+    await joinQueue(watcher._id as Types.ObjectId, watcher.email, deal);
+  }
+  logEvent("watch_confirmed", { via: "email", deal: deals[0] });
+  return { email: watcher.email, deal: deals[0] };
 }
 
 /** The link in an alert email: an active address gets its session and lands on the board. */
@@ -204,24 +247,15 @@ export async function enter(value: string): Promise<{ email: string } | null> {
  */
 export async function stop(value: string): Promise<void> {
   await dbConnect();
-  const result = await Watcher.updateOne(
+  const watcher = await Watcher.findOneAndUpdate(
     { stopToken: value, stoppedAt: { $exists: false } },
     { $set: { stoppedAt: new Date() }, $unset: { confirmToken: "" } }
   );
-  logEvent("watch_stopped", { matched: result.matchedCount });
-}
-
-/** How many addresses would get the next alert. Shown on the page, so it has to be this
-    exact predicate and not a count of rows. */
-export async function countWaiting(): Promise<number> {
-  await dbConnect();
-  return Watcher.countDocuments({ confirmedAt: { $exists: true }, stoppedAt: { $exists: false } });
-}
-
-/** Whether one address is on the list at all, served or still waiting. */
-export async function isWatching(email: string): Promise<boolean> {
-  await dbConnect();
-  return Boolean(
-    await Watcher.exists({ email: email.toLowerCase(), confirmedAt: { $exists: true }, stoppedAt: { $exists: false } })
-  );
+  // One click, every board. A stop link that silenced only the queue whose alert it rode in
+  // on would leave someone still receiving mail from us, which is not what the word means.
+  if (watcher) {
+    const { stopMemberships } = await import("@/lib/queue");
+    await stopMemberships(watcher.email);
+  }
+  logEvent("watch_stopped", { matched: watcher ? 1 : 0 });
 }

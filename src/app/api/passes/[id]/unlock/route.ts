@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
+import { dealLink } from "@/lib/deals";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import {
   UNLOCKS_PER_USER_PER_DAY,
   countRecentUnlocks,
+  dealOf,
   hashIp,
-  passUrl,
   recordUnlock,
 } from "@/lib/passes";
 import { leaveQueue, mayUnlock } from "@/lib/queue";
@@ -37,13 +38,17 @@ export async function POST(
     return NextResponse.json({ error: "This pass is no longer available." }, { status: 404 });
   }
 
+  // Which board this listing belongs to decides which line is checked, which allowance is
+  // spent, and which queue the unlock takes them out of.
+  const deal = dealOf(pass);
+
   const { ok, standing } = await mayUnlock(user.email, pass);
   if (!standing) {
-    logEvent("unlock_rejected", { reason: "no_number", user: user.id });
+    logEvent("unlock_rejected", { deal: deal.slug, reason: "no_number", user: user.id });
     return NextResponse.json({ error: "Take a number to unlock.", reason: "join" }, { status: 403 });
   }
   if (!ok) {
-    logEvent("unlock_rejected", { reason: "wave_closed", user: user.id, wave: standing.wave });
+    logEvent("unlock_rejected", { deal: deal.slug, reason: "wave_closed", user: user.id, wave: standing.wave });
     return NextResponse.json(
       {
         error: `Wave ${standing.wave} hasn't opened yet. A new wave opens every five minutes.`,
@@ -57,11 +62,12 @@ export async function POST(
     passId: new Types.ObjectId(id),
     userId: new Types.ObjectId(user.id),
   });
-  if (!already && (await countRecentUnlocks(user.id)) >= UNLOCKS_PER_USER_PER_DAY) {
-    logEvent("unlock_rejected", { reason: "daily_cap", user: user.id });
+  // Counted per board: a run on Waymo codes must not spend someone's Claude allowance.
+  if (!already && (await countRecentUnlocks(user.id, deal.slug)) >= UNLOCKS_PER_USER_PER_DAY) {
+    logEvent("unlock_rejected", { deal: deal.slug, reason: "daily_cap", user: user.id });
     return NextResponse.json(
       {
-        error: `You've unlocked ${UNLOCKS_PER_USER_PER_DAY} passes in the last 24 hours. Try one of those first, or come back tomorrow.`,
+        error: `You've unlocked ${UNLOCKS_PER_USER_PER_DAY} ${deal.nounPlural} in the last 24 hours. Try one of those first, or come back tomorrow.`,
       },
       { status: 429 }
     );
@@ -70,10 +76,11 @@ export async function POST(
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     request.headers.get("x-real-ip");
-  await recordUnlock(id, user.id, hashIp(ip));
-  // Their turn is spent: out of the queue, and everyone behind them moves up one.
-  await leaveQueue(user.email);
-  logEvent("pass_unlocked", { pass: id, user: user.id, wave: standing.wave });
+  await recordUnlock(id, user.id, deal.slug, hashIp(ip));
+  // Their turn on this board is spent: out of that queue, and everyone behind them on it
+  // moves up one. The lines they hold on other boards are untouched.
+  await leaveQueue(user.email, deal.slug);
+  logEvent("pass_unlocked", { deal: deal.slug, pass: id, user: user.id, wave: standing.wave });
 
-  return NextResponse.json({ url: passUrl(pass.code), code: pass.code });
+  return NextResponse.json({ url: dealLink(deal, pass.code), code: pass.code });
 }

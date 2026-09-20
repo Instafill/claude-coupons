@@ -2,7 +2,8 @@ import { CaptchaBridge, CaptchaSlot } from "@/components/CaptchaBridge";
 import PlaceMe from "@/components/PlaceMe";
 import SkipProbe from "@/components/SkipProbe";
 import WatchForm from "@/components/WatchForm";
-import type { ClaimSpeed } from "@/lib/passes";
+import { type Deal, capitalize, numberWord } from "@/lib/deals";
+import { WAVE_SIZE, type ClaimSpeed } from "@/lib/passes";
 import type { Standing } from "@/lib/queue";
 import { spotsLeftInJoinWave } from "@/lib/queue";
 
@@ -23,6 +24,7 @@ function Wave({ n }: { n: number }) {
 }
 
 export default function PassListCard({
+  deal,
   livePasses,
   inLine,
   joinWave,
@@ -35,6 +37,7 @@ export default function PassListCard({
   email,
   confirmed,
 }: {
+  deal: Deal;
   livePasses: number;
   inLine: number;
   joinWave: number;
@@ -49,6 +52,12 @@ export default function PassListCard({
 }) {
   const spotsLeft = spotsLeftInJoinWave(inLine);
   const myTurn = standing !== null && openWave > 0 && standing.wave <= openWave;
+  // How a listing running out is said, in the brand's own arithmetic. Three passes come
+  // off inside the first waves; thirty muse.ai invites plainly do not, so the clause that
+  // claims otherwise is dropped rather than made untrue.
+  const finishes = `${capitalize(numberWord(deal.unlocksPerListing))} unlocks and the ${
+    deal.noun
+  } is finished`;
 
   let heading: React.ReactNode;
   let body: string;
@@ -58,25 +67,29 @@ export default function PassListCard({
         Your turn. <span className="text-accent">Unlock it now</span> or lose it.
       </>
     );
-    body = `Wave ${openWave} is open and you are in wave ${standing.wave}. Three unlocks and this pass is gone.`;
+    body = `Wave ${openWave} is open and you are in wave ${standing.wave}. ${capitalize(
+      numberWord(deal.unlocksPerListing)
+    )} unlocks and this ${deal.noun} is gone.`;
   } else if (standing && livePasses > 0) {
     heading = (
       <>
         You are <Wave n={standing.wave} />. Wave {openWave} is unlocking right now.
       </>
     );
-    body = "A wave opens every five minutes while the pass lasts. Stay on this page - the button turns on by itself.";
+    body = `A wave opens every five minutes while the ${deal.noun} lasts. Stay on this page - the button turns on by itself.`;
   } else if (standing) {
     heading = (
       <>
         You are <Wave n={standing.wave} /> in the queue.
       </>
     );
-    body = `${standing.ahead} ${standing.ahead === 1 ? "person is" : "people are"} ahead of you, and nobody who joins now can get in front. The next pass goes to wave 1 first.`;
+    body = `${standing.ahead} ${
+      standing.ahead === 1 ? "person is" : "people are"
+    } ahead of you, and nobody who joins now can get in front. The next ${deal.noun} goes to wave 1 first.`;
   } else if (livePasses > 0) {
     heading = (
       <>
-        A pass is live. Join now and you are <Wave n={joinWave} />.
+        A {deal.noun} is live. Join now and you are <Wave n={joinWave} />.
       </>
     );
     body = "Waves open five minutes apart, so a queue this short can still reach you today. Wait, and it will not.";
@@ -99,8 +112,10 @@ export default function PassListCard({
 
   const rules: string[] = [
     "Numbers are handed out in order and never reused. Join later and you start further back, always.",
-    "A new pass goes to the first 10 in the queue. Ten more every five minutes after that.",
-    "Three unlocks and the pass is finished, so it rarely gets past the first waves.",
+    `A new ${deal.noun} goes to the first ${WAVE_SIZE} in the queue. Ten more every five minutes after that.`,
+    deal.unlocksPerListing <= WAVE_SIZE
+      ? `${finishes}, so it rarely gets past the first waves.`
+      : `${finishes}, and the queue is walked in order until it is.`,
     "Unlock one and you leave the queue - everyone behind you moves up a place.",
     "Let three turns go by without unlocking and your number goes to the back.",
   ];
@@ -153,7 +168,8 @@ export default function PassListCard({
                 )}
                 {speed && (
                   <>
-                    The last {speed.sample} passes were unlocked within {speed.medianMinutes} minute
+                    The last {speed.sample} {deal.nounPlural} were unlocked within{" "}
+                    {speed.medianMinutes} minute
                     {speed.medianMinutes === 1 ? "" : "s"} of being listed.
                   </>
                 )}
@@ -179,8 +195,8 @@ export default function PassListCard({
               </p>
               <p className="mt-1 text-sm">
                 {standing.ahead === 0
-                  ? "You are first in line. The next pass is offered to you before anyone else."
-                  : `${standing.ahead} ahead of you. Each one who unlocks a pass leaves the queue and you move up.`}
+                  ? `You are first in line. The next ${deal.noun} is offered to you before anyone else.`
+                  : `${standing.ahead} ahead of you. Each one who unlocks a ${deal.noun} leaves the queue and you move up.`}
               </p>
               {standing.ahead > 0 && <SkipProbe />}
               {/* Renders nothing. Someone holding a number is the person we could not place
@@ -191,7 +207,12 @@ export default function PassListCard({
             <>
               {/* No heading here: the card's own already says take a number and which wave
                   it would be, and saying it twice on one screen makes neither louder. */}
-              <WatchForm signedIn={signedIn} email={email} buttonLabel={`Take my number - wave ${joinWave}`} />
+              <WatchForm
+                deal={deal}
+                signedIn={signedIn}
+                email={email}
+                buttonLabel={`Take my number - wave ${joinWave}`}
+              />
               <p className="mt-2 text-[13px] text-muted">
                 One click in the confirmation email holds your place. Nothing else is ever sent, and one
                 click stops it.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { findOrCreateUser, setSessionCookie } from "@/lib/auth";
+import { getDeal } from "@/lib/deals";
 import { readGeo } from "@/lib/geo";
 import { baseUrl, confirm, placeWatcher } from "@/lib/watchers";
 
@@ -17,7 +18,11 @@ export async function GET(request: NextRequest) {
   // are and carries the edge's geo, so it is where most of the list gets placed.
   await placeWatcher(result.email, readGeo(request.headers));
   const user = await findOrCreateUser(result.email);
-  const response = NextResponse.redirect(`${baseUrl()}/?watch=confirmed`);
+  // Back to the board they signed up on, where the card shows their number and wave.
+  const board = getDeal(result.deal).path;
+  const response = NextResponse.redirect(
+    `${baseUrl()}${board}${board.includes("?") ? "&" : "?"}watch=confirmed`
+  );
   setSessionCookie(response, user);
   return response;
 }

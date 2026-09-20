@@ -7,9 +7,22 @@ import PassListCard from "@/components/PassListCard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
+import { OTHER_DEALS, getDeal } from "@/lib/deals";
 import { FAQS } from "@/lib/faqs";
-import { UNLOCKS_PER_PASS, claimSpeed, getBoard } from "@/lib/passes";
-import { joinedToday, queueSize, servedThisWeek, standingFor, waveForNewcomer } from "@/lib/queue";
+import { claimSpeed, getBoard } from "@/lib/passes";
+import {
+  ensureQueueAdopted,
+  joinedToday,
+  queueSize,
+  servedThisWeek,
+  standingFor,
+  waveForNewcomer,
+} from "@/lib/queue";
+
+// The Claude board, and the page that ranks. Its copy is tuned against real queries and is
+// deliberately not generated from lib/deals.ts like the other boards are - the machinery is
+// shared, the words are not.
+const DEAL = getDeal("claude");
 
 export const dynamic = "force-dynamic";
 
@@ -62,15 +75,18 @@ export default async function Home({
 }) {
   const { watch } = await searchParams;
   const user = await getUser();
+  // Before any standing is read: somebody holding a number from before the boards existed
+  // would otherwise be shown the join form and quietly lose their place in line.
+  await ensureQueueAdopted();
   // Every number the card shows comes from here. Nothing on it is a constant.
   const [passes, inLine, joinWave, served, today, speed, standing] = await Promise.all([
-    getBoard(user?.id ?? null),
-    queueSize(),
-    waveForNewcomer(),
-    servedThisWeek(),
-    joinedToday(),
-    claimSpeed(),
-    user ? standingFor(user.email) : Promise.resolve(null),
+    getBoard(DEAL.slug, user?.id ?? null),
+    queueSize(DEAL.slug),
+    waveForNewcomer(DEAL.slug),
+    servedThisWeek(DEAL.slug),
+    joinedToday(DEAL.slug),
+    claimSpeed(DEAL.slug),
+    user ? standingFor(user.email, DEAL.slug) : Promise.resolve(null),
   ]);
 
   const schema = [
@@ -115,6 +131,7 @@ export default async function Home({
           only move - so the card comes first in both cases. */}
       <div className="mt-6">
         <PassListCard
+          deal={DEAL}
           livePasses={passes.length}
           inLine={inLine}
           joinWave={joinWave}
@@ -148,20 +165,16 @@ export default async function Home({
           {/* Branched here rather than inside Board: an empty board needs none of the
               carousel, unlock or outcome machinery. */}
           {passes.length === 0 ? (
-            <EmptyBoard />
+            <EmptyBoard deal={DEAL} />
           ) : (
-            <Board
-              passes={passes}
-              myWave={standing?.wave ?? null}
-              unlocksPerPass={UNLOCKS_PER_PASS}
-            />
+            <Board passes={passes} myWave={standing?.wave ?? null} deal={DEAL} />
           )}
         </section>
 
-        <ShareCard />
+        <ShareCard deal={DEAL} />
       </div>
 
-      <ShareCta />
+      <ShareCta deal={DEAL} />
 
       <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
         <h2>What you get with a Claude Code pass</h2>
@@ -248,6 +261,28 @@ export default async function Home({
             href="/claude-guest-pass"
           >
             how a Claude guest pass works
+          </Link>
+          .
+        </p>
+
+        <h2>Other referral codes on this board</h2>
+        <p>
+          The same queue now runs for a few other programs, each one a code its owner would
+          otherwise let expire. Every one of them pays the person who claims it:
+        </p>
+        <ul className="mt-3 list-disc space-y-1 pl-6">
+          {OTHER_DEALS.map((deal) => (
+            <li key={deal.slug}>
+              <Link className="text-accent-dark underline" href={deal.path}>
+                {deal.name} {deal.nounPlural}
+              </Link>{" "}
+              - {deal.reward}.
+            </li>
+          ))}
+        </ul>
+        <p>
+          <Link className="text-accent-dark underline" href="/referral-codes">
+            See every board and what is live right now
           </Link>
           .
         </p>

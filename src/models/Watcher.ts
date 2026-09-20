@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+import { DEAL_SLUGS, DealSlug } from "@/lib/deals";
 import { MAX_WANTS_LENGTH } from "@/lib/wants";
 
 // Someone who asked to hear when the board has passes again. One row per address, reused
@@ -21,14 +22,22 @@ export interface IWatcher extends Document {
   // board. Separate from stopToken on purpose: a stop link must stay harmless if it leaks,
   // and a link that starts a session is not harmless.
   enterToken?: string;
-  // The queue number, handed out on confirmation and never reused. Waiting can only make
-  // it worse, which is the whole point of showing it.
+  // Which boards they asked for, held until the confirmation link is clicked - a place in
+  // line is only ever handed to a proven address. Emptied once the memberships exist.
+  pendingDeals?: DealSlug[];
+  // Stamped when this row's place in the Claude queue was copied into a Membership. Its
+  // absence is what lib/queue.ts looks for to find the rows that still need adopting, so
+  // the migration finishes itself and then costs nothing.
+  queueMigratedAt?: Date;
+  // The queue number, handed out on confirmation and never reused.
+  //
+  // Legacy: the queue lives in the Membership collection now, one row per board, because a
+  // single number cannot say where someone stands on five of them. Nothing writes these
+  // five fields any more; they are read once, by the adoption pass in lib/queue.ts, which
+  // copies them into that person's Claude membership so nobody loses the place they have
+  // been holding. See models/Membership.ts.
   position?: number;
-  // Set when they unlocked a pass: they had their turn and are out of the queue. The row
-  // stays so the stop link keeps working and a dead-link report can put them back.
   leftQueueAt?: Date;
-  // Turns offered without an unlock. At three, the number is reissued at the back, so a
-  // sleeping front row cannot hold up every pass behind it.
   offersSinceUnlock: number;
   lastNotifiedAt?: Date;
   notifyCount: number;
@@ -85,6 +94,8 @@ const WatcherSchema = new Schema<IWatcher>(
     // keep working months after it was issued.
     stopToken: { type: String, required: true, unique: true },
     enterToken: { type: String, unique: true, sparse: true },
+    pendingDeals: { type: [String], enum: DEAL_SLUGS, default: undefined },
+    queueMigratedAt: { type: Date },
     position: { type: Number },
     leftQueueAt: { type: Date },
     offersSinceUnlock: { type: Number, default: 0 },
@@ -107,9 +118,10 @@ const WatcherSchema = new Schema<IWatcher>(
   { timestamps: true }
 );
 
-// Everything the queue does is a walk over active members in position order: ranking one
-// person, taking the next ten, counting the line.
-WatcherSchema.index({ confirmedAt: 1, stoppedAt: 1, leftQueueAt: 1, position: 1 });
+// Finding the rows whose legacy queue place has not been adopted yet. Once the collection
+// is migrated this index answers "none" immediately, which is the point: the adoption pass
+// runs on every wave advance and must cost nothing after the first one.
+WatcherSchema.index({ confirmedAt: 1, stoppedAt: 1, queueMigratedAt: 1 });
 
 const Watcher: Model<IWatcher> =
   mongoose.models.Watcher || mongoose.model<IWatcher>("Watcher", WatcherSchema);

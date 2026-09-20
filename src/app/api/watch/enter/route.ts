@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { findOrCreateUser, setSessionCookie } from "@/lib/auth";
+import { getDeal } from "@/lib/deals";
 import { readGeo } from "@/lib/geo";
 import { baseUrl, enter, placeWatcher } from "@/lib/watchers";
 
@@ -16,7 +17,10 @@ export async function GET(request: NextRequest) {
   // device actually opened the alert.
   await placeWatcher(result.email, readGeo(request.headers));
   const user = await findOrCreateUser(result.email);
-  const response = NextResponse.redirect(`${baseUrl()}/`);
+  // The alert said which board had filled, and the link carries it, so the button lands on
+  // that board rather than making someone watching two of them go looking.
+  const board = getDeal(request.nextUrl.searchParams.get("deal")).path;
+  const response = NextResponse.redirect(`${baseUrl()}${board}`);
   setSessionCookie(response, user);
   return response;
 }

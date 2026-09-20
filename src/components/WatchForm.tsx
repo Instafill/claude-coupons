@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { useCaptchaToken } from "@/components/CaptchaBridge";
 import Turnstile from "@/components/Turnstile";
+import type { Deal } from "@/lib/deals";
 import { TURNSTILE_FIELD } from "@/lib/turnstile";
 
 // The stem carries the product so the options stay short and parallel. Values never change
@@ -27,10 +28,14 @@ const INTENTS = [
 // 3 answers in 60 joins, and two of those were questions about Claude Pro rather than the
 // name of another product. It was asking people to do the hard half of the thinking.
 export default function WatchForm({
+  deal,
   signedIn,
   email,
-  buttonLabel = "Watch for passes",
+  buttonLabel,
 }: {
+  /** Which board this form joins. One submit, one queue - somebody wanting two of them
+      fills in two forms, on the two pages that promise two different things. */
+  deal: Deal;
   signedIn: boolean;
   email?: string;
   buttonLabel?: string;
@@ -53,7 +58,7 @@ export default function WatchForm({
     });
     if (response.ok) {
       const data = await response.json().catch(() => ({}));
-      track("watch_requested", { signedIn });
+      track("watch_requested", { signedIn, deal: deal.slug });
       setState(data.watching ? "watching" : "sent");
       // A pre-verified address is on the list now, so the board's unlock button is live.
       if (data.watching) router.refresh();
@@ -68,7 +73,9 @@ export default function WatchForm({
     return (
       <div className="mt-5 rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
         <p className="font-semibold">You&rsquo;re on the list.</p>
-        <p className="mt-1 text-sm">Next pass, you get the email. One click in it stops them for good.</p>
+        <p className="mt-1 text-sm">
+          Next {deal.noun}, you get the email. One click in it stops them for good.
+        </p>
       </div>
     );
   }
@@ -89,6 +96,7 @@ export default function WatchForm({
     <form onSubmit={onSubmit} className="mt-4 flex flex-col gap-2.5 sm:max-w-sm">
       {/* Honeypot: humans never see it, bots fill it. */}
       <input type="text" name="website" className="hp" tabIndex={-1} autoComplete="off" aria-hidden />
+      <input type="hidden" name="deal" value={deal.slug} />
       {signedIn ? (
         // The session address is already proven, so there is nothing to type and no
         // confirmation email to wait for.
@@ -111,11 +119,14 @@ export default function WatchForm({
 
       {/* Asked to find out who is here for a week and who is here for a subscription. It is
           stated plainly that the answer changes nothing, because an answer that buys a
-          better place is an answer everybody gives. */}
+          better place is an answer everybody gives.
+          
+          Only where the brand has something worth asking: there is no equivalent question
+          about a $10 ride, and a question asked for symmetry is a question that costs
+          conversions for nothing. */}
+      {deal.intentQuestion && (
       <fieldset className="mt-1">
-        <legend className="text-sm font-semibold">
-          After your free week of Claude Pro, do you expect to
-        </legend>
+        <legend className="text-sm font-semibold">{deal.intentQuestion}</legend>
         <div className="mt-1.5 flex flex-col gap-1.5">
           {INTENTS.map((option) => (
             <label key={option.value} className="flex cursor-pointer items-start gap-2 text-[14px]">
@@ -132,6 +143,7 @@ export default function WatchForm({
         </div>
         <p className="mt-1.5 text-[13px] text-muted">Does not affect your place in line.</p>
       </fieldset>
+      )}
 
       {bridged ? (
         token && <input type="hidden" name={TURNSTILE_FIELD} value={token} />
@@ -144,7 +156,7 @@ export default function WatchForm({
         disabled={state === "sending"}
         className="cursor-pointer rounded-lg bg-accent px-4 py-2.5 font-semibold text-white hover:bg-accent-dark disabled:opacity-60"
       >
-        {state === "sending" ? "Saving..." : buttonLabel}
+        {state === "sending" ? "Saving..." : buttonLabel ?? `Watch for ${deal.nounPlural}`}
       </button>
       {signedIn && email && (
         <p className="text-[13px] text-muted">We&rsquo;ll write to {email}.</p>

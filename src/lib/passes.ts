@@ -1,39 +1,39 @@
 import crypto from "crypto";
 import { Types } from "mongoose";
 
+import {
+  DEFAULT_DEAL,
+  Deal,
+  DealSlug,
+  dealDisplay,
+  dealLink,
+  getDeal,
+} from "@/lib/deals";
 import { dbConnect } from "@/lib/mongodb";
 import Pass, { IPass, PASS_STATUS } from "@/models/Pass";
 import Unlock, { IUnlock, UNLOCK_OUTCOME, UnlockOutcome } from "@/models/Unlock";
 
-// A Pro/Max subscriber holds at most this many guest passes, so after this many unlocks
-// the listing has nothing left to give. Unlocks, not claims: whether someone redeemed a
-// link on claude.ai is invisible to us and always will be, so the lifecycle turns on the
-// one thing this server actually observes.
-export const UNLOCKS_PER_PASS = 3;
+// The board, for any one deal. How many people a listing may be offered to is the brand's
+// own number and lives in lib/deals.ts - Claude's three passes, Waymo's ten monthly uses,
+// muse.ai's thirty - so nothing here knows a brand by name.
+//
+// Unlocks, not claims: whether someone redeemed a code inside the brand's app is invisible
+// to us and always will be, so the lifecycle turns on the one thing this server observes.
 
-// The queue is offered a pass ten people at a time, five minutes apart. Wave 1 is open the
-// moment a pass is listed; wave 2 five minutes later, and so on until the pass runs out.
+// The queue is offered a listing ten people at a time, five minutes apart. Wave 1 is open
+// the moment it is listed; wave 2 five minutes later, and so on until it runs out. Shared
+// by every board: the wave is a property of the queue, not of the brand.
 export const WAVE_SIZE = 10;
 export const WAVE_MINUTES = 5;
 const DEAD_REPORTS_TO_HIDE = 2;
 const LISTING_LIFETIME_DAYS = 21;
 
-// Anti-hoarding: how many distinct passes one account may unlock per rolling day.
+// Anti-hoarding: how many distinct listings one account may unlock per rolling day, counted
+// per board, so a run on Waymo codes does not spend someone's Claude allowance.
 export const UNLOCKS_PER_USER_PER_DAY = 3;
 
-// Accepts a full referral URL or a bare code; only the code survives.
-//
-// The host check is the security boundary - it is what keeps an arbitrary link off the
-// board. The code itself is deliberately loose: Anthropic's shapes vary ("aB3xKq9ZtR",
-// "c_Kd7PnRsVq", ... - illustrative, not real invites), so any URL-safe token is taken
-// rather than guessing at a format and turning away real invite links. Stripped first:
-// whitespace, query string, fragment, trailing slashes - the noise a real paste picks up
-// from share buttons.
-const REFERRAL_SHAPE =
-  /^(?:https?:\/\/(?:www\.)?claude\.ai\/referral\/)?([A-Za-z0-9._~-]{4,64})$/i;
-
-// Anonymous submissions accept only the official URL shape. Normalizing common character
-// substitutions catches obvious attempts to spell profanity inside an otherwise valid token.
+// Anonymous submissions are checked for obvious attempts to spell profanity inside an
+// otherwise valid token. Normalizing common character substitutions is what catches them.
 const BLOCKED_CODE_WORDS = [
   "bitch",
   "cock",
@@ -68,27 +68,9 @@ export function containsBlockedCodeWord(code: string): boolean {
   return BLOCKED_CODE_WORDS.some((word) => normalized.includes(word));
 }
 
-export function parseOfficialReferralUrl(input: string): string | null {
-  try {
-    const url = new URL(input.trim());
-    if (url.protocol !== "https:" || !["claude.ai", "www.claude.ai"].includes(url.hostname)) {
-      return null;
-    }
-    const match = /^\/referral\/([A-Za-z0-9._~-]{4,64})\/?$/.exec(url.pathname);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-export function parseReferralCode(input: string): string | null {
-  const cleaned = input.trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
-  const match = REFERRAL_SHAPE.exec(cleaned);
-  return match ? match[1] : null;
-}
-
-export function passUrl(code: string): string {
-  return `https://claude.ai/referral/${code}`;
+/** The deal a stored row belongs to. Rows written before there were several carry none. */
+export function dealOf(pass: Pick<IPass, "deal">): Deal {
+  return getDeal(pass.deal ?? DEFAULT_DEAL);
 }
 
 // What the board shows before an unlock: enough to look real, not enough to use.
@@ -105,17 +87,21 @@ export function hashIp(ip: string | null): string {
 export interface BoardPass {
   id: string;
   code: string | null; // present only when this viewer has unlocked it
+  /** What the card prints: the brand's URL shape around the code, or the bare code. */
+  display: string;
+  /** Where "open it" goes once unlocked. Null until then. */
+  url: string | null;
   maskedCode: string;
   unlockCount: number;
   createdAt: string;
   unlockedOutcome: UnlockOutcome | null;
-  /** Waves open on this pass right now. Everyone up to openWave * WAVE_SIZE may unlock. */
+  /** Waves open on this listing right now. Everyone up to openWave * WAVE_SIZE may unlock. */
   openWave: number;
   /** Seconds until the next wave opens, for the countdown on the card. */
   nextWaveInSeconds: number;
 }
 
-/** How many waves a pass has opened by now. Pure arithmetic on the listing time. */
+/** How many waves a listing has opened by now. Pure arithmetic on the listing time. */
 export function openWaveCount(waveStartedAt: Date, now: Date = new Date()): number {
   const elapsed = now.getTime() - waveStartedAt.getTime();
   return Math.max(1, Math.floor(elapsed / (WAVE_MINUTES * 60 * 1000)) + 1);
@@ -127,28 +113,31 @@ export function secondsToNextWave(waveStartedAt: Date, now: Date = new Date()): 
   return Math.ceil((period - (elapsed % period)) / 1000);
 }
 
+/** How many people this listing has left to serve. The brand's own number, from deals.ts. */
+export function unlocksLeft(pass: IPass): number {
+  return dealOf(pass).unlocksPerListing - pass.unlockCount;
+}
+
 // The hiding rules, evaluated lazily on read. Writes back only on a transition, so the
 // board self-maintains without a cron job.
 function nextStatus(pass: IPass): string | null {
   if (pass.status !== PASS_STATUS.live) return null;
-  if (pass.unlockCount >= UNLOCKS_PER_PASS) return PASS_STATUS.exhausted;
+  if (pass.unlockCount >= dealOf(pass).unlocksPerListing) return PASS_STATUS.exhausted;
   if (pass.deadCount >= DEAD_REPORTS_TO_HIDE && pass.deadCount > pass.claimedCount)
     // Hidden either way, but the label matters: "dead" accuses the submitter of listing a
-    // broken link. A pass somebody has actually claimed demonstrably worked, so later dead
+    // broken code. One somebody has actually claimed demonstrably worked, so later dead
     // reports mean the allotment ran out - latecomers cannot tell "used up" from "fake".
-    // Reaching MAX_CLAIMS_PER_PASS is the rare path, since most claimers never report at
-    // all; without this, every generous submitter ends up marked as having posted junk.
+    // Without this, every generous submitter ends up marked as having posted junk.
     return pass.claimedCount > 0 ? PASS_STATUS.exhausted : PASS_STATUS.dead;
   const cutoff = Date.now() - LISTING_LIFETIME_DAYS * 24 * 60 * 60 * 1000;
   if (pass.lastRefreshedAt.getTime() < cutoff) return PASS_STATUS.expired;
   return null;
 }
 
-// The public board: live listings, least-claimed first so fresh allotments surface.
-// A signed-in viewer sees the codes they already unlocked revealed in place.
-export async function getBoard(userId: string | null): Promise<BoardPass[]> {
+/** Every live listing on one board, retiring the ones whose rules have caught up with them. */
+async function liveFor(deal: DealSlug): Promise<IPass[]> {
   await dbConnect();
-  const passes = await Pass.find({ status: PASS_STATUS.live });
+  const passes = await Pass.find({ status: PASS_STATUS.live, ...dealFilter(deal) });
 
   const live: IPass[] = [];
   for (const pass of passes) {
@@ -159,6 +148,30 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
     }
     live.push(pass);
   }
+  return live;
+}
+
+/**
+ * Matching one board's rows, including the ones written before the field existed.
+ *
+ * Every pass listed before this site had more than one board is a Claude pass and carries
+ * no `deal` at all, so Claude's filter has to mean "claude, or nothing" - a plain equality
+ * would empty the home page the moment this ships.
+ */
+export function dealFilter(deal: DealSlug): Record<string, unknown> {
+  return deal === DEFAULT_DEAL
+    ? { $or: [{ deal: DEFAULT_DEAL }, { deal: { $exists: false } }] }
+    : { deal };
+}
+
+// The public board: live listings, least-unlocked first so fresh allotments surface.
+// A signed-in viewer sees the codes they already unlocked revealed in place.
+export async function getBoard(
+  deal: DealSlug,
+  userId: string | null
+): Promise<BoardPass[]> {
+  const live = await liveFor(deal);
+  const brand = getDeal(deal);
 
   const unlocks = userId
     ? await Unlock.find({ userId: new Types.ObjectId(userId) })
@@ -177,6 +190,10 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
       return {
         id: pass._id.toString(),
         code: unlock ? pass.code : null,
+        display: unlock
+          ? dealDisplay(brand, pass.code)
+          : dealDisplay(brand, maskCode(pass.code)),
+        url: unlock ? dealLink(brand, pass.code) : null,
         maskedCode: maskCode(pass.code),
         unlockCount: pass.unlockCount,
         createdAt: pass.createdAt.toISOString(),
@@ -187,30 +204,46 @@ export async function getBoard(userId: string | null): Promise<BoardPass[]> {
     });
 }
 
-// How many passes a visitor would actually see right now. Deliberately not a
+// How many listings a visitor would actually see right now. Deliberately not a
 // countDocuments on status alone: nextStatus() retires exhausted, dead and expired
 // listings lazily on read, so a row can still say "live" in Mongo while the board renders
 // empty. Filtering through the same predicate - rather than restating its rules as a query
 // - is what keeps this answer and getBoard's in agreement.
-export async function countLivePasses(): Promise<number> {
-  await dbConnect();
-  const passes = await Pass.find({ status: PASS_STATUS.live });
-  return passes.filter((pass) => nextStatus(pass) === null).length;
+export async function countLivePasses(deal: DealSlug): Promise<number> {
+  return (await liveFor(deal)).length;
 }
 
-export async function countRecentUnlocks(userId: string): Promise<number> {
+/** The same count for every board at once, for the hub page and the header. */
+export async function countLivePassesByDeal(): Promise<Record<string, number>> {
+  await dbConnect();
+  const passes = await Pass.find({ status: PASS_STATUS.live });
+  const counts: Record<string, number> = {};
+  for (const pass of passes) {
+    if (nextStatus(pass)) continue;
+    const slug = pass.deal ?? DEFAULT_DEAL;
+    counts[slug] = (counts[slug] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export async function countRecentUnlocks(
+  userId: string,
+  deal: DealSlug
+): Promise<number> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   return Unlock.countDocuments({
     userId: new Types.ObjectId(userId),
     createdAt: { $gt: cutoff },
+    ...dealFilter(deal),
   });
 }
 
-// Idempotent: a second unlock of the same pass returns the existing row and neither
+// Idempotent: a second unlock of the same listing returns the existing row and neither
 // bumps the counter nor spends another slot of the daily cap.
 export async function recordUnlock(
   passId: string,
   userId: string,
+  deal: DealSlug,
   ipHash: string
 ): Promise<IUnlock> {
   const filter = {
@@ -222,15 +255,15 @@ export async function recordUnlock(
 
   const unlock = await Unlock.findOneAndUpdate(
     filter,
-    { $setOnInsert: { ...filter, ipHash, outcome: UNLOCK_OUTCOME.none } },
+    { $setOnInsert: { ...filter, deal, ipHash, outcome: UNLOCK_OUTCOME.none } },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
   await Pass.updateOne({ _id: filter.passId }, { $inc: { unlockCount: 1 } });
   return unlock;
 }
 
-// Records the "did it work?" answer on the caller's own unlock, once. The pass counters
-// move with it, which is what eventually hides the listing.
+// Records the "did it work?" answer on the caller's own unlock, once. The listing's
+// counters move with it, which is what eventually hides it.
 export async function recordOutcome(
   passId: string,
   userId: string,
@@ -254,21 +287,24 @@ export async function recordOutcome(
 }
 
 export interface ClaimSpeed {
-  sample: number; // passes in the window that were unlocked at all
+  sample: number; // listings in the window that were unlocked at all
   medianMinutes: number;
 }
 
 const SPEED_WINDOW_DAYS = 30;
 const SPEED_MIN_SAMPLE = 3;
 
-// How long a listed pass typically stays unclaimed: the median gap between a pass being
-// listed and its first unlock, over the last 30 days. Median rather than mean, so one pass
-// that sat overnight cannot turn "minutes" into "hours"; null under three data points, so
-// the page says nothing rather than something built on one pass.
-export async function claimSpeed(): Promise<ClaimSpeed | null> {
+// How long a listing typically stays unclaimed: the median gap between it being listed and
+// its first unlock, over the last 30 days. Median rather than mean, so one listing that sat
+// overnight cannot turn "minutes" into "hours"; null under three data points, so the page
+// says nothing rather than something built on one listing.
+export async function claimSpeed(deal: DealSlug): Promise<ClaimSpeed | null> {
   await dbConnect();
   const since = new Date(Date.now() - SPEED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const passes = await Pass.find({ createdAt: { $gte: since } }).select("createdAt");
+  const passes = await Pass.find({
+    createdAt: { $gte: since },
+    ...dealFilter(deal),
+  }).select("createdAt");
   if (passes.length < SPEED_MIN_SAMPLE) return null;
 
   const firstUnlocks = await Unlock.aggregate<{ _id: Types.ObjectId; first: Date }>([

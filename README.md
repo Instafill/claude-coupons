@@ -1,11 +1,51 @@
 # ClaudeCoupons.com
 
-A community exchange for [Claude Code and Cowork guest passes](https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes).
-Every Claude Pro/Max subscriber holds a few guest passes (7 free days of Claude Pro for someone
-new to paid Claude, shared via a personal `claude.ai/referral/{code}` link). Most expire unused.
-Here anyone can list their link and anyone can unlock one — behind a signup wall on both sides.
+A community exchange for referral codes that pay the person claiming them. It started with
+[Claude Code and Cowork guest passes](https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes)
+— every Claude Pro/Max subscriber holds a few (7 free days of Claude Pro for someone new to
+paid Claude, shared via a personal `claude.ai/referral/{code}` link), and most expire unused.
+Anyone can list theirs and anyone can unlock one, behind a signup wall on both sides.
+
+The same machine now runs several boards. Each one is a **deal** in `lib/deals.ts`:
+
+| Deal | Board | What the claimer gets | What the lister gets | Uses |
+| --- | --- | --- | --- | --- |
+| Claude | `/` | 7 free days of Claude Pro | $10 usage credit if they stay | 3 |
+| Waymo | `/waymo-promo-code` | $10 off a first ride | up to $10 off their next ride | 10 |
+| Uber | `/uber-promo-code` | 50% off 2 trips, up to $10 each | 50% off 2 trips per rider sent | 10 |
+| muse.ai | `/muse-ai-invite-code` | 1B Muse tokens (redeem within 48h) | 1B Muse tokens | 30 |
+| Pokémon GO | `/pokemon-go-referral-code` | 100 Poké Balls + milestones | milestone rewards | 10 |
+| Fireflies.ai | `/fireflies-ai-referral-code` | 10% off all plans | $5 credit per signup | 10 |
+
+`/referral-codes` is the hub, with live counts per board.
+
+**ElevenLabs is deliberately not a board.** Its program is an affiliate link — 22% to the
+sharer for 12 months — and nothing in its affiliate guide, terms or partner page gives the
+person clicking the link a discount, free month or extra credits. A queue for that would be
+a queue for nothing, so `/elevenlabs-promo-code` is an honest article that says so and
+points at the free tier. If ElevenLabs ever attaches a discount to referred signups, it
+becomes a `Deal` like the rest and gets a board.
 
 Next.js 16 (App Router) + MongoDB via Mongoose, deployed on Vercel.
+
+## Adding a deal
+
+Add an entry to `DEALS` in `lib/deals.ts`, an article to `lib/dealArticles.ts`, and a page
+file that renders `<DealPage deal={getDeal("slug")} />`. Nothing else in the codebase names
+a brand: the queue, the board, the emails, the submit form and the sitemap all read the
+registry. The slug is written onto rows forever, so it is the one field never to change.
+
+The two fields that carry real weight:
+
+- `unlocksPerListing` is how many people a listing is offered to before it retires itself.
+  Where the app states a number (Waymo prints ten uses a month, muse.ai counts down from
+  thirty) it is that number. Where it states none, it is our own rationing, and the comment
+  in the registry says so rather than implying the brand promised it.
+- `linkHosts` is the security boundary. A pasted URL is accepted only from those hosts, and
+  only the code is kept from it — the link is always rebuilt server-side from
+  `linkTemplate`, so an arbitrary link structurally cannot reach the board. `acceptsBareCode`
+  is false for Claude on purpose: Anthropic hands out a URL, and requiring the whole URL is
+  what keeps a guessed token off that board.
 
 ## Why there is no automatic validity check
 
@@ -28,10 +68,15 @@ drives the lifecycle.
 
 ## How it works
 
-- **The queue** (`lib/queue.ts`): confirming hands out a number from an atomic counter
-  (`models/Counter.ts`); numbers are never reused. A listed pass is offered to the first
+- **One queue per board** (`lib/queue.ts`, `models/Membership.ts`): a place in line belongs
+  to a board, not to a person — somebody waiting for a Claude pass has not been waiting for
+  a Waymo code, and unlocking one must not cost them the other. One `Membership` row per
+  (address, deal) holds the number, the offers let go and when they were last mailed;
+  Claude's counter is still called `queue` with no suffix so the numbers people are already
+  holding keep counting up rather than restarting at 1. Confirming hands out a number from
+  an atomic counter (`models/Counter.ts`); numbers are never reused. A listed pass is offered to the first
   `WAVE_SIZE` (10) people, then ten more every `WAVE_MINUTES` (5), until `UNLOCKS_PER_PASS`
-  (3) unlocks retire it. Rank is recomputed from *active* members, so the line shortens as
+  (the deal's own number) unlocks retire it. Rank is recomputed from *active* members, so the line shortens as
   people are served. Unlocking sets `leftQueueAt` (their turn is spent); a "didn't work"
   report puts them back at the end; three offers ignored reissues the number at the back,
   evaluated when the next pass is listed so it never lands mid-offer. Waves advance lazily
@@ -50,9 +95,11 @@ drives the lifecycle.
 - **Unlock log** (`models/Unlock.ts`): one row per (pass, user) with time, salted IP hash and the
   reported outcome — so there is an answer to "who unlocked this coupon, and did they get it".
   Submitters see per-listing unlock/claim/dead counts on `/manage`.
-- **Only codes, never URLs**: submissions are parsed against
-  `^(https://claude\.ai/referral/)?[A-Za-z0-9]{6,20}$`; the URL is always reconstructed
-  server-side, so arbitrary links structurally cannot enter the board.
+- **Only codes, never URLs** (`parseDealCode` in `lib/deals.ts`): a pasted URL is accepted
+  only from the deal's own `linkHosts`, and only the code is kept from it; the link is
+  always reconstructed server-side from `linkTemplate`, so arbitrary links structurally
+  cannot enter the board. Bare codes are accepted only for the brands whose share sheet
+  hands out a bare code, and only against that brand's shape.
 - **Lifecycle** (`lib/passes.ts`, evaluated lazily on read — no cron): a listing hides after 3
   reported claims (a sender's whole allotment), after 2 "didn't work" reports exceeding claims,
   or 21 days after its last refresh. Submitters can refresh / mark exhausted / remove.
@@ -84,7 +131,22 @@ drives the lifecycle.
 npm install
 npm run dev          # http://localhost:3000
 node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our own pass
+node --require ./dns-fix.cjs --env-file=.env.local scripts/migrate-deals.mjs --dry
 ```
+
+## Migrating an existing database
+
+`scripts/migrate-deals.mjs` tags existing passes and unlocks as `claude`, drops the old
+global unique index on `passes.code` (codes are unique per board now, and Mongoose creates
+indexes but never drops the ones it no longer declares), and copies every legacy queue place
+off the watcher into a `Membership` row — number, offers let go and last-notified time
+intact, so nobody loses the place they have been holding. `--dry` reports without writing.
+
+None of it is required for the app to work. Passes with no `deal` read as Claude, and
+`ensureQueueAdopted()` in `lib/queue.ts` does the same adoption lazily on the first board
+render or wave advance, stamping `queueMigratedAt` so the query that finds the work is the
+one that proves there is none left. The script just gets it all done at deploy time instead
+of trickling through on live requests.
 
 `.env.local` keys - `MONGODB_URI` (the `claudecoupons` database), `SENDGRID_API_KEY` (omit and
 every email prints to the console instead of sending), `GOOGLE_CLIENT_ID`,
