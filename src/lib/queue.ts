@@ -26,6 +26,11 @@ const OFFERS_BEFORE_DEMOTION = 3;
 
 // Waves fire as people load the page, and a burst of arrivals must not become a burst of
 // duplicate sends, so one advance run has a ceiling.
+//
+// The ceiling is per board, not per run. A single shared budget would be one queue's
+// backlog spending another queue's turn: listings are walked oldest first across every
+// board, so a busy Claude board would use the whole allowance and leave Waymo's waves
+// unopened until the next poll. Each board gets its own count and its own exhaustion.
 const MAX_WAVES_PER_RUN = 12;
 
 // Two listings on one board within a minute walk the same front row, and the alert is
@@ -410,22 +415,30 @@ export async function advanceWaves(): Promise<number> {
     await ensureQueueAdopted();
     const passes = await Pass.find({ status: PASS_STATUS.live }).sort({ waveStartedAt: 1 });
     let sent = 0;
-    let runs = 0;
+    const runs = new Map<DealSlug, number>();
 
     for (const pass of passes) {
+      const deal = dealOf(pass).slug;
+      // Spent its own board's allowance. Continue rather than return: the boards after
+      // this one have their own, and abandoning the walk would let one busy queue hold up
+      // every other queue's waves for the next thirty seconds.
+      if ((runs.get(deal) ?? 0) >= MAX_WAVES_PER_RUN) continue;
+
       const due = openWaveCount(pass.waveStartedAt);
       const limit = dealOf(pass).unlocksPerListing;
       let current = pass;
       while (current.wavesNotified < due && current.unlockCount < limit) {
-        if (++runs > MAX_WAVES_PER_RUN) return sent;
+        const spent = runs.get(deal) ?? 0;
+        if (spent >= MAX_WAVES_PER_RUN) break;
+        runs.set(deal, spent + 1);
+
         const delivered = await sendWave(current, current.wavesNotified + 1);
         const refreshed = await Pass.findById(current._id);
         if (!refreshed || refreshed.wavesNotified === current.wavesNotified) break;
         current = refreshed;
         sent += delivered;
         // The line ran out before the listing did; later waves have nobody left to reach.
-        if (delivered === 0 && refreshed.waveCursor >= (await highestPosition(dealOf(pass).slug)))
-          break;
+        if (delivered === 0 && refreshed.waveCursor >= (await highestPosition(deal))) break;
       }
     }
     return sent;
