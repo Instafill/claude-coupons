@@ -120,6 +120,38 @@ if (placed) {
   console.log("\nlocation: nobody placed yet");
 }
 
+// Per board. This is the demand test: a board nobody joins is a board to retire, and a
+// board people join before anything has ever been listed on it is the opposite - proof the
+// line itself is what they want. "joined" counts every number ever handed out on that
+// board; "waiting" is who still holds one; "7d" is the pace.
+const M = db.collection("memberships");
+const P = db.collection("passes");
+const boards = await M.aggregate([{ $group: { _id: "$deal", n: { $sum: 1 } } }]).toArray();
+const week = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+const slugs = [...new Set([
+  ...boards.map((b) => b._id),
+  ...(await P.distinct("deal")),
+])].filter(Boolean).sort();
+if (slugs.length) {
+  console.log("\nboards:");
+  console.log("  board        joined  waiting  served      7d  listed  unlocks");
+  for (const slug of slugs) {
+    const listed = await P.countDocuments(
+      slug === "claude" ? { $or: [{ deal: "claude" }, { deal: { $exists: false } }] } : { deal: slug }
+    );
+    console.log(
+      "  %s%s%s%s%s%s%s",
+      slug.padEnd(13),
+      String(await M.countDocuments({ deal: slug })).padStart(6),
+      String(await M.countDocuments({ deal: slug, stoppedAt: { $exists: false }, leftQueueAt: { $exists: false } })).padStart(9),
+      String(await M.countDocuments({ deal: slug, leftQueueAt: { $exists: true } })).padStart(7),
+      String(await M.countDocuments({ deal: slug, createdAt: { $gte: week } })).padStart(8),
+      String(listed).padStart(8),
+      String(await db.collection("unlocks").countDocuments({ deal: slug })).padStart(9)
+    );
+  }
+}
+
 console.log("\ntotals: accounts=%d passes=%d unlocks=%d claims=%d dead=%d rejects=%d",
   await db.collection("users").countDocuments(),
   await db.collection("passes").countDocuments(),

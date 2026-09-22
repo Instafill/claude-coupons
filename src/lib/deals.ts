@@ -17,6 +17,7 @@ export const DEAL_SLUGS = [
   "muse",
   "pokemongo",
   "fireflies",
+  "chatgpt",
 ] as const;
 export type DealSlug = (typeof DEAL_SLUGS)[number];
 
@@ -91,6 +92,17 @@ export interface Deal {
   supplyAsk: string;
   /** The share card's headline and pitch. */
   sharePitch: string;
+
+  // --- an empty board ---
+  /** What the board says when it has nothing on it. Its own field per brand rather than one
+      sentence for all of them, because "listed a few times a week and unlocked within
+      minutes" is a claim about history, and a board that has never had a listing has none
+      to make it with. */
+  emptyNote: string;
+  /** Set while a board is still waiting for its first listing ever. It keeps the alert
+      confirmation from promising codes "again" when there have not been any, and marks the
+      board honestly on the hub. Remove it once something has been listed. */
+  awaitingFirstListing?: boolean;
 }
 
 const CLAUDE: Deal = {
@@ -129,6 +141,8 @@ const CLAUDE: Deal = {
   supplyAsk: "Have Claude Pro or Max?",
   sharePitch:
     "Not everyone can afford Claude Pro. A pass you may never use can give someone seven days to learn, create, solve a problem, or discover what Claude can make possible for them.",
+  emptyNote:
+    "Passes are listed a few times a week and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
 const WAYMO: Deal = {
@@ -168,6 +182,8 @@ const WAYMO: Deal = {
   supplyAsk: "Ridden with Waymo?",
   sharePitch:
     "Your code is worth $10 to someone taking their first driverless ride, and up to $10 back to you when they take it. It resets every month whether you share it or not.",
+  emptyNote:
+    "Codes are listed as riders remember they have them, and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
 const UBER: Deal = {
@@ -207,6 +223,8 @@ const UBER: Deal = {
   supplyAsk: "Ride with Uber?",
   sharePitch:
     "Every rider you send on a first trip is 50% off two of yours. The code costs you nothing to list and the invite screen is three taps away.",
+  emptyNote:
+    "Codes are listed as riders remember they have them, and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
 const MUSE: Deal = {
@@ -244,6 +262,8 @@ const MUSE: Deal = {
   supplyAsk: "On muse.ai already?",
   sharePitch:
     "An invite is a billion tokens for them and a billion for you, and the counter on your code goes down only when someone actually uses it.",
+  emptyNote:
+    "Invite codes are listed a few at a time and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
 const POKEMON_GO: Deal = {
@@ -283,6 +303,8 @@ const POKEMON_GO: Deal = {
   supplyAsk: "Already playing Pokémon GO?",
   sharePitch:
     "Every Trainer who starts on your code earns you Ultra Balls, incense and encounters as they pass their first milestones - and it costs them nothing but gains them 100 Poké Balls.",
+  emptyNote:
+    "Referral codes are listed as Trainers remember they have them, and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
 const FIREFLIES: Deal = {
@@ -323,9 +345,62 @@ const FIREFLIES: Deal = {
   supplyAsk: "Using Fireflies.ai?",
   sharePitch:
     "Every signup on your link is $5 of credit towards your own Pro renewal, and 10% off for them. Your meetings list is full of people who would use it.",
+  emptyNote:
+    "Referral links are listed a few at a time and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
 };
 
-export const DEALS: Deal[] = [CLAUDE, WAYMO, UBER, MUSE, POKEMON_GO, FIREFLIES];
+const CHATGPT: Deal = {
+  slug: "chatgpt",
+  name: "ChatGPT",
+  path: "/chatgpt-promo-code",
+  noun: "invite code",
+  nounPlural: "invite codes",
+  unlockLabel: "Unlock this code",
+  reward: "free months of ChatGPT Plus or Go",
+  // OpenAI's promotional invites pay the sender nothing at all. Saying so rather than
+  // inventing a bonus is the only version that survives someone checking.
+  giverReward: "",
+  summary:
+    "OpenAI hands selected accounts a few personal invite codes, each worth a free run of ChatGPT. They arrive in campaigns and go quickly.",
+  mailDescription: "ChatGPT invite codes",
+  // An invite is a code typed into an account, not a personal URL we could rebuild.
+  linkTemplate: "",
+  redeemUrl: "https://chatgpt.com/",
+  redeemHint:
+    "Redeem it on a ChatGPT account that has never been on a paid plan - the invite is checked against the account, not against the card.",
+  needsCode: true,
+  displayPrefix: "",
+  findYourCode:
+    "OpenAI sends invites by email or shows them inside ChatGPT. If you were given more than you can use, the spare ones are what this board is for.",
+  // Deliberately loose: OpenAI has never published the shape of an invite code, and a guess
+  // narrow enough to be wrong would turn away the real ones.
+  codePattern: "^[A-Za-z0-9_-]{6,40}$",
+  codeExample: "CHATGPT3MO-XXXXXX",
+  acceptsBareCode: true,
+  codeCase: "preserve",
+  linkHosts: [
+    "chatgpt.com",
+    "www.chatgpt.com",
+    "chat.openai.com",
+    "openai.com",
+    "www.openai.com",
+  ],
+  codeParams: ["code", "invite", "invite_code", "referral", "referralCode"],
+  linkPaths: ["/invite/", "/redeem/"],
+  // Our own rationing, not a figure from OpenAI: their help centre says only that eligible
+  // accounts get "a limited number" and that the number varies by campaign.
+  unlocksPerListing: 3,
+  intentQuestion: "",
+  audience: "For anyone holding a spare ChatGPT invite",
+  supplyAsk: "Did OpenAI send you invites?",
+  sharePitch:
+    "OpenAI pays you nothing for passing one on, and the code expires whether you use it or not. Someone who could never justify the monthly price gets months of it instead.",
+  emptyNote:
+    "Nothing has been listed here yet. OpenAI gives invites out in campaigns rather than continuously, which is exactly why the line matters: the first code that lands goes to the front of it, not to whoever happens to be refreshing.",
+  awaitingFirstListing: true,
+};
+
+export const DEALS: Deal[] = [CLAUDE, WAYMO, UBER, MUSE, POKEMON_GO, FIREFLIES, CHATGPT];
 
 /** The one every legacy row belongs to: passes and queue numbers predate the brand field. */
 export const DEFAULT_DEAL: DealSlug = "claude";

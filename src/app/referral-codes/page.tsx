@@ -90,7 +90,9 @@ export default async function ReferralCodesPage() {
                   >
                     {live > 0
                       ? `${live} live`
-                      : `waiting on ${deal.nounPlural}`}
+                      : deal.awaitingFirstListing
+                        ? "no codes yet"
+                        : `waiting on ${deal.nounPlural}`}
                   </span>
                 </div>
                 <p className="mt-1.5 text-[15px] font-semibold text-accent-dark">

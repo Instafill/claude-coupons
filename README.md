@@ -16,8 +16,20 @@ The same machine now runs several boards. Each one is a **deal** in `lib/deals.t
 | muse.ai | `/muse-ai-invite-code` | 1B Muse tokens (redeem within 48h) | 1B Muse tokens | 30 |
 | Pokémon GO | `/pokemon-go-referral-code` | 100 Poké Balls + milestones | milestone rewards | 10 |
 | Fireflies.ai | `/fireflies-ai-referral-code` | 10% off all plans | $5 credit per signup | 10 |
+| ChatGPT | `/chatgpt-promo-code` | free months of Plus or Go | nothing — OpenAI pays the sender nothing | 3 |
 
 `/referral-codes` is the hub, with live counts per board.
+
+**ChatGPT is a demand probe.** OpenAI takes no promo code at checkout, but it does issue
+personal invite codes — its help centre documents promotional subscription invites, referrals
+for Plus and Go, desktop-app referral promotions, and a ChatGPT Free referral campaign that
+ran 18 Aug – 17 Sep 2026 in Mexico, India and Indonesia. Those invites have the same shape as
+a Claude guest pass, so `/chatgpt-promo-code` is an ordinary board. It ships with nothing on
+it, which is the point: signups before a single code has been listed measure whether the
+queue itself is the product. Read the signal from the `boards` table in `scripts/stats.mjs`
+and from impressions in Google Search Console. `awaitingFirstListing` on the deal keeps the
+empty board and the confirmation email from implying codes have been here before; remove it
+once one has.
 
 **ElevenLabs is deliberately not a board.** Its program is an affiliate link — 22% to the
 sharer for 12 months — and nothing in its affiliate guide, terms or partner page gives the

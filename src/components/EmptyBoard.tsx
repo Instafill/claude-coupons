@@ -9,13 +9,11 @@ export default function EmptyBoard({ deal }: { deal: Deal }) {
   return (
     <div className="rounded-xl border border-line bg-paper px-5 py-5">
       <h3 className="text-[19px] font-semibold">
-        No {deal.name} {deal.nounPlural} on the board right now
+        {deal.awaitingFirstListing
+          ? `No ${deal.name} ${deal.nounPlural} on the board yet`
+          : `No ${deal.name} ${deal.nounPlural} on the board right now`}
       </h3>
-      <p className="mt-2 text-[15px] text-muted">
-        {deal.nounPlural.charAt(0).toUpperCase() + deal.nounPlural.slice(1)} are listed a few
-        times a week and unlocked within minutes. The list above gets the email the moment one
-        lands. Refreshing this page does not.
-      </p>
+      <p className="mt-2 text-[15px] text-muted">{deal.emptyNote}</p>
       <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
         {deal.supplyAsk}{" "}
         <Link className="text-accent-dark underline" href={`/submit?deal=${deal.slug}`}>

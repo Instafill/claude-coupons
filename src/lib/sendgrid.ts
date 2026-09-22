@@ -118,17 +118,21 @@ export async function sendWatchConfirmation(
     return;
   }
 
+  // "again" is a claim about the past. On a board still waiting for its first listing it
+  // would be the one false word in an email whose whole job is to be trusted.
+  const again = deal.awaitingFirstListing ? "" : " again";
+
   try {
     init();
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `Confirm you want ${deal.name} ${deal.noun} alerts`,
-      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription} again.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
+      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription}${again}.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
-          <p>Someone asked us to email this address when the board at claudecoupons.com has ${deal.mailDescription} again.</p>
+          <p>Someone asked us to email this address when the board at claudecoupons.com has ${deal.mailDescription}${again}.</p>
           <p style="margin: 24px 0;">
             <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Confirm and start watching</a>
           </p>

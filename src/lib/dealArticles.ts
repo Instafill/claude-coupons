@@ -546,10 +546,168 @@ const FIREFLIES: DealArticle = {
   ],
 };
 
+// The one board where the honest answer to the search term is "not the way you mean".
+//
+// The sequencing is the whole design. Someone who typed "chatgpt promo code" gets the true
+// answer in the first clause of the first sentence - there is no code box at OpenAI's
+// checkout - and then, in the same breath, the thing that does exist and is worth staying
+// for. It is never a heading, never a banner, never a warning box. A page that shouts the
+// absence loses the reader; a page that hides it is the aggregator spam this site exists to
+// be the opposite of.
+const CHATGPT: DealArticle = {
+  title: "ChatGPT Promo Code: What Actually Exists in 2026 | Claude Coupons",
+  h1: "ChatGPT promo codes: get in line for the next invite",
+  description:
+    "OpenAI takes no promo code at checkout - it hands selected accounts personal invite codes, each worth a free run of ChatGPT Plus or Go. Take a number and be first when one is listed.",
+  keywords: [
+    "chatgpt promo code",
+    "chatgpt coupon code",
+    "chatgpt discount code",
+    "chatgpt plus promo code",
+    "chatgpt invite code",
+    "chatgpt referral code",
+    "chatgpt plus discount",
+    "chatgpt plus free trial",
+    "openai promo code",
+    "chatgpt promo code 2026",
+    "chatgpt student discount",
+  ],
+  imageAlt: "ChatGPT invite codes",
+  lead: [
+    "OpenAI doesn't take a promo code at checkout. What it does hand out, in waves, is personal invite codes - a small number to a limited set of accounts, each worth a free run of ChatGPT Plus or Go for someone who hasn't paid for it before. They arrive by email or inside the app, they're often tied to one country, and they go quickly.",
+    "You can't ask OpenAI for one. What you can do is already be in line when the next batch lands here. Numbers are handed out in order and never reused, and every code listed on this board is offered to the front of the line first.",
+  ],
+  facts: [
+    {
+      term: "What OpenAI takes at checkout",
+      def: "No promo code field. Discounts arrive as invites or verified offers, never as a code you type.",
+    },
+    {
+      term: "What does exist",
+      def: "Personal invite codes, issued by OpenAI to selected accounts, campaign by campaign.",
+    },
+    {
+      term: "What an invite is worth",
+      def: "A free run of ChatGPT Plus or Go. The length is set per campaign - three months is OpenAI's own example.",
+    },
+    {
+      term: "Who can redeem one",
+      def: "Generally accounts on the free plan. Some campaigns make exceptions.",
+    },
+    {
+      term: "How you get one",
+      def: "OpenAI sends it, by email or in-product. There is no way to request one.",
+    },
+    {
+      term: "Students in the US",
+      def: "Four free months of Plus, verified through SheerID. No code involved. The claim window closes 31 October 2026.",
+    },
+    {
+      term: "When the free run ends",
+      def: "Auto-renews at the standard rate unless cancelled first.",
+    },
+  ],
+  factsNote:
+    "Campaign terms are OpenAI's and differ between campaigns - how many invites an account gets, who may redeem them and when they expire are all set per campaign and shown when the invite is generated.",
+  sections: [
+    {
+      h2: "Is there a ChatGPT promo code?",
+      body: [
+        "Not in the sense the phrase usually means. There is no box at OpenAI's checkout to paste a code into, no seasonal sale, and no public discount code - which is why a list of \u201cworking ChatGPT promo codes\u201d is a list of things there is nowhere to type.",
+        "What OpenAI runs instead is invites. Selected accounts are given a few personal codes, each worth a free stretch of ChatGPT, and who gets them is decided by OpenAI campaign by campaign, usually by country. That is the real currency, and it is the one this board deals in.",
+      ],
+    },
+    {
+      h2: "What OpenAI has actually handed out",
+      bullets: [
+        "Promotional subscription invites: a limited number of unique codes given to eligible accounts, each giving someone a free limited-duration ChatGPT subscription, delivered by email or inside the app.",
+        "A ChatGPT Free referral campaign, run from 18 August to 17 September 2026 in Mexico, India and Indonesia, where each qualifying referral doubled the referrer's free usage limits for seven days, up to three times.",
+        "ChatGPT Go promotions, including a stretch of Go at no cost for accounts in India.",
+        "Referral promotions tied to the ChatGPT desktop app.",
+        "A US student offer: four free months of Plus, verified rather than redeemed with a code.",
+      ],
+      body: [
+        "The pattern is the point. These arrive in waves, they are usually regional, and they are given rather than requested. Being in a line when the next one starts is worth more than any code on a coupon site.",
+      ],
+    },
+    {
+      h2: "How to pay less for ChatGPT today",
+      bullets: [
+        "The free plan. It is not a trial and it does not expire, and for occasional use it is often the whole answer. No card, no code.",
+        "ChatGPT Go, where it is offered. It is the cheaper paid tier and it is priced regionally - in some countries it has been given away outright for a period.",
+        "The US student offer: four free months of Plus, verified through SheerID rather than redeemed with a code. The claim window closes 31 October 2026, and it renews at the standard rate afterwards.",
+        "Your university or employer. Institutions on ChatGPT Edu or Business seat their people directly, which is a better deal than any consumer discount and costs you nothing.",
+        "Not the coupon aggregators. Since there is no code field at checkout, every \u201cverified 40% off ChatGPT code\u201d is either an affiliate link with the word code printed beside it or simply invented.",
+      ],
+    },
+    {
+      h2: "How to redeem a ChatGPT invite code",
+      steps: [
+        "Take a number here and confirm your email - that one click is also your sign-in.",
+        "When your wave opens, unlock a code on the board and copy it.",
+        "Redeem it on a ChatGPT account that has never been on a paid plan. Most campaigns check that and refuse an account that has.",
+        "Read what the invite says it gives you before you add a card - the length is set by the campaign, not by whoever shared it.",
+        "Tell us whether it worked. One click, and a spent code stops being offered to the person behind you.",
+      ],
+    },
+    {
+      h2: "Why ChatGPT codes from a list usually do nothing",
+      body: [
+        "An invite is issued to one account, for one campaign, with an expiry OpenAI sets and shows when the invite is generated. Most are tied to a country. An account that already pays is refused outright. Any of those four is enough to make a code that was real last month do nothing today, and a scraped list tells you none of them.",
+        "Here a code is listed by the person OpenAI gave it to, offered to a queue in order, and retired the moment it has been handed out its allotment or someone reports it dead. The person who just tried a code is the only check on it that exists, and one click from them is what keeps the board honest.",
+      ],
+    },
+  ],
+  terms: [
+    "Invites are OpenAI's to issue. Nobody can request one, and no site can promise you one - including this one.",
+    "Generally only accounts on the ChatGPT free plan can redeem an invite. Some campaigns make exceptions for existing subscribers; most do not.",
+    "The length of the free run is set by the campaign that issued the code, not by whoever shares it.",
+    "Every invite carries an expiry OpenAI sets and shows when the invite is generated. After it, the code does nothing.",
+    "Campaigns are usually regional. An invite from one country's campaign may not apply to an account elsewhere.",
+    "The subscription auto-renews at the standard rate when the free run ends. Cancel at least 24 hours before the first billing date if you do not want to continue.",
+    "Invites are personal codes issued to an account. Nothing here is sold, and a code that has to be bought is not an invite.",
+    "Nothing is redeemed on this site. Every rule above is OpenAI's, and this site is not affiliated with OpenAI.",
+  ],
+  termsSource:
+    "OpenAI's help centre - the ChatGPT Promotional Subscriptions/Free Trial Invites FAQ, and the promotions and referrals articles for Plus, Go and the desktop app.",
+  faqHeading: "ChatGPT promo code questions",
+  faqs: [
+    {
+      q: "Is there a ChatGPT promo code?",
+      a: "Not one you can type. OpenAI's checkout has no promo code field, and there is no public discount code for ChatGPT Plus. What OpenAI does issue is personal invite codes, given to selected accounts in campaigns, each worth a free run of ChatGPT. Those are real, and those are what this board exchanges.",
+    },
+    {
+      q: "Does ChatGPT have a referral program?",
+      a: "Yes, in campaigns rather than continuously. OpenAI's help centre documents promotional subscription invites, referrals for ChatGPT Plus and Go, referral promotions in the desktop app, and a ChatGPT Free referral campaign that ran in Mexico, India and Indonesia during August and September 2026. Eligibility is decided by OpenAI, campaign by campaign.",
+    },
+    {
+      q: "How do I get a ChatGPT invite code?",
+      a: "You cannot request one. OpenAI sends invites to accounts it selects, by email or inside ChatGPT, and how many you get depends on the campaign. The only other way is from somebody who was given more than they can use - which is what this board is for.",
+    },
+    {
+      q: "Can I use an invite if I already pay for ChatGPT Plus?",
+      a: "Usually not. Invites are generally redeemable only by accounts on the free plan, though a campaign can make an exception for existing subscribers. If you already subscribe, assume no unless the invite itself says otherwise.",
+    },
+    {
+      q: "Is the ChatGPT student discount a promo code?",
+      a: "No. OpenAI's US student offer - four free months of ChatGPT Plus - is claimed by verifying you are a student through SheerID, not by entering a code. The claim window closes on 31 October 2026, and the plan renews at the standard rate afterwards unless you cancel.",
+    },
+    {
+      q: "Do ChatGPT invite codes expire?",
+      a: "Yes. OpenAI sets an expiry on each invite and shows it when the invite is generated. Past that date the code does nothing, which is the most common reason a code found on a forum fails.",
+    },
+    {
+      q: "Are the codes on this board free?",
+      a: "Yes, and they always will be. People list invites they were given and cannot use, and a queue decides who gets the next one. Nothing on this site is sold, and a code that has to be bought is not an invite.",
+    },
+  ],
+};
+
 export const DEAL_ARTICLES: Partial<Record<DealSlug, DealArticle>> = {
   waymo: WAYMO,
   uber: UBER,
   muse: MUSE,
   pokemongo: POKEMON_GO,
   fireflies: FIREFLIES,
+  chatgpt: CHATGPT,
 };
