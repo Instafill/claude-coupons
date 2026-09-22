@@ -34,6 +34,7 @@ for (const d of days) {
 }
 
 const W = db.collection("watchers");
+const M = db.collection("memberships");
 const active = { confirmedAt: { $exists: true }, stoppedAt: { $exists: false }, leftQueueAt: { $exists: false } };
 console.log("\nwatch list: %d total  %d confirmed  %d unconfirmed  %d stopped  %d served",
   await W.countDocuments(),
@@ -42,11 +43,26 @@ console.log("\nwatch list: %d total  %d confirmed  %d unconfirmed  %d stopped  %
   await W.countDocuments({ stoppedAt: { $exists: true } }),
   await W.countDocuments({ leftQueueAt: { $exists: true } }));
 
-// The queue only walks members that hold a number, so anyone confirmed before the queue
-// shipped is invisible to it: no alerts, no standing, no unlock. Worth seeing every run.
-const inQueue = await W.countDocuments({ ...active, position: { $exists: true } });
-const orphaned = await W.countDocuments({ ...active, position: { $exists: false } });
-console.log("queue: %d holding a number, %d confirmed WITHOUT one (cannot be alerted or unlock)", inQueue, orphaned);
+// The queue only walks members that hold a number, so a confirmed watcher with no live
+// membership is invisible to it: no alerts, no standing, no unlock. That bug has happened
+// once already, so it is checked every run.
+//
+// Membership is per board now, and it is the watcher's *email* that joins the two - so the
+// count is of confirmed people with no live row on any board. Reading watchers.position
+// here, as this did before the boards shipped, silently always answered zero: the field
+// stopped being written and the check stopped being a check.
+const liveEmails = new Set(
+  (await M.find({ stoppedAt: { $exists: false } }, { projection: { email: 1 } }).toArray()).map(
+    (row) => row.email
+  )
+);
+const confirmedActive = await W.find(active, { projection: { email: 1 } }).toArray();
+const orphaned = confirmedActive.filter((row) => !liveEmails.has(row.email)).length;
+console.log(
+  "queue: %d holding a number, %d confirmed WITHOUT one (cannot be alerted or unlock)",
+  confirmedActive.length - orphaned,
+  orphaned
+);
 
 // Test 1: what people say they will do after the free week. Only rows created after the
 // question shipped can answer it, so the unanswered count is the pre-test population and
@@ -65,7 +81,7 @@ console.log(
 
 // Test 2: the price probe. Pressed, never charged.
 const probed = await W.countDocuments({ skipProbeCount: { $gt: 0 } });
-const inLineNotFirst = await W.countDocuments({ ...active, position: { $exists: true } });
+const inLineNotFirst = confirmedActive.length - orphaned;
 console.log(
   "skip probe: %d pressed of %d in line (%s%%)",
   probed,
@@ -120,11 +136,11 @@ if (placed) {
   console.log("\nlocation: nobody placed yet");
 }
 
-// Per board. This is the demand test: a board nobody joins is a board to retire, and a
+// Per board, so a new one that nobody joins is visible as such rather than averaged away.
+// This is the demand test: a board nobody joins is a board to retire, and a
 // board people join before anything has ever been listed on it is the opposite - proof the
 // line itself is what they want. "joined" counts every number ever handed out on that
 // board; "waiting" is who still holds one; "7d" is the pace.
-const M = db.collection("memberships");
 const P = db.collection("passes");
 const boards = await M.aggregate([{ $group: { _id: "$deal", n: { $sum: 1 } } }]).toArray();
 const week = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
