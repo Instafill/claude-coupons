@@ -38,7 +38,7 @@ export default function SubmitForm({ initialDeal }: { initialDeal: DealSlug }) {
       <fieldset>
         <legend className="text-sm font-semibold">What are you sharing?</legend>
         <div className="mt-2 flex flex-wrap gap-2">
-          {DEALS.map((option) => (
+          {DEALS.filter((option) => !option.waitlistOnly).map((option) => (
             <label
               key={option.slug}
               className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-[14px] font-semibold ${

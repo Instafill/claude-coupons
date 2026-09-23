@@ -14,22 +14,26 @@ export default function EmptyBoard({ deal }: { deal: Deal }) {
           : `No ${deal.name} ${deal.nounPlural} on the board right now`}
       </h3>
       <p className="mt-2 text-[15px] text-muted">{deal.emptyNote}</p>
-      <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
-        {deal.supplyAsk}{" "}
-        <Link className="text-accent-dark underline" href={`/submit?deal=${deal.slug}`}>
-          List your spare {deal.nounPlural}
-        </Link>{" "}
-        - they go unused otherwise.
-        {deal.slug === DEFAULT_DEAL && (
-          <>
-            {" "}
-            <Link className="text-accent-dark underline" href="/claude-guest-pass">
-              How passes work
-            </Link>
-            .
-          </>
-        )}
-      </p>
+      {/* No ask where there is nothing to ask for: on a waitlist board the brand issues
+          nothing anyone could be holding, and inviting a paste would undo the page. */}
+      {!deal.waitlistOnly && (
+        <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
+          {deal.supplyAsk}{" "}
+          <Link className="text-accent-dark underline" href={`/submit?deal=${deal.slug}`}>
+            List your spare {deal.nounPlural}
+          </Link>{" "}
+          - they go unused otherwise.
+          {deal.slug === DEFAULT_DEAL && (
+            <>
+              {" "}
+              <Link className="text-accent-dark underline" href="/claude-guest-pass">
+                How passes work
+              </Link>
+              .
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

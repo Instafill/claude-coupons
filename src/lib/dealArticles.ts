@@ -44,6 +44,12 @@ export interface DealArticle {
   /** Where the binding version lives, named by the screen it is on rather than by a URL
       we would be guessing at. The terms someone is held to are the ones in their app. */
   termsSource: string;
+  /** Overrides the terms heading where "referral terms" would be a lie - a board can exist
+      for a brand that runs no referral program at all. */
+  termsHeading?: string;
+  /** Replaces the sentence under the terms wholesale, for the same reason: the default names
+      the app as the binding screen, which is wrong where the rules are a price list. */
+  termsNote?: string;
   faqHeading: string;
   faqs: { q: string; a: string }[];
 }
@@ -703,6 +709,143 @@ const CHATGPT: DealArticle = {
   ],
 };
 
+const GROK: DealArticle = {
+  title: "Grok Promo Code: What Actually Exists in 2026 | Claude Coupons",
+  h1: "Grok promo codes: get in line for the first one",
+  description:
+    "xAI takes no promo code at checkout and runs no Grok referral program. Here is every real way to pay less for Grok today - and a line to be first in if codes ever arrive.",
+  keywords: [
+    "grok promo code",
+    "grok coupon code",
+    "grok discount code",
+    "supergrok promo code",
+    "grok referral code",
+    "supergrok discount",
+    "grok free trial",
+    "supergrok free trial",
+    "x premium grok",
+    "grok student discount",
+    "grok promo code 2026",
+    "is grok free",
+  ],
+  imageAlt: "Grok promo codes",
+  lead: [
+    "xAI doesn't take a promo code at checkout, and Grok has no referral program - which is why every “75% off Grok” code you will find today leads to a page with nowhere to type it. What does exist is a permanent free tier, a cheaper annual rate, and two bundles that quietly get you SuperGrok for less than SuperGrok costs. All of it is below.",
+    "And if xAI does start handing out codes - they have run unannounced trials before - this is the line that gets them first. Numbers are given out in order and never reused.",
+  ],
+  facts: [
+    { term: "What xAI takes at checkout", def: "No promo code field. There is nowhere on grok.com to enter one." },
+    { term: "Referral program", def: "None. xAI has never announced one for Grok or SuperGrok." },
+    { term: "Free access", def: "Permanent. The free tier is the starting plan, not a countdown trial." },
+    { term: "Cheapest paid route", def: "Annual billing, around 16% off the monthly rate." },
+    { term: "The bundles", def: "X Premium+ includes SuperGrok. SuperGrok Heavy includes X Premium+ at no extra cost, once you link your X account." },
+    { term: "Gifting", def: "X Premium and Premium+ can be gifted - annual only, to an account that isn't already subscribed. No code changes hands." },
+    { term: "Free trials", def: "Occasional and time-limited, usually around a model launch. Not guaranteed, and not on offer as standard." },
+    { term: "Students", def: "A US .edu offer ran in 2025. There is no student option on the plans page today." },
+  ],
+  factsNote:
+    "Plan names and prices are xAI's and they move - SuperGrok Lite, SuperGrok, SuperGrok Plus and SuperGrok Heavy are the current tiers, and grok.com/plans is the only place the live price is right.",
+  sections: [
+    {
+      h2: "Is there a Grok promo code?",
+      body: [
+        "No. There is no promo code field at xAI's checkout, no public discount code, and no sale that runs on one. The pages listing “working Grok coupons” at 20%, 75% or 82% off are publishing codes for a box that does not exist, and several of them admit in their own fine print that they have never verified one.",
+        "There is no Grok referral program either. xAI has never announced one, it is absent from their own billing FAQ, and no invite code is issued to Grok subscribers to pass on. The discounts that are real are structural: which tier you pick, how often you pay, and which door you come in through.",
+      ],
+    },
+    {
+      h2: "How to actually pay less for Grok",
+      bullets: [
+        "Use the free tier, and know that it is a plan rather than a trial. It does not expire, it does not ask for a card, and its limits reset.",
+        "Pay annually. The yearly toggle on the plans page takes roughly 16% off, and it is the only across-the-board discount xAI offers.",
+        "Pick the tier you need rather than the one in the middle. SuperGrok Lite exists and costs a fraction of standard SuperGrok.",
+        "Come in through X Premium+, which includes SuperGrok. If you were going to pay for both, that is one subscription instead of two.",
+        "Going the other way, SuperGrok Heavy now includes X Premium+ at no extra cost - link your X account inside the Grok app to switch it on.",
+        "Buy on the web rather than in an app. App store purchases carry the store's cut, and the same plan usually costs more through them than through grok.com.",
+        "Watch model launches. Where trials have appeared, they have appeared then - 7 to 30 days, announced late and withdrawn quietly.",
+      ],
+    },
+    {
+      h2: "What xAI has actually given away",
+      bullets: [
+        "SuperGrok free trials, 7 to 30 days, around model releases. They have not been on offer as standard since mid-2026.",
+        "Two free months of SuperGrok for US students with a .edu address, in 2025. Not renewed, and no student option appears on the plans page now.",
+        "X Premium gifting: a Premium or Premium+ annual subscription bought for another account. Real and official, but it is sent to a handle, the recipient must not already be a subscriber, and X reviews it before it lands.",
+        "On the developer side, $25 in promotional credits on a new console account and up to $150 a month for teams that opt into data sharing. Both are granted to an account rather than redeemed with a code.",
+      ],
+      body: [
+        "The shape is the point. Everything xAI has given away has been attached to an account or to a moment - never to a code someone could pass to you.",
+      ],
+    },
+    {
+      h2: "Why Grok coupon codes from a list never work",
+      body: [
+        "They were never real. A coupon page is generated the same way for every product on the internet: a brand name, a template, a discount figure nobody checked, and a date stamped on it this morning so it looks fresh. For a company that has never issued a code, that process produces pure fiction, and you can watch the same sites claim 20%, 75% and 82% off the same product in the same week.",
+        "The tell is the instructions. They will tell you to look for the promo code box at checkout. Open grok.com, start a subscription, and see whether there is one.",
+      ],
+    },
+    {
+      h2: "What being in line actually gets you",
+      body: [
+        "Nothing today, and this page is not going to pretend otherwise. What it gets you is a position, in order, from the moment you confirm your email - and one message if xAI starts issuing codes, before the pages that publish invented ones have anything real to publish.",
+        "If it never happens, you never hear from us about Grok again. There is one email at the point there is something to say, and an unsubscribe link in it.",
+      ],
+    },
+  ],
+  terms: [
+    "xAI issues no promo or referral codes for Grok. No site can give you one, this one included, and anything sold as a Grok code is not xAI's.",
+    "The free tier is a plan, not a trial: it carries usage limits that reset, and no card is required to use it.",
+    "Free trials, where they have appeared, convert to a paid subscription automatically unless you cancel before the trial ends.",
+    "Annual plans are charged up front for the full year. The saving is measured against twelve monthly payments, not against a higher list price.",
+    "X Premium+ includes SuperGrok, but it is an X subscription - cancelling X ends the Grok access with it.",
+    "SuperGrok Heavy includes X Premium+ only once you link your X account inside the Grok app. Until you do, you are paying for one and not receiving the other.",
+    "A gifted X Premium subscription is annual and one-time, can only be sent to an account that is not already subscribed, and X can decline it after review. Recently renamed or inactive accounts may not be eligible.",
+    "Where you bought decides who refunds you: xAI handles purchases made on the web and through Google Play, and Apple handles everything bought in the App Store.",
+    "Prices differ by country and by payment route, and a plan bought inside an app usually costs more than the same plan bought on the web.",
+    "Nothing is redeemed on this site, no money changes hands on it, and it is not affiliated with xAI or X.",
+  ],
+  termsSource:
+    "xAI's own Grok FAQ at docs.x.ai, the plans page at grok.com, and X's Premium and gifting help pages.",
+  termsHeading: "Grok pricing terms and what the offers actually require",
+  termsNote:
+    "These are xAI's and X's rules, not ours, and they change without notice - the tiers and their prices have moved several times this year. The binding version is the one on the screen you are paying on: the plans page at grok.com, or X's own checkout. Where this page and that screen disagree, that screen is right.",
+  faqHeading: "Grok promo codes: common questions",
+  faqs: [
+    {
+      q: "Is there a Grok promo code?",
+      a: "No. xAI's checkout has no promo code field, and the company has never issued a public discount code for Grok or SuperGrok. The discounts that exist are annual billing, the choice of tier, and the X Premium+ bundle.",
+    },
+    {
+      q: "Does Grok have a referral program?",
+      a: "No. xAI has never announced one, and it does not appear in their own billing FAQ. Grok subscribers are given no invite code to pass on, which is why no genuine Grok referral code is in circulation.",
+    },
+    {
+      q: "Are those 75% off Grok coupon codes real?",
+      a: "No. They are generated from a template, and several of the sites publishing them state in their own fine print that they have verified none. The simplest check is to open a Grok subscription and look for somewhere to enter one.",
+    },
+    {
+      q: "Is Grok free?",
+      a: "Yes, on the free tier, and permanently. It is the starting plan rather than a trial that converts: it has usage limits that reset, and it does not require a card. The paid tiers raise those limits and add features.",
+    },
+    {
+      q: "Is there a SuperGrok free trial?",
+      a: "Not as standard. xAI has run time-limited trials of 7 to 30 days, usually around a model launch, but they are not guaranteed and many users report no trial option when upgrading today.",
+    },
+    {
+      q: "What is the cheapest way to get SuperGrok?",
+      a: "Pay annually rather than monthly, on the web rather than through an app store, and check whether X Premium+ covers you - it includes SuperGrok, so if you wanted both it is one subscription instead of two.",
+    },
+    {
+      q: "Does X Premium+ include Grok?",
+      a: "Yes. X Premium+ includes SuperGrok access and Grok Bot. It works in the other direction too: SuperGrok Heavy now includes X Premium+ at no extra cost once you link your X account in the Grok app.",
+    },
+    {
+      q: "Is there a Grok student discount?",
+      a: "Not currently. xAI gave US students with a .edu address two free months of SuperGrok in 2025, but that offer was time-limited and no student verification option appears on the plans page today.",
+    },
+  ],
+};
+
 export const DEAL_ARTICLES: Partial<Record<DealSlug, DealArticle>> = {
   waymo: WAYMO,
   uber: UBER,
@@ -710,4 +853,5 @@ export const DEAL_ARTICLES: Partial<Record<DealSlug, DealArticle>> = {
   pokemongo: POKEMON_GO,
   fireflies: FIREFLIES,
   chatgpt: CHATGPT,
+  grok: GROK,
 };

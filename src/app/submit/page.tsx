@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import SubmitForm from "@/components/SubmitForm";
 import { getUser } from "@/lib/auth";
-import { DEFAULT_DEAL, isDealSlug } from "@/lib/deals";
+import { DEFAULT_DEAL, getDeal, isDealSlug } from "@/lib/deals";
 
 export const metadata: Metadata = {
   title: "Share a Referral Code - Claude Coupons",
@@ -20,7 +20,10 @@ export default async function SubmitPage({
   // The board someone arrived from, so a Waymo rider who pressed "share yours" is not made
   // to pick Waymo again on the page that took them there.
   const { deal } = await searchParams;
-  const initialDeal = deal && isDealSlug(deal) ? deal : DEFAULT_DEAL;
+  const requested = deal && isDealSlug(deal) ? deal : DEFAULT_DEAL;
+  // A board that takes no listings is not in the picker below, so arriving on it would label
+  // the form with a brand it cannot submit to.
+  const initialDeal = getDeal(requested).waitlistOnly ? DEFAULT_DEAL : requested;
 
   return (
     <section className="mx-auto mt-8 max-w-md">

@@ -77,21 +77,27 @@ export default async function DealPage({ deal }: { deal: Deal }) {
       })),
     },
     // The offer itself, so a result can carry what it is worth rather than only its title.
-    // Price zero is the honest figure: the codes are shared, never sold.
-    {
-      "@context": "https://schema.org",
-      "@type": "Offer",
-      name: article.h1,
-      description: deal.reward,
-      url,
-      price: 0,
-      priceCurrency: "USD",
-      availability:
-        passes.length > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/LimitedAvailability",
-      seller: { "@type": "Organization", name: "Claude Coupons" },
-    },
+    // Price zero is the honest figure: the codes are shared, never sold. Dropped entirely on a
+    // waitlist board that has never had a listing: an Offer for something that has never existed
+    // is a claim a search engine is right to distrust, and we would be making it about ourselves.
+    ...(deal.waitlistOnly && passes.length === 0
+      ? []
+      : [
+          {
+            "@context": "https://schema.org",
+            "@type": "Offer",
+            name: article.h1,
+            description: deal.reward,
+            url,
+            price: 0,
+            priceCurrency: "USD",
+            availability:
+              passes.length > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/LimitedAvailability",
+            seller: { "@type": "Organization", name: "Claude Coupons" },
+          },
+        ]),
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -142,7 +148,13 @@ export default async function DealPage({ deal }: { deal: Deal }) {
         ))}
       </div>
 
-      <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
+      {/* A board nobody can list on has no supply side to show, so the board takes the
+          full width rather than sitting next to an empty half. */}
+      <div
+        className={
+          deal.waitlistOnly ? "mt-6" : "mt-6 grid items-start gap-8 lg:grid-cols-2"
+        }
+      >
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
           <h2 className="mb-4 text-2xl font-semibold">
             Available {deal.name} {deal.nounPlural}
@@ -156,10 +168,10 @@ export default async function DealPage({ deal }: { deal: Deal }) {
           )}
         </section>
 
-        <ShareCard deal={deal} />
+        {!deal.waitlistOnly && <ShareCard deal={deal} />}
       </div>
 
-      <ShareCta deal={deal} />
+      {!deal.waitlistOnly && <ShareCta deal={deal} />}
 
       <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold [&_p]:mt-3">
         {/* The answer box: the rows a search result may lift whole. */}
@@ -195,7 +207,7 @@ export default async function DealPage({ deal }: { deal: Deal }) {
             somebody signs up rather than discovered afterwards. Every line is the
             program's own rule; the site's own promise is the last one. */}
         <h2 id="terms">
-          {deal.name} referral terms, limits and who is eligible
+          {article.termsHeading ?? `${deal.name} referral terms, limits and who is eligible`}
         </h2>
         <ul className="mt-3 list-disc space-y-1.5 pl-6">
           {article.terms.map((term) => (
@@ -203,9 +215,13 @@ export default async function DealPage({ deal }: { deal: Deal }) {
           ))}
         </ul>
         <p className="text-sm text-muted">
-          All program rules are {deal.name}&rsquo;s and can change without notice. The
-          binding version is the one in the app: {article.termsSource} Where this page and
-          that screen disagree, that screen is right.
+          {article.termsNote ?? (
+            <>
+              All program rules are {deal.name}&rsquo;s and can change without notice. The
+              binding version is the one in the app: {article.termsSource} Where this page and
+              that screen disagree, that screen is right.
+            </>
+          )}
         </p>
 
         <h2 id="faq">{article.faqHeading}</h2>

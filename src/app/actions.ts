@@ -81,6 +81,14 @@ export async function submitPass(
   // field was added after the form existed, and a submission is too valuable to lose to it.
   const slug = String(formData.get("deal") || "");
   const deal = getDeal(isDealSlug(slug) ? slug : DEFAULT_DEAL);
+  // A board we know and have closed is refused outright. The fallback above is for slugs we do
+  // not recognise; letting a closed one through it would file the listing under Claude.
+  if (deal.waitlistOnly) {
+    logEvent("submit_rejected", { reason: "waitlist_only", deal: deal.slug });
+    return {
+      error: `${deal.name} doesn't issue codes anyone can pass on, so that board only keeps a list. There is nothing to submit to it yet.`,
+    };
+  }
   const ip = await getSubmitterIp();
   const ipHash = hashIp(ip);
 

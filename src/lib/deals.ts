@@ -18,6 +18,7 @@ export const DEAL_SLUGS = [
   "pokemongo",
   "fireflies",
   "chatgpt",
+  "grok",
 ] as const;
 export type DealSlug = (typeof DEAL_SLUGS)[number];
 
@@ -103,6 +104,13 @@ export interface Deal {
       confirmation from promising codes "again" when there have not been any, and marks the
       board honestly on the hub. Remove it once something has been listed. */
   awaitingFirstListing?: boolean;
+  /** Set on a board where the brand issues nothing anyone could list. The queue still runs -
+      being first if that changes is the whole point - but the share cards, the submit link and
+      this board's place in the submit form's picker are hidden, and a submission naming it is
+      refused. Asking someone to paste a code that demonstrably does not exist is the one thing
+      that would cost such a page the trust the rest of its copy is built on. Clear the flag the
+      day the brand starts handing codes out; every field below is already filled for that. */
+  waitlistOnly?: boolean;
 }
 
 const CLAUDE: Deal = {
@@ -400,7 +408,50 @@ const CHATGPT: Deal = {
   awaitingFirstListing: true,
 };
 
-export const DEALS: Deal[] = [CLAUDE, WAYMO, UBER, MUSE, POKEMON_GO, FIREFLIES, CHATGPT];
+const GROK: Deal = {
+  slug: "grok",
+  name: "Grok",
+  path: "/grok-promo-code",
+  noun: "code",
+  nounPlural: "codes",
+  unlockLabel: "Unlock this code",
+  // Not a discount, because there is none to promise. What the line is actually worth is the
+  // position in it, and that is what this says.
+  reward: "first call on a Grok code if xAI starts issuing them",
+  giverReward: "",
+  summary:
+    "xAI runs no promo codes and no referral program for Grok. This is the line for the first ones, if that ever changes.",
+  mailDescription: "Grok codes",
+  linkTemplate: "",
+  redeemUrl: "https://grok.com/",
+  redeemHint: "Codes would be entered at grok.com under Settings, then Billing.",
+  needsCode: true,
+  displayPrefix: "",
+  findYourCode:
+    "xAI issues nothing shareable today - no invite codes, no referral links. There is nothing to find yet, which is the whole reason this page exists.",
+  // Every field from here down is dormant while waitlistOnly is set. They are filled anyway, and
+  // filled loosely, so that clearing one flag yields a working board rather than a rewrite.
+  codePattern: "^[A-Za-z0-9_-]{6,40}$",
+  codeExample: "GROK-XXXXXX",
+  acceptsBareCode: true,
+  codeCase: "preserve",
+  linkHosts: ["grok.com", "www.grok.com", "x.ai", "www.x.ai", "accounts.x.ai"],
+  codeParams: ["code", "invite", "invite_code", "referral", "referralCode"],
+  linkPaths: ["/invite/", "/redeem/"],
+  // Our own rationing. xAI has never issued a code, so there is no published figure to take.
+  unlocksPerListing: 3,
+  intentQuestion: "",
+  audience: "For anyone watching for the first Grok code",
+  supplyAsk: "Holding a Grok code?",
+  sharePitch:
+    "xAI has never handed one out, so if you are holding something we have not seen, the queue on this page is waiting for exactly it.",
+  emptyNote:
+    "xAI has never issued a Grok promo or referral code, so there is nothing on this board yet - and a coupon site telling you otherwise is guessing. The list above is what puts you first if that changes.",
+  awaitingFirstListing: true,
+  waitlistOnly: true,
+};
+
+export const DEALS: Deal[] = [CLAUDE, WAYMO, UBER, MUSE, POKEMON_GO, FIREFLIES, CHATGPT, GROK];
 
 /** The one every legacy row belongs to: passes and queue numbers predate the brand field. */
 export const DEFAULT_DEAL: DealSlug = "claude";

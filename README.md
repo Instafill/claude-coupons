@@ -17,6 +17,7 @@ The same machine now runs several boards. Each one is a **deal** in `lib/deals.t
 | Pokémon GO | `/pokemon-go-referral-code` | 100 Poké Balls + milestones | milestone rewards | 10 |
 | Fireflies.ai | `/fireflies-ai-referral-code` | 10% off all plans | $5 credit per signup | 10 |
 | ChatGPT | `/chatgpt-promo-code` | free months of Plus or Go | nothing — OpenAI pays the sender nothing | 3 |
+| Grok | `/grok-promo-code` | nothing yet — a place in line | n/a — waitlist only, no listings taken | 3 |
 
 `/referral-codes` is the hub, with live counts per board.
 
@@ -30,6 +31,18 @@ queue itself is the product. Read the signal from the `boards` table in `scripts
 and from impressions in Google Search Console. `awaitingFirstListing` on the deal keeps the
 empty board and the confirmation email from implying codes have been here before; remove it
 once one has.
+
+**Grok is a waitlist, not a board.** xAI issues no promo codes and runs no referral program
+for Grok: its own billing FAQ never mentions codes, invites, referrals or student pricing, and
+every “Grok coupon” in circulation comes from a coupon farm publishing codes for a checkout
+with no box to type them in. The nearest real things — X Premium gifting, and xAI's API credits
+— are bound to an account and produce nothing anyone could pass on. So `/grok-promo-code` runs
+the queue and nothing else: `waitlistOnly` on the deal hides the share cards, drops the board
+from the submit form's picker, and makes `submitPass` refuse it server-side, because asking for
+a code that demonstrably does not exist would cost the page the trust its copy is built on. It
+also omits the `Offer` JSON-LD while the board is empty. Clear the flag the day xAI launches
+something — every other field on the deal is already filled for that — and re-read the article
+at the same time, because its opening argument is what goes stale first.
 
 **ElevenLabs is deliberately not a board.** Its program is an affiliate link — 22% to the
 sharer for 12 months — and nothing in its affiliate guide, terms or partner page gives the
