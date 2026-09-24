@@ -339,7 +339,7 @@ const FIREFLIES: Deal = {
   // either side rather than pinned at 26, so a change of format does not turn away a link
   // that the app itself just produced.
   codePattern: "^[A-Za-z0-9]{16,40}$",
-  codeExample: "01JVSS60B14MQNGMSNM4V9A19W",
+  codeExample: "01JEXAMPLE9B14MQNGMSNM4V9A",
   acceptsBareCode: true,
   codeCase: "upper",
   linkHosts: ["app.fireflies.ai", "fireflies.ai", "www.fireflies.ai"],

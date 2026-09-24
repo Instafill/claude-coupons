@@ -155,9 +155,19 @@ drives the lifecycle.
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-node --require ./dns-fix.cjs --env-file=.env.local scripts/seed.mjs   # list our own pass
+SEED_DEAL=waymo SEED_CODE=RIDER5ABCD SEED_EMAIL=you@example.com \
+  node --experimental-strip-types --require ./dns-fix.cjs --env-file=.env.local \
+  scripts/seed.mjs --dry            # list one of our own codes on one board
 node --require ./dns-fix.cjs --env-file=.env.local scripts/migrate-deals.mjs --dry
 ```
+
+`seed.mjs` lists one code on one board. `SEED_CODE` takes a bare code or a full share link,
+and it is validated and case-normalized by `parseDealCode` - the same boundary a submission
+through the form crosses - so a seeded row is indistinguishable from a listed one and a typo
+is an error rather than a dead code handed to a real person. It refuses a `waitlistOnly`
+board, and it never creates the old global unique index on `passes.code`. Drop `--dry` to
+write. It needs `--experimental-strip-types` because it reads the deal registry rather than
+keeping its own copy of it.
 
 ## Migrating an existing database
 
