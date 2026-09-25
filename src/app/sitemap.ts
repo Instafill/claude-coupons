@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 
+import { getAllPosts } from "@/lib/blog";
 import { OTHER_DEALS } from "@/lib/deals";
 import { SITE_URL } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const blogPosts = getAllPosts();
+
   return [
     // No trailing slash, deliberately. Next strips it from the rendered canonical tag
     // (trailingSlash defaults to false), so a slash here submits one URL while the page
@@ -25,6 +28,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
+    {
+      url: `${SITE_URL}/blog`,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    ...blogPosts.map((post) => ({
+      url: `${SITE_URL}/blog/${post.slug}`,
+      lastModified: new Date(post.updatedAt),
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    })),
     {
       url: `${SITE_URL}/claude-guest-pass`,
       changeFrequency: "monthly",

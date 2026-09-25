@@ -44,6 +44,9 @@ export default async function RootLayout({
             <Link href="/claude-guest-pass" className="hover:text-accent-dark">
               Guest passes
             </Link>
+            <Link href="/blog" className="hover:text-accent-dark">
+              Blog
+            </Link>
             {/* The other boards reach every page through one link rather than six: the nav
                 is the wrong place to spend a reader's attention, and the hub is the page
                 built to hold that list. */}
@@ -127,6 +130,9 @@ export default async function RootLayout({
             ))}
             <Link href="/elevenlabs-promo-code" className="hover:text-accent-dark">
               ElevenLabs
+            </Link>
+            <Link href="/blog" className="hover:text-accent-dark">
+              Blog
             </Link>
           </p>
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
