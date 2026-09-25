@@ -9,6 +9,13 @@ export interface Friend {
 
 export const FRIENDS: Friend[] = [
   {
+    name: "KitCut",
+    url: "https://kitcut.ai",
+    tag: "AI animation",
+    blurb:
+      "Films Claude draws with code - Canvas, WebGL, Three.js, no video model - with the prompts beside them. The film on our About page was made there.",
+  },
+  {
     name: "InstaShare",
     url: "https://instashare.to",
     tag: "Developer tools",

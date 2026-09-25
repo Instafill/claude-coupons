@@ -168,6 +168,9 @@ export default async function RootLayout({
               </svg>
               Built by @ogamaniuk
             </a>
+            <Link href="/about" className="hover:text-accent-dark">
+              About
+            </Link>
             <Link href="/friends" className="hover:text-accent-dark">
               Our friends
             </Link>
