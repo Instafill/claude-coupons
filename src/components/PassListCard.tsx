@@ -1,6 +1,5 @@
 import { CaptchaBridge, CaptchaSlot } from "@/components/CaptchaBridge";
 import PlaceMe from "@/components/PlaceMe";
-import SkipProbe from "@/components/SkipProbe";
 import WatchForm from "@/components/WatchForm";
 import { type Deal, capitalize, numberWord } from "@/lib/deals";
 import { WAVE_SIZE, type ClaimSpeed } from "@/lib/passes";
@@ -198,7 +197,6 @@ export default function PassListCard({
                   ? `You are first in line. The next ${deal.noun} is offered to you before anyone else.`
                   : `${standing.ahead} ahead of you. Each one who unlocks a ${deal.noun} leaves the queue and you move up.`}
               </p>
-              {standing.ahead > 0 && <SkipProbe />}
               {/* Renders nothing. Someone holding a number is the person we could not place
                   from anything stored, and this is the one moment we see them. */}
               <PlaceMe />
