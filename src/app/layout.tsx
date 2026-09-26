@@ -3,8 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 
+import KitCutBanner from "@/components/KitCutBanner";
+import KitCutBar from "@/components/KitCutBar";
 import { getUser } from "@/lib/auth";
 import { OTHER_DEALS } from "@/lib/deals";
+import { KITCUT, kitcutUrl } from "@/lib/kitcut";
 
 import "./globals.css";
 
@@ -95,6 +98,9 @@ export default async function RootLayout({
           </nav>
         </header>
 
+        {/* Our other product, on every page: see src/lib/kitcut.ts. */}
+        <KitCutBanner />
+
         <main className="mx-auto max-w-5xl px-5 pb-16">{children}</main>
 
         <footer className="mx-auto max-w-5xl border-t border-line px-5 pt-6 pb-10 text-[13px] text-muted">
@@ -175,7 +181,14 @@ export default async function RootLayout({
               Our friends
             </Link>
           </p>
+          <p className="mt-3">
+            <a className="font-semibold text-accent-dark underline" href={kitcutUrl("footer")} rel="noopener">
+              Also by us: KitCut.ai
+            </a>{" "}
+            &mdash; {KITCUT.headline} {KITCUT.free}
+          </p>
         </footer>
+        <KitCutBar />
         <Analytics />
       </body>
     </html>

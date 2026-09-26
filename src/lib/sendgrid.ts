@@ -1,6 +1,7 @@
 import sgMail from "@sendgrid/mail";
 
 import { Deal, capitalize, dealLink, numberWord } from "@/lib/deals";
+import { KITCUT, kitcutUrl } from "@/lib/kitcut";
 
 // Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
 // one domain arriving from another is the shape of a phishing mail and filters score it
@@ -105,6 +106,28 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
   }
 }
 
+// Our other product (src/lib/kitcut.ts), as a card at the foot of the watch confirmation: after
+// the one thing the email is for, so confirming stays the obvious action. The image is served
+// from this site, absolute because a mail client has no base URL.
+const KITCUT_EMAIL_TEXT = `
+
+---
+${KITCUT.label}: ${KITCUT.name}. ${KITCUT.headline} ${KITCUT.free}
+${kitcutUrl("email")}`;
+function kitcutEmailHtml(): string {
+  const url = kitcutUrl("email");
+  return `
+          <div style="margin-top: 28px; border: 2px solid #c9642f; border-radius: 12px; overflow: hidden;">
+            <a href="${url}"><img src="https://claudecoupons.com${KITCUT.image}" alt="${KITCUT.imageAlt}" width="516" style="display: block; width: 100%; height: auto; border: 0;"></a>
+            <div style="padding: 14px 16px 16px;">
+              <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a94f20;">${KITCUT.label}</p>
+              <p style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: #1f1e1d;">${KITCUT.headline}</p>
+              <p style="margin: 0 0 12px; font-size: 14px; color: #6e6a63;">${KITCUT.pitch} <strong style="color: #1f1e1d;">${KITCUT.free}</strong></p>
+              <a href="${url}" style="display: inline-block; background: #1f1e1d; color: #fff; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-weight: 600;">${KITCUT.cta} &rarr;</a>
+            </div>
+          </div>`;
+}
+
 // Asks someone to confirm they want alerts before a single one is sent. The confirmation
 // step is not ceremony: unconfirmed bulk mail from this domain would put the sign-in links
 // above at risk, and those are the one email this site cannot afford to have filtered.
@@ -128,7 +151,7 @@ export async function sendWatchConfirmation(
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `Confirm you want ${deal.name} ${deal.noun} alerts`,
-      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription}${again}.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.`,
+      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription}${again}.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.${KITCUT_EMAIL_TEXT}`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
@@ -141,7 +164,7 @@ export async function sendWatchConfirmation(
             once every 12 hours. No newsletter, and we don&rsquo;t share your address. Every alert carries a
             one-click link to stop.
           </p>
-          <p style="color: #6e6a63; font-size: 13px;">If this wasn&rsquo;t you, ignore this email &mdash; nothing further will be sent.</p>
+          <p style="color: #6e6a63; font-size: 13px;">If this wasn&rsquo;t you, ignore this email &mdash; nothing further will be sent.</p>${kitcutEmailHtml()}
         </div>`,
     });
   } catch (error) {
