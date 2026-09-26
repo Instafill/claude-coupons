@@ -183,7 +183,7 @@ export default async function RootLayout({
           </p>
           <p className="mt-3">
             <a className="font-semibold text-accent-dark underline" href={kitcutUrl("footer")} rel="noopener">
-              Also by us: KitCut.ai
+              Also by us: KitCut, the Claude animation maker
             </a>{" "}
             &mdash; {KITCUT.headline} {KITCUT.free}
           </p>
