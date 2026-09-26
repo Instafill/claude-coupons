@@ -16,7 +16,7 @@ export const KITCUT = {
   cta: "Make a free film",
   label: "New from the maker of ClaudeCoupons",
   image: "/kitcut-promo.jpg",
-  imageAlt: "Stills from four Claude animations made with KitCut: a honey jar, a young dragon, a lighthouse cat and a raindrop",
+  imageAlt: "Stills from four Claude videos made with KitCut: a honey jar, a young dragon, a lighthouse cat and a raindrop",
   logo: "/kitcut-logo.png",
 };
 
