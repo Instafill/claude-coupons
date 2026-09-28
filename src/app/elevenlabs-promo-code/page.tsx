@@ -96,7 +96,7 @@ export default function ElevenLabsPage() {
       ]}
       cta={{
         heading: "Codes that do pay you",
-        body: "Waymo, Uber, muse.ai, Pokémon GO, Fireflies.ai and Claude all give the person claiming the code something real. Those are on the board.",
+        body: "Waymo, Uber, muse.ai, Pokémon GO, Fireflies.ai, KitCut and Claude all give the person claiming the code something real. Those are on the board.",
         label: "See codes that work",
       }}
       lead={

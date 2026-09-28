@@ -16,7 +16,7 @@ import { SITE_URL, articleMetadata } from "@/lib/seo";
 // trusts them.
 
 const DESCRIPTION =
-  "Referral codes that actually work, shared by the people who own them: Claude, Waymo, Uber, muse.ai, Pokémon GO and Fireflies.ai. Take a number and unlock one when your wave opens.";
+  "Referral codes that actually work, shared by the people who own them: Claude, Waymo, Uber, muse.ai, Pokémon GO, Fireflies.ai and KitCut. Take a number and unlock one when your wave opens.";
 
 export const dynamic = "force-dynamic";
 

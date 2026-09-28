@@ -1,7 +1,7 @@
 import { CaptchaBridge, CaptchaSlot } from "@/components/CaptchaBridge";
 import PlaceMe from "@/components/PlaceMe";
 import WatchForm from "@/components/WatchForm";
-import { type Deal, capitalize, numberWord } from "@/lib/deals";
+import { aNoun, type Deal, capitalize, numberWord } from "@/lib/deals";
 import { WAVE_SIZE, type ClaimSpeed } from "@/lib/passes";
 import type { Standing } from "@/lib/queue";
 import { spotsLeftInJoinWave } from "@/lib/queue";
@@ -195,7 +195,7 @@ export default function PassListCard({
               <p className="mt-1 text-sm">
                 {standing.ahead === 0
                   ? `You are first in line. The next ${deal.noun} is offered to you before anyone else.`
-                  : `${standing.ahead} ahead of you. Each one who unlocks a ${deal.noun} leaves the queue and you move up.`}
+                  : `${standing.ahead} ahead of you. Each one who unlocks ${aNoun(deal)} leaves the queue and you move up.`}
               </p>
               {/* Renders nothing. Someone holding a number is the person we could not place
                   from anything stored, and this is the one moment we see them. */}

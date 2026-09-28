@@ -7,7 +7,7 @@ import { DEFAULT_DEAL, isDealSlug } from "@/lib/deals";
 export const metadata: Metadata = {
   title: "Share a Referral Code - Claude Coupons",
   description:
-    "List a spare referral code so someone actually uses it: Claude Code passes, Waymo and Uber promo codes, muse.ai invites, Pokémon GO referrals, Fireflies.ai links. No account required.",
+    "List a spare referral code so someone actually uses it: Claude Code passes, Waymo and Uber promo codes, muse.ai invites, Pokémon GO referrals, Fireflies.ai links, KitCut invites. No account required.",
   alternates: { canonical: "https://claudecoupons.com/submit" },
 };
 

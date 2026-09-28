@@ -81,7 +81,7 @@ export default function AboutPage() {
       <h2 className="mt-8 text-[20px] font-bold">More than Claude</h2>
       <p className="mt-2">
         The same queue now runs boards for other programs that reward the person using a code
-        - Waymo, Uber, muse.ai, Fireflies and more. See them all on{" "}
+        - Waymo, Uber, muse.ai, Fireflies, KitCut and more. See them all on{" "}
         <Link className="text-accent-dark underline" href="/referral-codes">
           All codes
         </Link>

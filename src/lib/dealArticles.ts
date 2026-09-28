@@ -703,6 +703,118 @@ const CHATGPT: DealArticle = {
   ],
 };
 
+// Every number is kitcut.ai's own (its /docs/invite-friends page, generated from the code that
+// pays it out). KitCut is made by the people who run this site, and the page says so first.
+const KITCUT: DealArticle = {
+  title: "KitCut Referral Code: 2 Free Minutes of Claude Video | Claude Coupons",
+  h1: "KitCut invite link: 2 free minutes of Claude video",
+  description:
+    "KitCut invite links shared by its users. Join the Claude video maker through one and your first finished film adds 2 free minutes of Claude video for you both.",
+  keywords: [
+    "kitcut referral code",
+    "kitcut invite code",
+    "kitcut promo code",
+    "kitcut invite link",
+    "kitcut coupon",
+    "kitcut free credits",
+    "claude video",
+    "claude video maker",
+    "claude video generator",
+    "free claude video",
+    "opus 5.5 video",
+    "claude animation",
+  ],
+  imageAlt: "KitCut invite links: free minutes of Claude video",
+  lead: [
+    "KitCut is the Claude video maker: type one sentence and Claude Opus 5.5 writes, draws, narrates and scores a finished animated film - an ad, an explainer, a brand film. The free plan gives 30 seconds of Claude video a month. An invite link adds 2 minutes: four more 30-second films.",
+    "KitCut is made by the people who run this site, so read this page as ours. The board works the same as every other one here: people list their own invite links, you take a number, and when your wave opens you unlock one and sign up through it.",
+  ],
+  facts: [
+    {
+      term: "What you get",
+      def: "2 minutes of film when your first film is finished (or when you first subscribe, if that comes first).",
+    },
+    {
+      term: "If you subscribe",
+      def: "50% more minutes in your first paid month, up to 10 minutes more, when you subscribe within 30 days of joining.",
+    },
+    {
+      term: "What the person who shared it gets",
+      def: "2 minutes of film for your first film, for up to 20 friends, and a one-time bonus as big as your plan, up to 10 minutes, if you subscribe.",
+    },
+    {
+      term: "Who can use one",
+      def: "New KitCut accounts only, signed up through the link within 30 days of opening it.",
+    },
+    {
+      term: "How long the minutes last",
+      def: "365 days. They are spent after your monthly minutes, soonest-expiring first.",
+    },
+  ],
+  factsNote:
+    "These are KitCut's own terms, as its Invite friends page states them. KitCut may change or end invitations; minutes already received are kept until they expire.",
+  sections: [
+    {
+      h2: "What a KitCut invite is worth",
+      body: [
+        "A KitCut film is charged by its length. The free plan gives 30 seconds a month, enough for one short ad. An invite's 2 minutes is four more of those, or two 60-second explainers, and they last a year rather than a month.",
+        "If you go on to subscribe, the invite also adds half again to your first paid month, up to 10 minutes. That part only applies within 30 days of joining.",
+      ],
+    },
+    {
+      h2: "How to use a KitCut invite link",
+      steps: [
+        "Take a number here and confirm your email - that one click is also your sign-in.",
+        "When your wave opens, unlock a link on the board and open it.",
+        "Sign up on the KitCut page the link opens. It shows a note saying who invited you - that is how you know the invite is attached.",
+        "Make your first film. The 2 minutes arrive, for you and for them, the moment it is finished, and you both get an email.",
+        "Tell us whether it worked. One click, and a link that did nothing stops being offered to the person behind you.",
+      ],
+    },
+    {
+      h2: "Sharing your own link",
+      body: [
+        "Your link is in the Invite friends section of your KitCut account page. Paste the whole link on the submit page and it is offered to twenty people in turn - twenty is where KitCut stops paying the sharer's 2 minutes, although every friend still gets theirs.",
+        "A friend who subscribes earns you a one-time bonus as big as their plan, up to 10 minutes, 14 days after their first payment if the plan is still renewing. That bonus has no limit on the number of friends.",
+      ],
+    },
+  ],
+  terms: [
+    "New accounts only. Someone who already has a KitCut account cannot join through a link.",
+    "Sign up within 30 days of opening the link. If you open several people's links, the last one counts.",
+    "The 2 minutes arrive when your first film is finished, or at your first payment if that comes first. A film that fails or is stopped does not count.",
+    "Your own second address earns nothing - KitCut treats Gmail dots, + aliases and disposable addresses as the same person - and a sign-up from the same network or browser as the inviter is checked by hand first, usually within a day or two.",
+    "The first-month boost needs a Standard or Pro subscription within 30 days of joining, and is at most 10 minutes.",
+    "If a payment is refunded or disputed, what it earned is taken back, for both sides.",
+    "Invitation minutes have no cash value, cannot be transferred and last 365 days.",
+    "Nothing is redeemed on this site. Every rule above is KitCut's.",
+  ],
+  termsSource: "kitcut.ai -> Docs -> Invite friends, and KitCut's terms.",
+  faqHeading: "KitCut referral code questions",
+  faqs: [
+    {
+      q: "Is there a KitCut promo code?",
+      a: "Not a code you type. KitCut's offer is an invite link: sign up through someone's link and your first finished film gives you both 2 minutes of film. There is no checkout code field.",
+    },
+    {
+      q: "What is KitCut?",
+      a: "KitCut is a Claude video maker: from one sentence, Claude Opus 5.5 writes the script, draws and animates every scene in code, and scores the film, and KitCut records the narration and renders a 1080p video. It is made by the people who run this site.",
+    },
+    {
+      q: "I already have a KitCut account. Can I use a link?",
+      a: "No. Invitations are for new accounts only. You can list your own link here instead, and earn 2 minutes for every friend who finishes a first film.",
+    },
+    {
+      q: "When do the free minutes arrive?",
+      a: "The moment your first film is finished, or when you first subscribe if that happens first. Both of you get an email, and the minutes show under Credits received as an invitation bonus.",
+    },
+    {
+      q: "Are the links on this board free?",
+      a: "Yes. People list their own invite links and a queue decides who gets the next one. Nothing on this site is sold.",
+    },
+  ],
+};
+
 export const DEAL_ARTICLES: Partial<Record<DealSlug, DealArticle>> = {
   waymo: WAYMO,
   uber: UBER,
@@ -710,4 +822,5 @@ export const DEAL_ARTICLES: Partial<Record<DealSlug, DealArticle>> = {
   pokemongo: POKEMON_GO,
   fireflies: FIREFLIES,
   chatgpt: CHATGPT,
+  kitcut: KITCUT,
 };

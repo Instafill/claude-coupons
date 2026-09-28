@@ -1,4 +1,4 @@
-import { DEFAULT_DEAL, type Deal } from "@/lib/deals";
+import { aNoun, DEFAULT_DEAL, type Deal } from "@/lib/deals";
 
 // The detailed half of the submitter pitch. ShareCard above makes the offer; this explains
 // the mechanics for someone who scrolled because they were interested.
@@ -17,7 +17,7 @@ export default function ShareCta({ deal }: { deal: Deal }) {
     {
       n: "3",
       title: "Give someone the opportunity",
-      body: `Someone gets ${deal.reward} because you chose not to let a ${deal.noun} go unused.${
+      body: `Someone gets ${deal.reward} because you chose not to let ${aNoun(deal)} go unused.${
         deal.giverReward ? ` Your dashboard shows how many people you reached, and you get ${deal.giverReward}.` : ""
       }`,
     },

@@ -1,6 +1,6 @@
 import sgMail from "@sendgrid/mail";
 
-import { Deal, capitalize, dealLink, numberWord } from "@/lib/deals";
+import { aNoun, Deal, capitalize, dealLink, numberWord } from "@/lib/deals";
 import { KITCUT, KITCUT_FILMS, type KitCutFilm, filmStill, filmUrl, kitcutUrl } from "@/lib/kitcut";
 
 // Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
@@ -55,7 +55,7 @@ export async function notifyNewPass(pass: {
       to: NOTIFY_EMAIL,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `New ${deal.name} ${deal.noun} listed by ${pass.submitterEmail || "an anonymous contributor"}`,
-      text: `${who} listed a ${deal.noun}.\n\n${pass.code}\n${url}\n\nLive ${deal.nounPlural} on the ${deal.name} board: ${pass.livePasses}\nhttps://claudecoupons.com${deal.path}`,
+      text: `${who} listed ${aNoun(deal)}.\n\n${pass.code}\n${url}\n\nLive ${deal.nounPlural} on the ${deal.name} board: ${pass.livePasses}\nhttps://claudecoupons.com${deal.path}`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d;">
           <h2 style="color: #c9642f; margin-bottom: 4px;">New ${deal.name} ${deal.noun} on the board</h2>

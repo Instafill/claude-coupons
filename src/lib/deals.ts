@@ -18,6 +18,7 @@ export const DEAL_SLUGS = [
   "pokemongo",
   "fireflies",
   "chatgpt",
+  "kitcut",
 ] as const;
 export type DealSlug = (typeof DEAL_SLUGS)[number];
 
@@ -400,7 +401,67 @@ const CHATGPT: Deal = {
   awaitingFirstListing: true,
 };
 
-export const DEALS: Deal[] = [CLAUDE, WAYMO, UBER, MUSE, POKEMON_GO, FIREFLIES, CHATGPT];
+// KitCut is made by the people who run this site, which the board and the article both say
+// in so many words. Its terms are kitcut.ai's own invite program (kitcut.ai/docs/invite-friends):
+// 2:00 of film each when the friend's first film is finished, more when they subscribe.
+const KITCUT: Deal = {
+  slug: "kitcut",
+  name: "KitCut",
+  path: "/kitcut-referral-code",
+  noun: "invite link",
+  nounPlural: "invite links",
+  unlockLabel: "Unlock this link",
+  // Read after "Give someone" and "someone gets", so it names no one: the condition (a first
+  // finished film) is in the summary, the facts and the terms.
+  reward: "2 free minutes of Claude video",
+  giverReward:
+    "2 minutes of film when their first film is finished, and a bonus as big as their plan (up to 10 minutes) if they subscribe",
+  summary:
+    "A KitCut invite link gives a new account 2 free minutes of Claude video - four 30-second ads - on top of the free plan, once their first film is finished.",
+  mailDescription: "KitCut invite links",
+  linkTemplate: "https://kitcut.ai/i/{code}",
+  redeemUrl: "https://kitcut.ai/",
+  redeemHint:
+    "Open the link and sign up on the page it opens - an account made any other way is not counted. The 2 minutes arrive when your first film is finished.",
+  needsCode: false,
+  displayPrefix: "kitcut.ai/i/",
+  findYourCode:
+    "kitcut.ai -> Account -> Invite friends. Press Copy link and paste the whole link here.",
+  // KitCut's codes are seven characters from an alphabet without i, l, o, 0 or 1
+  // (sketch-studio lib/referrals.js CODE).
+  codePattern: "^[a-hjkmnp-z2-9]{7}$",
+  codeExample: "abc2def",
+  // KitCut hands out a link, never a bare code, so only the link is taken - the same reason
+  // Claude's board refuses bare tokens.
+  acceptsBareCode: false,
+  codeCase: "lower",
+  linkHosts: ["kitcut.ai", "www.kitcut.ai"],
+  codeParams: [],
+  // /i/<code>, including the film share links (/i/<code>?to=/film/<id>) that carry an invite.
+  linkPaths: ["/i/"],
+  // The inviter's 2:00 stops after twenty friends (the friend's never does), so a listing is
+  // offered to twenty people - past that it would earn its lister nothing.
+  unlocksPerListing: 20,
+  intentQuestion: "",
+  audience: "For KitCut users",
+  supplyAsk: "Made a film on KitCut?",
+  sharePitch:
+    "Every friend who finishes a first film on your link is 2 minutes of film for you and 2 for them, and a friend who subscribes earns you up to 10 minutes more.",
+  emptyNote:
+    "Nothing has been listed here yet. The list above gets the email the moment the first link lands. Refreshing this page does not.",
+  awaitingFirstListing: true,
+};
+
+export const DEALS: Deal[] = [
+  CLAUDE,
+  WAYMO,
+  UBER,
+  MUSE,
+  POKEMON_GO,
+  FIREFLIES,
+  CHATGPT,
+  KITCUT,
+];
 
 /** The one every legacy row belongs to: passes and queue numbers predate the brand field. */
 export const DEFAULT_DEAL: DealSlug = "claude";
@@ -493,6 +554,11 @@ export function numberWord(n: number): string {
 
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** The noun with its article: "a pass", "an invite code". */
+export function aNoun(deal: Deal): string {
+  return `${/^[aeiou]/i.test(deal.noun) ? "an" : "a"} ${deal.noun}`;
 }
 
 /** What the submit form tells someone to paste. */

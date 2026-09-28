@@ -17,6 +17,7 @@ The same machine now runs several boards. Each one is a **deal** in `lib/deals.t
 | Pokémon GO | `/pokemon-go-referral-code` | 100 Poké Balls + milestones | milestone rewards | 10 |
 | Fireflies.ai | `/fireflies-ai-referral-code` | 10% off all plans | $5 credit per signup | 10 |
 | ChatGPT | `/chatgpt-promo-code` | free months of Plus or Go | nothing — OpenAI pays the sender nothing | 3 |
+| KitCut | `/kitcut-referral-code` | 2:00 of film after a first film, +50% first paid month | 2:00 of film (up to 20 friends), plan-sized bonus on subscribe | 20 |
 
 `/referral-codes` is the hub, with live counts per board.
 
