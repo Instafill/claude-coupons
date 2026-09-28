@@ -4,8 +4,8 @@
 // the reader down, a footer line, and a card in the watch confirmation email. It is our own
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
-// It leads with business films (ads, explainers, brand films) because a business is the reader
-// who pays for film; a film of a fox seeing snow sells the craft but not the use.
+// It leads with films made for businesses (a launch, an explainer, an opening) because a business
+// is the reader who pays for film; a film of a fox seeing snow sells the craft but not the use.
 //
 // One place for the words and the links, so the four placements cannot drift apart. The utm_*
 // parameters say which placement brought a visitor.
@@ -20,33 +20,32 @@ export const KITCUT = {
   logo: "/kitcut-logo.png",
 };
 
-// The films the banner and the email show: KitCut's best business films, all public on
-// kitcut.ai. `at` is the second the still was taken at (public/kitcut/<slug>.jpg), and where
-// the hover preview starts, so the moving picture picks up where the still left off.
+// The films the banner and the email show: KitCut films made for businesses, one per industry.
+// Each has a still and a few seconds of the film as a small silent clip (public/kitcut/<slug>.jpg
+// and .mp4, cut from the film), and opens the whole film with sound: its page on kitcut.ai, or
+// YouTube for a film made outside the studio. No lengths: the tile sells the look, not the runtime.
 export interface KitCutFilm {
   slug: string;
-  id: string;
   kind: string;
-  what: string;
-  length: string;
-  at: number;
+  company: string;
+  // a studio film's id (its page is kitcut.ai/film/<id>), or a YouTube video's
+  id?: string;
+  youtube?: string;
 }
 
 export const KITCUT_FILMS: KitCutFilm[] = [
-  { slug: "turing-complete", id: "studio-20260928-041445-2p46v3", kind: "Launch ad", what: "A game on Steam", length: "0:13", at: 9.1 },
-  { slug: "dell-hp", id: "studio-20260927-171047-mgkibw", kind: "Business documentary", what: "Dell vs HP in the AI era", length: "8:00", at: 336 },
-  { slug: "queensgame", id: "studio-20260927-223145-5wo5i4", kind: "Product ad", what: "A web puzzle game", length: "0:13", at: 2.6 },
-  { slug: "clamly", id: "studio-20260927-061617-q6t772", kind: "Brand values film", what: "An app's values", length: "0:33", at: 23.1 },
+  { slug: "thatchers-wine", kind: "Champagne launch", company: "Thatcher's Wine", id: "studio-20260928-102216-ba5ra3" },
+  { slug: "instafill-bpo", kind: "Product explainer", company: "Instafill, for real-estate agents", youtube: "1bEBQp96rb8" },
+  { slug: "marisol", kind: "Restaurant opening", company: "Marisol, an example brand", id: "studio-20260928-102317-awn3zx" },
+  { slug: "brightfold", kind: "Software launch", company: "Brightfold, an example brand", id: "studio-20260928-102314-adduja" },
 ];
-
-const FILMS_BASE = "https://kitcutst.blob.core.windows.net/films";
 
 export function filmStill(f: KitCutFilm): string {
   return `/kitcut/${f.slug}.jpg`;
 }
 
-export function filmPreview(f: KitCutFilm): string {
-  return `${FILMS_BASE}/${f.id}/film_web.mp4#t=${f.at}`;
+export function filmClip(f: KitCutFilm): string {
+  return `/kitcut/${f.slug}.mp4`;
 }
 
 export type KitCutPlacement = "banner" | "stickybar" | "footer" | "email";
@@ -58,7 +57,8 @@ export function kitcutUrl(placement: KitCutPlacement): string {
   return `https://kitcut.ai/?${UTM(placement)}`;
 }
 
-// A showcased film's own page on kitcut.ai, where it plays with sound.
+// Where a showcased film plays in full, with sound.
 export function filmUrl(f: KitCutFilm, placement: KitCutPlacement): string {
+  if (f.youtube) return `https://www.youtube.com/watch?v=${f.youtube}`;
   return `https://kitcut.ai/film/${f.id}?${UTM(placement)}`;
 }

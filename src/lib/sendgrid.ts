@@ -119,9 +119,9 @@ function kitcutEmailHtml(): string {
   const url = kitcutUrl("email");
   const cell = (f: KitCutFilm) => `
                 <td width="50%" valign="top" style="padding: 6px;">
-                  <a href="${filmUrl(f, "email")}" style="text-decoration: none; color: #1f1e1d;"><img src="https://claudecoupons.com${filmStill(f)}" alt="${f.kind}: ${f.what}" width="240" style="display: block; width: 100%; height: auto; border: 0; border-radius: 6px;">
-                  <span style="display: block; margin-top: 5px; font-size: 13px; font-weight: 700;">${f.kind} &middot; ${f.length}</span>
-                  <span style="display: block; font-size: 12px; color: #6e6a63;">${f.what}</span></a>
+                  <a href="${filmUrl(f, "email")}" style="text-decoration: none; color: #1f1e1d;"><img src="https://claudecoupons.com${filmStill(f)}" alt="${f.kind} for ${f.company}" width="240" style="display: block; width: 100%; height: auto; border: 0; border-radius: 6px;">
+                  <span style="display: block; margin-top: 5px; font-size: 13px; font-weight: 700;">${f.kind}</span>
+                  <span style="display: block; font-size: 12px; color: #6e6a63;">${f.company}</span></a>
                 </td>`;
   const rows = [KITCUT_FILMS.slice(0, 2), KITCUT_FILMS.slice(2, 4)]
     .map((r) => `
