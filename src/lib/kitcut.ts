@@ -34,9 +34,9 @@ export interface KitCutFilm {
 }
 
 export const KITCUT_FILMS: KitCutFilm[] = [
-  { slug: "thatchers-wine", kind: "Champagne launch", company: "Thatcher's Wine", id: "studio-20260928-102216-ba5ra3" },
+  { slug: "thatchers-wine", kind: "Champagne launch", company: "Thatcher's Wine", id: "studio-20260928-110106-skiird" },
   { slug: "instafill-bpo", kind: "Product explainer", company: "Instafill, for real-estate agents", youtube: "1bEBQp96rb8" },
-  { slug: "marisol", kind: "Restaurant opening", company: "Marisol, an example brand", id: "studio-20260928-102317-awn3zx" },
+  { slug: "marisol", kind: "Restaurant opening", company: "Marisol, an example brand", id: "studio-20260928-110110-2ohqb3" },
   { slug: "brightfold", kind: "Software launch", company: "Brightfold, an example brand", id: "studio-20260928-102314-adduja" },
 ];
 
