@@ -8,7 +8,7 @@ import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import type { DealArticle } from "@/lib/dealArticles";
 import { DEAL_ARTICLES } from "@/lib/dealArticles";
-import { OTHER_DEALS, type Deal } from "@/lib/deals";
+import { DEALS, DEFAULT_DEAL, type Deal } from "@/lib/deals";
 import { claimSpeed, getBoard } from "@/lib/passes";
 import {
   ensureQueueAdopted,
@@ -222,20 +222,23 @@ export default async function DealPage({ deal }: { deal: Deal }) {
             the same person who would take another. */}
         <h2>Other codes on the board</h2>
         <ul className="mt-3 list-disc space-y-1.5 pl-6">
-          <li>
-            <Link className="text-accent-dark underline" href="/">
-              Claude Code passes
-            </Link>{" "}
-            - a free week of Claude Pro.
-          </li>
-          {OTHER_DEALS.filter((other) => other.slug !== deal.slug).map((other) => (
-            <li key={other.slug}>
-              <Link className="text-accent-dark underline" href={other.path}>
-                {other.name} {other.nounPlural}
-              </Link>{" "}
-              - {other.reward}.
-            </li>
-          ))}
+          {DEALS.filter((other) => other.slug !== deal.slug).map((other) =>
+            other.slug === DEFAULT_DEAL ? (
+              <li key={other.slug}>
+                <Link className="text-accent-dark underline" href="/">
+                  Claude Code passes
+                </Link>{" "}
+                - a free week of Claude Pro.
+              </li>
+            ) : (
+              <li key={other.slug}>
+                <Link className="text-accent-dark underline" href={other.path}>
+                  {other.name} {other.nounPlural}
+                </Link>{" "}
+                - {other.reward}.
+              </li>
+            ),
+          )}
         </ul>
       </section>
     </>

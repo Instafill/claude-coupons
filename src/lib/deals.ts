@@ -452,7 +452,11 @@ const KITCUT: Deal = {
   awaitingFirstListing: true,
 };
 
+// The order every list shows: the hub, the home page's other boards, the footer, the submit
+// form's choices and each board's "other codes". KitCut leads, at the user's request; the
+// default board is still Claude (DEFAULT_DEAL), whatever comes first here.
 export const DEALS: Deal[] = [
+  KITCUT,
   CLAUDE,
   WAYMO,
   UBER,
@@ -460,7 +464,6 @@ export const DEALS: Deal[] = [
   POKEMON_GO,
   FIREFLIES,
   CHATGPT,
-  KITCUT,
 ];
 
 /** The one every legacy row belongs to: passes and queue numbers predate the brand field. */
