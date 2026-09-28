@@ -2,8 +2,118 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllPosts, getPostBySlug, formatDate, getAuthorInitials } from "@/lib/blog";
+import {
+  type BlogCta,
+  type BlogImage,
+  type BlogPost,
+  type BlogTableColumn,
+  type BlogTableRow,
+  formatDate,
+  getAllPosts,
+  getAuthorInitials,
+  getPostBySlug,
+  getRecentPosts,
+} from "@/lib/blog";
 import { SITE_URL } from "@/lib/seo";
+
+// The first post was written into this page (its takeaways, its guest-pass boxes); later posts
+// bring their own through the optional BlogPost fields, and each falls back to what the first
+// post has always shown, so that page renders exactly as before.
+
+const absolute = (src: string) => (src.startsWith("http") ? src : `${SITE_URL}${src}`);
+
+function shareImage(post: BlogPost) {
+  return post.image
+    ? { url: post.image, width: 1200, height: 630, alt: post.imageAlt }
+    : { url: "/og.png", width: 1200, height: 630, alt: post.imageAlt };
+}
+
+// The first post's status table styles its four known columns; any other table is plain,
+// with its first column bold.
+const CELL: Record<string, string> = {
+  deal: "font-semibold text-ink",
+  target: "text-muted",
+  value: "font-medium text-ink",
+};
+
+function TableCell({ col, row, index }: { col: BlogTableColumn; row: BlogTableRow; index: number }) {
+  const value = row[col.key] ?? "";
+  if (col.key === "status") {
+    return (
+      <td className="px-4 py-3 sm:px-5 whitespace-nowrap text-xs font-semibold">
+        <span
+          className={`inline-block rounded-md px-2 py-1 ${
+            value.includes("✅")
+              ? "bg-good/10 text-good"
+              : value.includes("❌")
+                ? "bg-bad/10 text-bad"
+                : "bg-line text-muted"
+          }`}
+        >
+          {value}
+        </span>
+      </td>
+    );
+  }
+  const cls = CELL[col.key] ?? (index === 0 ? "font-semibold text-ink" : "text-ink");
+  return <td className={`px-4 py-3 sm:px-5 align-top ${cls}`}>{value}</td>;
+}
+
+function Figure({ img, fallbackLabel }: { img: BlogImage; fallbackLabel: string }) {
+  return (
+    <figure className="overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-xs">
+      <div className="overflow-hidden rounded-xl bg-paper">
+        <Image
+          src={img.src}
+          alt={img.alt}
+          width={img.width ?? 1200}
+          height={img.height ?? 675}
+          sizes="(min-width: 1024px) 896px, 100vw"
+          className="w-full h-auto object-contain rounded-lg border border-line/40"
+        />
+      </div>
+      {img.caption && (
+        <figcaption className="px-3 pt-3 pb-1 text-center text-xs text-muted">
+          <span className="font-semibold text-ink">{img.label ?? fallbackLabel}:</span>{" "}
+          {img.caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+function CtaBox({ cta }: { cta: BlogCta }) {
+  const external = (href: string) => href.startsWith("http");
+  return (
+    <div className="my-8 rounded-2xl border-2 border-accent bg-paper p-6 sm:p-8 text-center flex flex-col items-center">
+      {cta.kicker && (
+        <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-accent-dark mb-2">
+          {cta.kicker}
+        </span>
+      )}
+      <h3 className="text-xl sm:text-2xl font-extrabold text-ink max-w-xl">{cta.title}</h3>
+      <p className="mt-2 text-sm sm:text-base text-muted max-w-md">{cta.text}</p>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href={cta.primary.href}
+          {...(external(cta.primary.href) ? { target: "_blank", rel: "noopener" } : {})}
+          className="rounded-xl bg-accent px-6 py-3 text-sm font-bold text-white shadow-xs hover:bg-accent-dark transition-colors"
+        >
+          {cta.primary.label}
+        </a>
+        {cta.secondary && (
+          <a
+            href={cta.secondary.href}
+            {...(external(cta.secondary.href) ? { target: "_blank", rel: "noopener" } : {})}
+            className="rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-ink hover:border-accent transition-colors"
+          >
+            {cta.secondary.label}
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -44,20 +154,13 @@ export async function generateMetadata({
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt,
       authors: [post.author.name],
-      images: [
-        {
-          url: "/og.png",
-          width: 1200,
-          height: 630,
-          alt: post.imageAlt,
-        },
-      ],
+      images: [shareImage(post)],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.metaDescription,
-      images: ["/og.png"],
+      images: [shareImage(post).url],
     },
   };
 }
@@ -83,7 +186,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         "@type": "WebPage",
         "@id": articleUrl,
       },
-      image: `${SITE_URL}/og.png`,
+      image: absolute(shareImage(post).url),
+      keywords: post.keywords.join(", "),
       datePublished: post.publishedAt,
       dateModified: post.updatedAt,
       author: {
@@ -138,7 +242,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         },
       })),
     },
+    // Every film the article plays, so each can surface in video results.
+    ...post.sections.flatMap((section) =>
+      (section.videos ?? []).map((video) => ({
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        name: video.title,
+        description: `${video.meta}. Made with KitCut from the prompt: ${video.prompt}`,
+        thumbnailUrl: [absolute(video.poster)],
+        uploadDate: video.uploadDate,
+        duration: video.duration,
+        contentUrl: video.src,
+        url: video.pageUrl,
+      }))
+    ),
   ];
+  const related = getRecentPosts(2, post.slug);
 
   return (
     <>
@@ -176,7 +295,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               {post.category}
             </span>
             <span>•</span>
-            <span className="text-good font-medium">Verified Active</span>
+            <span className="text-good font-medium">{post.badge ?? "Verified Active"}</span>
             <span>•</span>
             <time dateTime={post.updatedAt} className="text-muted font-medium">
               Updated {formatDate(post.updatedAt)}
@@ -211,6 +330,20 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <h2 className="text-base font-bold uppercase tracking-wider text-accent-dark mb-2">
             Key Takeaways (TL;DR)
           </h2>
+          {post.takeaways ? (
+          <ul className="space-y-2 text-sm sm:text-base text-ink leading-relaxed">
+            {post.takeaways.map((item) => (
+              <li key={item.title} className="flex items-start gap-2">
+                <span className={`${item.mark === "yes" ? "text-good" : "text-bad"} font-bold`}>
+                  {item.mark === "yes" ? "✅" : "❌"}
+                </span>
+                <span>
+                  <strong>{item.title}</strong> {item.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+          ) : (
           <ul className="space-y-2 text-sm sm:text-base text-ink leading-relaxed">
             <li className="flex items-start gap-2">
               <span className="text-bad font-bold">❌</span>
@@ -245,6 +378,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               </span>
             </li>
           </ul>
+          )}
         </div>
 
         {/* Table of Contents */}
@@ -301,6 +435,52 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 </div>
               )}
 
+              {section.bullets && (
+                <ul className="mt-4 list-disc pl-5 space-y-2 text-ink leading-relaxed">
+                  {section.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Films. preload="metadata": a few KB each (the web copies are faststart), so
+                  the player is ready with its poster; the film itself loads on play. */}
+              {section.videos && (
+                <div className="my-6 grid gap-6 sm:grid-cols-2">
+                  {section.videos.map((video) => (
+                    <figure
+                      key={video.src}
+                      className="overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-xs"
+                    >
+                      <video
+                        controls
+                        preload="metadata"
+                        playsInline
+                        poster={video.poster}
+                        className="aspect-video w-full rounded-xl bg-black"
+                      >
+                        <source src={video.src} type="video/mp4" />
+                      </video>
+                      <figcaption className="px-2 pt-3 pb-1">
+                        <div className="text-sm font-semibold text-ink">{video.title}</div>
+                        <div className="text-xs text-muted">{video.meta}</div>
+                        <p className="mt-1.5 text-xs text-muted italic">
+                          Prompt: &ldquo;{video.prompt}&rdquo;
+                        </p>
+                        <a
+                          href={video.pageUrl}
+                          target="_blank"
+                          rel="noopener"
+                          className="mt-1.5 inline-block text-xs font-semibold text-accent-dark hover:underline"
+                        >
+                          Watch on KitCut with sound →
+                        </a>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+
               {/* Status Matrix Table */}
               {section.table && (
                 <div className="my-6 overflow-hidden rounded-2xl border border-line bg-surface">
@@ -321,28 +501,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                             key={rIdx}
                             className="hover:bg-line/20 transition-colors"
                           >
-                            <td className="px-4 py-3 sm:px-5 font-semibold text-ink">
-                              {row.deal}
-                            </td>
-                            <td className="px-4 py-3 sm:px-5 text-muted">
-                              {row.target}
-                            </td>
-                            <td className="px-4 py-3 sm:px-5 font-medium text-ink">
-                              {row.value}
-                            </td>
-                            <td className="px-4 py-3 sm:px-5 whitespace-nowrap text-xs font-semibold">
-                              <span
-                                className={`inline-block rounded-md px-2 py-1 ${
-                                  row.status.includes("✅")
-                                    ? "bg-good/10 text-good"
-                                    : row.status.includes("❌")
-                                    ? "bg-bad/10 text-bad"
-                                    : "bg-line text-muted"
-                                }`}
-                              >
-                                {row.status}
-                              </span>
-                            </td>
+                            {section.table!.columns.map((col, cIdx) => (
+                              <TableCell key={col.key} col={col} row={row} index={cIdx} />
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -386,7 +547,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               {section.steps && (
                 <div className="my-6 rounded-2xl border border-line bg-surface p-5 sm:p-6">
                   <div className="font-semibold text-ink mb-3 text-sm uppercase tracking-wide text-muted">
-                    How to Claim Your Free 7-Day Pass
+                    {section.stepsTitle ?? "How to Claim Your Free 7-Day Pass"}
                   </div>
                   <ol className="list-decimal space-y-3 pl-5 text-sm sm:text-base leading-relaxed text-ink">
                     {section.steps.map((step, sIdx) => (
@@ -428,32 +589,25 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 </div>
               )}
 
+              {/* Paragraphs that read after the table or the steps above them. */}
+              {section.bodyAfter && (
+                <div className="mt-5 space-y-4 text-ink leading-relaxed">
+                  {section.bodyAfter.map((p, pIdx) => (
+                    <p key={pIdx}>{p}</p>
+                  ))}
+                </div>
+              )}
+
               {/* Section Images (if any) */}
               {section.images && (
                 <div className="my-6 space-y-6">
                   {section.images.map((img, imgIdx) => (
-                    <figure
-                      key={imgIdx}
-                      className="overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-xs"
-                    >
-                      <div className="overflow-hidden rounded-xl bg-paper">
-                        <Image
-                          src={img.src}
-                          alt={img.alt}
-                          width={1200}
-                          height={675}
-                          className="w-full h-auto object-contain rounded-lg border border-line/40"
-                        />
-                      </div>
-                      {img.caption && (
-                        <figcaption className="px-3 pt-3 pb-1 text-center text-xs text-muted">
-                          <span className="font-semibold text-ink">Verified:</span> {img.caption}
-                        </figcaption>
-                      )}
-                    </figure>
+                    <Figure key={imgIdx} img={img} fallbackLabel="Verified" />
                   ))}
                 </div>
               )}
+
+              {section.cta && <CtaBox cta={section.cta} />}
 
               {/* Subsections (if any) */}
               {section.subsections && (
@@ -517,7 +671,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           {/* Frequently Asked Questions */}
           <section id="faqs" className="scroll-mt-12 pt-6">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink mb-6 pb-2 border-b border-line">
-              Frequently Asked Questions About Claude Discounts
+              {post.faqHeading ?? "Frequently Asked Questions About Claude Discounts"}
             </h2>
 
             <dl className="space-y-4">
@@ -568,7 +722,32 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
           </footer>
 
+          {/* More from the blog: every post links the others. */}
+          {related.length > 0 && (
+            <nav aria-label="More from the blog" className="rounded-2xl border border-line bg-surface p-6">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
+                More from the blog
+              </div>
+              <ul className="space-y-3">
+                {related.map((other) => (
+                  <li key={other.slug}>
+                    <Link
+                      href={`/blog/${other.slug}`}
+                      className="font-semibold text-ink hover:text-accent-dark"
+                    >
+                      {other.h1}
+                    </Link>
+                    <p className="text-sm text-muted">{other.summary}</p>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+
           {/* Next Steps CTA */}
+          {post.cta ? (
+            <CtaBox cta={post.cta} />
+          ) : (
           <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8 text-center">
             <h3 className="text-xl font-bold text-ink mb-2">
               Have Spare Claude Guest Passes?
@@ -592,6 +771,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               </Link>
             </div>
           </div>
+          )}
         </div>
       </article>
     </>

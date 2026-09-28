@@ -152,6 +152,13 @@ export default async function DealPage({ deal }: { deal: Deal }) {
         {article.lead.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
+        {article.readMore && (
+          <p>
+            <Link className="text-accent-dark underline" href={article.readMore.href}>
+              {article.readMore.label} &rarr;
+            </Link>
+          </p>
+        )}
       </div>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">

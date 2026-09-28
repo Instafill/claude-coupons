@@ -1,5 +1,4 @@
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { kitcutUrl } from "@/lib/kitcut";
 
 export interface BlogPostAuthor {
   name: string;
@@ -29,6 +28,39 @@ export interface BlogImage {
   caption: string;
   width?: number;
   height?: number;
+  /** The word before the caption: "Verified" (the default in a section), "Screenshot"... */
+  label?: string;
+}
+
+/** A film played in the article. Also emitted as a VideoObject, so it can surface in
+    video results; the poster is a local still, the file is the film's own web copy. */
+export interface BlogVideo {
+  title: string;
+  /** What was typed to make it, quoted as far as it is known. */
+  prompt: string;
+  src: string;
+  poster: string;
+  /** Where it plays with its own page (and sound) - the film's page. */
+  pageUrl: string;
+  /** ISO 8601, e.g. PT30S. */
+  duration: string;
+  /** Shown beside the title: "0:30 · painted · made in 9 min". */
+  meta: string;
+  uploadDate: string;
+}
+
+export interface BlogTakeaway {
+  mark: "yes" | "no";
+  title: string;
+  text: string;
+}
+
+export interface BlogCta {
+  kicker?: string;
+  title: string;
+  text: string;
+  primary: { href: string; label: string };
+  secondary?: { href: string; label: string };
 }
 
 export interface BlogPostSection {
@@ -36,9 +68,16 @@ export interface BlogPostSection {
   h2: string;
   lead?: string;
   body?: string[];
+  /** Paragraphs shown after the section's table or steps rather than before them. */
+  bodyAfter?: string[];
   bullets?: string[];
   steps?: string[];
+  /** The heading over a steps list. */
+  stepsTitle?: string;
   images?: BlogImage[];
+  videos?: BlogVideo[];
+  /** A call to action boxed at the end of the section. */
+  cta?: BlogCta;
   table?: {
     columns: BlogTableColumn[];
     rows: BlogTableRow[];
@@ -76,7 +115,16 @@ export interface BlogPost {
   author: BlogPostAuthor;
   keywords: string[];
   imageAlt: string;
+  /** The share image (1200x630) and the Article schema's image; the site card otherwise. */
+  image?: string;
   featured?: boolean;
+  /** The pill beside the category. "Verified Active" when unset. */
+  badge?: string;
+  /** The TL;DR box. The first post's is hand-written in the page; later posts bring theirs. */
+  takeaways?: BlogTakeaway[];
+  faqHeading?: string;
+  /** The closing box. The guest-pass one when unset. */
+  cta?: BlogCta;
   sections: BlogPostSection[];
   faqs: BlogFaq[];
 }
@@ -91,7 +139,476 @@ export const AUTHORS: Record<string, BlogPostAuthor> = {
   },
 };
 
+// The Claude video guide's films: public films on kitcut.ai, each played from its own web
+// copy (the files kitcut.ai's pages play). Prompts are quoted as far as the film page shows
+// them; the "made in" times are the film pages' own.
+const KITCUT_FILMS_BASE = "https://kitcutst.blob.core.windows.net/films";
+const GUIDE_IMG = "/blog/claude-video";
+function kitcutFilm(id: string, film: Omit<BlogVideo, "src" | "pageUrl">): BlogVideo {
+  return {
+    ...film,
+    src: `${KITCUT_FILMS_BASE}/${id}/film_web.mp4`,
+    pageUrl: `https://kitcut.ai/film/${id}?utm_source=claudecoupons&utm_medium=blog&utm_campaign=claude-video`,
+  };
+}
+
+const CLAUDE_VIDEO_FILMS: BlogVideo[] = [
+  kitcutFilm("studio-20260928-102317-awn3zx", {
+    title: "Marisol - a restaurant opening ad",
+    prompt:
+      "A 30-second ad for the opening of Marisol, a new seafood restaurant by the harbour: fish from the morning's boats, cooked over a wood fire, served at a long table…",
+    poster: `${GUIDE_IMG}/marisol-restaurant-ad.jpg`,
+    duration: "PT30S",
+    meta: "0:30 · painted · made in 9 min",
+    uploadDate: "2026-09-28",
+  }),
+  kitcutFilm("studio-20260928-041445-2p46v3", {
+    title: "Turing Complete - a game launch ad",
+    prompt: 'Create a 10-second high-end advertisement for the Steam game "Turing Complete".',
+    poster: `${GUIDE_IMG}/turing-complete-launch-ad.jpg`,
+    duration: "PT10S",
+    meta: "0:10 · hand-drawn · made in 13 min",
+    uploadDate: "2026-09-28",
+  }),
+  kitcutFilm("studio-20260927-223145-5wo5i4", {
+    title: "queensgame.io - a product ad",
+    prompt:
+      "…Show queensgame.io as a modern, addictive online logic puzzle game. Focus on a polished puzzle board, queen placement…",
+    poster: `${GUIDE_IMG}/queensgame-product-ad.jpg`,
+    duration: "PT10S",
+    meta: "0:10 · hand-drawn, clean · made in 11 min",
+    uploadDate: "2026-09-27",
+  }),
+  kitcutFilm("studio-20260927-061617-q6t772", {
+    title: "Clamly - a brand values film",
+    prompt: "create something for https://clamly.app to show Clamly values",
+    poster: `${GUIDE_IMG}/clamly-brand-film.jpg`,
+    duration: "PT30S",
+    meta: "0:30 · hand-drawn · made in 15 min",
+    uploadDate: "2026-09-27",
+  }),
+  kitcutFilm("studio-20260927-171047-mgkibw", {
+    title: "Dell vs HP - an 8-minute business documentary",
+    prompt:
+      'An 8-minute hand-drawn documentary explainer titled "Dell Went Private. HP Split in Two. AI Picked a Winner." Two PC giants hit the same wall, made opposite bets…',
+    poster: `${GUIDE_IMG}/dell-hp-documentary.jpg`,
+    duration: "PT8M",
+    meta: "8:00 · hand-drawn · made in 2 h 21 min",
+    uploadDate: "2026-09-27",
+  }),
+  kitcutFilm("studio-20260927-084459-7xaoci", {
+    title: "How a fuel cell works - a painted science film",
+    prompt:
+      "Create a visually stunning 30-second hand-painted scientific film explaining how a proton exchange membrane fuel cell works…",
+    poster: `${GUIDE_IMG}/fuel-cell-explainer.jpg`,
+    duration: "PT30S",
+    meta: "0:30 · painted · made in 16 min",
+    uploadDate: "2026-09-27",
+  }),
+  kitcutFilm("studio-20260927-033619-iucict", {
+    title: "How a lever lifts a car - a blueprint explainer",
+    prompt: "How a lever lets one person lift a car, drawn as a blueprint",
+    poster: `${GUIDE_IMG}/lever-blueprint-explainer.jpg`,
+    duration: "PT10S",
+    meta: "0:10 · hand-drawn, blueprint · made in 12 min",
+    uploadDate: "2026-09-27",
+  }),
+  kitcutFilm("studio-20260926-195810-6kj2uw", {
+    title: "Pip the fox sees snow - a story",
+    prompt: "Pip the fox sees snow for the first time.",
+    poster: `${GUIDE_IMG}/pip-fox-snow.jpg`,
+    duration: "PT20S",
+    meta: "0:20 · hand-drawn, crayon · made in 14 min",
+    uploadDate: "2026-09-26",
+  }),
+];
+
+// KitCut is made by the people who run this site, so the guide says so before it praises
+// anything, and every number in it is one kitcut.ai's own docs state.
+const CLAUDE_VIDEO_GUIDE: BlogPost = {
+  slug: "claude-video",
+  title: "Claude Video: Make Videos with Claude Opus 5.5 (2026 Guide)",
+  h1: "Claude video: how to make a finished film with Claude Opus 5.5",
+  metaDescription:
+    "Can Claude make videos? With KitCut, Claude Opus 5.5 writes, draws, narrates and scores a 1080p film from one sentence. Real examples, steps and prices.",
+  summary:
+    "Claude does not export a video file on its own - but with KitCut, Claude Opus 5.5 turns one sentence into a narrated, scored 1080p film. Eight real examples, how it works, how to use it from inside Claude, and what it costs.",
+  publishedAt: "2026-09-28T18:00:00Z",
+  updatedAt: "2026-09-28T18:00:00Z",
+  readingTime: "11 min read",
+  category: "Claude Video",
+  tags: ["Claude video", "Opus 5.5", "KitCut", "AI video", "Claude animation", "MCP"],
+  author: {
+    ...AUTHORS.alex,
+    role: "Maker of KitCut and ClaudeCoupons",
+    bio: "Builds KitCut, the Claude video maker, and ClaudeCoupons. Writes about what Claude can make when it is given the right tools.",
+  },
+  keywords: [
+    "claude video",
+    "claude video maker",
+    "claude video generator",
+    "can claude make videos",
+    "how to make a video with claude",
+    "claude ai video",
+    "opus 5.5 video",
+    "claude opus 5.5 video",
+    "claude animation",
+    "claude animated video",
+    "claude mcp video",
+    "claude code video",
+    "ai explainer video",
+    "text to video claude",
+    "kitcut",
+  ],
+  imageAlt: "Claude video: films made with Claude Opus 5.5 on KitCut",
+  image: `${GUIDE_IMG}/og-claude-video.jpg`,
+  featured: true,
+  badge: "Hands-on guide",
+  takeaways: [
+    {
+      mark: "yes",
+      title: "Claude can make videos with KitCut:",
+      text: "type one sentence; Claude Opus 5.5 writes, draws, animates, narrates and scores the film, and KitCut renders a 1920x1080 MP4.",
+    },
+    {
+      mark: "yes",
+      title: "Free to start:",
+      text: "30 seconds of film every month with no card, and an invite link adds 2 more minutes.",
+    },
+    {
+      mark: "yes",
+      title: "Works inside Claude:",
+      text: "add kitcut.ai/mcp as a custom connector and ask for a film mid-conversation - in Claude, Claude Code, ChatGPT or Grok.",
+    },
+    {
+      mark: "no",
+      title: "Not a video generator:",
+      text: "no photoreal footage or real people moving - films are drawn or painted animation, in 16:9.",
+    },
+  ],
+  faqHeading: "Claude video: frequently asked questions",
+  cta: {
+    title: "Make your first Claude video",
+    text: "Type one sentence and watch Claude Opus 5.5 make the film. 30 seconds of film free every month, no card needed.",
+    primary: { href: kitcutUrl("blog"), label: "Make a free Claude video →" },
+    secondary: { href: "/kitcut-referral-code", label: "Get 2 extra minutes" },
+  },
+  sections: [
+    {
+      id: "can-claude-make-videos",
+      h2: "Can Claude make videos?",
+      lead: "Yes, with the right tool around it. On its own, Claude writes text and code; it does not hand you an MP4. KitCut is the missing half: it gives Claude Opus 5.5 a drawing engine, a narrator, an orchestra and a renderer, so one sentence comes back as a finished, narrated film.",
+      body: [
+        "That is a different thing from an AI video generator. Sora, Veo or Runway turn a prompt into moving pixels a few seconds at a time. On KitCut, Claude writes the whole film as a program - every drawing, camera move, word on screen and music cue - and KitCut renders it. So a film can run from 5 seconds to 8 minutes as one planned piece, with the picture, the narration and the music timed to each other, word by word.",
+        "A disclosure before the praise: we built KitCut, so read this as the maker's guide. Everything below is what the product does today, shown with real films made on it, and the limits are listed as plainly as the strengths. KitCut is an independent product built on Claude; it is not made or endorsed by Anthropic.",
+      ],
+      images: [
+        {
+          src: `${GUIDE_IMG}/kitcut-home.jpg`,
+          alt: "The KitCut home page: 'Type an idea. Get a Claude video.', the idea box, the look, the length slider and the Make the film button",
+          caption: "kitcut.ai: every Claude video starts in the idea box. Pick a look and a length, and press Make the film.",
+          width: 1440,
+          height: 610,
+          label: "Screenshot",
+        },
+      ],
+    },
+    {
+      id: "claude-video-examples",
+      h2: "Claude video examples: eight films, each from one prompt",
+      lead: "Every film below was made on KitCut from the prompt under it, and none was edited afterwards - KitCut has no edit step. Press play; the small kitcut.ai mark on some is the Free plan's.",
+      videos: CLAUDE_VIDEO_FILMS,
+    },
+    {
+      id: "how-to-make-a-claude-video",
+      h2: "How to make a Claude video in four steps",
+      stepsTitle: "Make your first Claude video",
+      steps: [
+        "Open kitcut.ai and describe the film in the idea box: what it is about, who it is for, the tone, and anything it must say or show. One sentence is enough; up to 12,000 characters are allowed.",
+        "Add pictures or voice notes if you have them - a logo, a product shot, a sketch or a spoken brief. Up to 6 pictures and 3 voice notes a film.",
+        "Pick a look (hand-drawn or painted) and a length, then press Make the film. You sign in the first time, and nothing you typed is lost.",
+        "Watch it being made. The film's page shows what Claude is doing and the stills it is checking, then plays the finished film. A 30-second film takes about 16 to 24 minutes once its turn comes.",
+      ],
+      callout: {
+        type: "tip",
+        title: "Write the idea like a brief",
+        text: "Say who the film is for and what it must say. The voice, the music and the drawing style are Claude's choice, but you can ask for them in words - 'a calm female voice, solo piano, clean line art' - and Claude follows when it can.",
+      },
+      images: [
+        {
+          src: `${GUIDE_IMG}/kitcut-composer.webp`,
+          alt: "The KitCut idea box with numbered red circles: the idea text, the + button for pictures, the microphone for voice notes, the look, the length slider and Make the film",
+          caption: "The idea box: ① the idea, ② pictures, ③ voice notes, ④ the look, ⑤ the length and ⑥ Make the film.",
+          width: 2408,
+          height: 824,
+          label: "Screenshot",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-making.webp`,
+          alt: "A Claude video being made: the review sheet of stills Claude is checking, and the log headed What Claude is doing, circled in red",
+          caption: "While Claude works: the stills it is reviewing, and its own notes under 'What Claude is doing'.",
+          width: 2388,
+          height: 2020,
+          label: "Screenshot",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-film-page.webp`,
+          alt: "A finished KitCut film's page: the video player circled in red, the making log, and the stats - made in 14:37, Claude 12:34, render 117 s, 41 turns",
+          caption: "A finished film's page: the video, the making log and the stats. This one took 14 minutes 37 seconds from start to finish.",
+          width: 2560,
+          height: 2580,
+          label: "Screenshot",
+        },
+      ],
+    },
+    {
+      id: "how-claude-makes-the-film",
+      h2: "What Claude Opus 5.5 does inside every film",
+      lead: "KitCut does not ask a model to imagine pixels. Claude directs the film, writes it as code and checks its own work; KitCut supplies the voice, the instruments and the renderer.",
+      table: {
+        columns: [
+          { key: "step", label: "Step" },
+          { key: "what", label: "What happens" },
+        ],
+        rows: [
+          {
+            step: "Direction",
+            what: "Claude decides who the film is for and its mood, then the drawing or painting style, the narrator's voice and the music - and holds the film to looking professionally made for that audience.",
+          },
+          {
+            step: "Narration",
+            what: "Claude writes the script. Gemini's text-to-speech records it, and every word is timed so the picture can change on it.",
+          },
+          {
+            step: "Picture",
+            what: "Claude draws and animates every scene in code on KitCut's sketch engine - or, in the painted look, has the scenes painted and animates the paintings.",
+          },
+          {
+            step: "Review",
+            what: "Claude renders stills and a motion check from across the film, looks at them and fixes what is wrong, up to twice.",
+          },
+          {
+            step: "Music and sound",
+            what: "Claude writes an instrumental score and the sound effects; KitCut plays them on sampled instruments and keeps the music under the voice.",
+          },
+          {
+            step: "Render",
+            what: "Every frame is drawn and encoded to a 1920x1080 MP4 - 60 frames a second on paid plans, 30 on Free - with subtitles.",
+          },
+        ],
+        caption: "From kitcut.ai/docs/how-films-are-made.",
+      },
+      bodyAfter: [
+        "Because the film is code, the words on screen are typed text, spelled exactly as written. A logo you attach is placed as it is, not re-imagined. And a character Claude drew is kept, so it can come back in your next film with the same look, voice and music.",
+      ],
+    },
+    {
+      id: "two-looks",
+      h2: "Two looks: hand-drawn Claude animation or painted scenes",
+      body: [
+        "Hand-drawn: Claude draws every frame in code. The default crayon style has lines that boil slightly from frame to frame, off-register fills and paper grain; the clean style is crisp editorial line art with flat fills. There are ten grounds, from paper and kraft to chalkboard and blueprint.",
+        "Painted: an image model paints the scenes from Claude's descriptions, and Claude animates them - camera moves across each painting, cross-fades on spoken words, and words drawn on top. Styles range from 1950s travel poster and ink wash to claymation and watercolour.",
+        "You pick the look; Claude picks everything inside it, and your idea can steer it in plain words.",
+      ],
+      images: [
+        {
+          src: `${GUIDE_IMG}/kitcut-look-drawn.webp`,
+          alt: "A hand-drawn KitCut still in the crayon style: Pip, an orange fox in a blue scarf, by an igloo among snowy pines",
+          caption: "Hand-drawn, crayon style: Pip the fox.",
+          width: 1280,
+          height: 720,
+          label: "Still",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-look-drawn-clean.webp`,
+          alt: "A hand-drawn KitCut still in the clean style on a blueprint ground: a lever lifting a car, labelled rises, pivot, push and long end",
+          caption: "Hand-drawn, clean style on the blueprint ground.",
+          width: 1280,
+          height: 720,
+          label: "Still",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-look-painted.webp`,
+          alt: "A painted KitCut still: glowing particles over a dark painted landscape, with the word proton drawn on top by Claude",
+          caption: "Painted: the scene is painted, the word on top is drawn.",
+          width: 1280,
+          height: 720,
+          label: "Still",
+        },
+      ],
+    },
+    {
+      id: "claude-video-inside-claude",
+      h2: "Make a Claude video without leaving Claude",
+      lead: "KitCut is also an MCP server, so you can ask Claude for a film in the middle of a conversation and get the link back in the chat.",
+      stepsTitle: "Connect KitCut to Claude",
+      steps: [
+        "In Claude on the web, desktop or phone, open Settings → Connectors → Add custom connector.",
+        "Name it KitCut and paste https://kitcut.ai/mcp. Press Connect, sign in to KitCut and press Allow.",
+        "Ask for a film - for example, 'Make a 30-second hand-drawn explainer of how our onboarding works.' Claude confirms the idea, length and look, starts the film and gives you its link straight away.",
+        "Claude checks on the film and tells you when it is ready; the finished film plays on its own page.",
+      ],
+      bodyAfter: [
+        "In Claude Code it is one command - claude mcp add --transport http kitcut https://kitcut.ai/mcp - then /mcp to sign in. The same address works in ChatGPT, Grok and Meta AI.",
+        "Films made from a chat use the same credits as the website, and they are link-only unless you ask for them to be public.",
+      ],
+      images: [
+        {
+          src: `${GUIDE_IMG}/kitcut-connect.webp`,
+          alt: "The kitcut.ai/connect page: the MCP server address with a Copy button, and setup steps for Claude, Claude Code, ChatGPT, Grok and other apps",
+          caption: "kitcut.ai/connect: the server address, and the steps for each app.",
+          width: 1800,
+          height: 1010,
+          label: "Screenshot",
+        },
+      ],
+    },
+    {
+      id: "claude-video-vs-ai-video-generators",
+      h2: "Claude video vs AI video generators (Sora, Veo, Runway)",
+      table: {
+        columns: [
+          { key: "what", label: "" },
+          { key: "gen", label: "AI video generators" },
+          { key: "kitcut", label: "KitCut (Claude video)" },
+        ],
+        rows: [
+          { what: "What the model makes", gen: "pixels, a clip at a time", kitcut: "a program: drawings, animation, text, sound cues" },
+          { what: "Length", gen: "usually seconds per clip", kitcut: "one film of 5 seconds to 8 minutes" },
+          { what: "Words on screen", gen: "often misspelled or warped", kitcut: "typed text, spelled exactly as written" },
+          { what: "Your logo", gen: "re-imagined by the model", kitcut: "the picture you attached, placed as it is" },
+          { what: "The same character", gen: "drifts between clips", kitcut: "kept as code and reused in later films" },
+          { what: "Narration and music", gen: "usually added with other tools", kitcut: "written, recorded and mixed with the film, subtitles included" },
+          { what: "Style", gen: "photoreal or painterly motion", kitcut: "hand-drawn animation, or painted scenes with camera moves" },
+        ],
+        caption: "Summarised from kitcut.ai/docs/compared.",
+      },
+      bodyAfter: [
+        "Where a generator wins: photorealistic motion, real-looking people moving, live-action shots. KitCut does none of those, by design.",
+        "Where a Claude video wins: explainers whose words must be right, product and brand films that must show the real logo, series whose characters must come back, and anything longer than a clip.",
+      ],
+    },
+    {
+      id: "what-to-make",
+      h2: "What people make with Claude video",
+      bullets: [
+        "Launch and product ads - a Steam game, a web puzzle game, a restaurant opening.",
+        "Explainers and lessons - a fuel cell, a lever, how bees make honey - where every label has to be right.",
+        "Brand films - a company's values in 30 seconds, from nothing but its web address.",
+        "Long-form business documentaries - up to 8 minutes on Pro, like the Dell vs HP film above.",
+        "Stories and series - Pip the fox came back for three films with the same scarf, look and voice.",
+        "Versions in other languages - the narration follows the language of your idea; words on screen cover Latin and Cyrillic alphabets.",
+      ],
+      images: [
+        {
+          src: `${GUIDE_IMG}/pip-fox-series.jpg`,
+          alt: "Three stills of Pip the fox from three KitCut films: in the snow with a snowman, building a sandcastle at the sea, and flying a kite",
+          caption: "One character, three films: Pip sees snow, goes to the sea and learns to fly. The fox is drawn in code and kept, so it comes back unchanged.",
+          width: 1920,
+          height: 357,
+          label: "Series",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-project-cast.webp`,
+          alt: "A KitCut Studio project's Cast tab listing the characters its episodes share",
+          caption: "For a series, a Studio project keeps its own brief, characters and pictures for every episode.",
+          width: 2560,
+          height: 1600,
+          label: "Screenshot",
+        },
+      ],
+    },
+    {
+      id: "pricing",
+      h2: "How much does a Claude video cost?",
+      table: {
+        columns: [
+          { key: "plan", label: "Plan" },
+          { key: "price", label: "Price a month" },
+          { key: "film", label: "Film a month" },
+          { key: "longest", label: "Longest film" },
+        ],
+        rows: [
+          { plan: "Free", price: "$0", film: "30 seconds", longest: "1 minute" },
+          { plan: "Standard", price: "$12 to $319", film: "2 to 60 minutes", longest: "1 minute" },
+          { plan: "Pro", price: "$45 to $849", film: "10 to 240 minutes", longest: "8 minutes" },
+        ],
+        caption: "kitcut.ai/pricing, September 2026.",
+      },
+      bodyAfter: [
+        "One credit is one second of film, and a film uses at least 30. Credits are held when a film starts and charged only when it is finished; a failed or stopped film gives them back.",
+        "Paid films are 60 frames a second and carry no KitCut mark. Pro makes films up to 8 minutes and goes first when the studio is busy.",
+      ],
+      cta: {
+        kicker: "Free minutes",
+        title: "Get 2 extra minutes of Claude video",
+        text: "Sign up through a KitCut invite link from our board and your first finished film adds 2 minutes of film for you - and for the person who shared it. No queue: every link is shown in full.",
+        primary: { href: "/kitcut-referral-code", label: "See KitCut invite links →" },
+        secondary: { href: kitcutUrl("blog"), label: "Make a free film" },
+      },
+    },
+    {
+      id: "limits",
+      h2: "What KitCut doesn't do (yet)",
+      bullets: [
+        "No photorealistic motion or real people moving: films are drawn or painted animation.",
+        "16:9 only for now - no vertical Shorts, Reels or TikToks.",
+        "No editing a finished film: make a new one, and its characters, look, voice and music can come back.",
+        "Instrumental music only - no songs or sung vocals.",
+        "No camera footage or video uploads: pictures are the only visual material a film takes.",
+        "No web research: Claude makes the film from your idea and your attachments.",
+      ],
+      bodyAfter: [
+        "Saying this plainly is the point. A Claude video is a film written and drawn by Claude, not a clip from a video model - which is exactly why its words, logos and characters stay right.",
+      ],
+    },
+  ],
+  faqs: [
+    {
+      q: "Can Claude make videos?",
+      a: "Not on its own - Claude writes text and code, not video files. With KitCut, Claude Opus 5.5 writes, draws, animates, narrates and scores a film, and KitCut renders it as a 1920x1080 MP4. You can use it on kitcut.ai or from inside Claude through the KitCut connector.",
+    },
+    {
+      q: "Is there a Claude video generator?",
+      a: "KitCut is a Claude video maker rather than a video generator: Claude Opus 5.5 writes the whole film as a program - drawings, camera moves, words on screen and music - and KitCut renders it. That is why words are spelled right and characters stay the same, and also why it does not make photorealistic footage.",
+    },
+    {
+      q: "How long does it take to make a Claude video?",
+      a: "Once its turn comes: about 9 to 14 minutes for a 10-second film, 16 to 24 minutes for 30 seconds, 26 to 39 minutes for a minute, and 1.5 to 2.4 hours for 8 minutes. The film's page shows what Claude is doing the whole time.",
+    },
+    {
+      q: "Is KitCut free?",
+      a: "To start, yes: 30 seconds of film every month with no card, which makes one 30-second film. Free films are 30 frames a second, carry a small kitcut.ai mark and end with a 3-second closing. An invite link adds 2 minutes.",
+    },
+    {
+      q: "How long can a Claude video be?",
+      a: "From 5 seconds up to 8 minutes, in steps of 5 seconds. Free and Standard make films up to 1 minute; Pro makes them up to 8 minutes.",
+    },
+    {
+      q: "Which AI models make the film?",
+      a: "Claude Opus 5.5 does the direction, the script, every drawing and animation, the music and sound-effect scores, and the review of its own frames. Gemini's text-to-speech is the narrator, Meta's Muse paints the scenes of painted films, and Whisper times each spoken word. There is no video-generation model and no stock footage.",
+    },
+    {
+      q: "Can I use Claude videos commercially?",
+      a: "Yes. KitCut's terms allow commercial use of the films you make.",
+    },
+    {
+      q: "What languages can the narration be in?",
+      a: "The narration follows the language your idea is written in, or the one it asks for, and the narrator speaks many languages. Words on screen are limited to Latin and Cyrillic alphabets.",
+    },
+    {
+      q: "Can I make vertical videos for TikTok or YouTube Shorts?",
+      a: "Not yet. Films are 16:9 landscape, 1920x1080.",
+    },
+    {
+      q: "Is KitCut made by Anthropic?",
+      a: "No. KitCut is an independent product built on Claude by the people who run ClaudeCoupons. Anthropic does not make or endorse it.",
+    },
+  ],
+};
+
 export const BLOG_POSTS: BlogPost[] = [
+  CLAUDE_VIDEO_GUIDE,
   {
     slug: "claude-promo-codes",
     title: "Claude AI Promo Codes & Discounts: What Actually Works (September 2026)",

@@ -46,6 +46,8 @@ export interface DealArticle {
   termsSource: string;
   faqHeading: string;
   faqs: { q: string; a: string }[];
+  /** A longer piece elsewhere on this site, linked under the lead. */
+  readMore?: { href: string; label: string };
 }
 
 const WAYMO: DealArticle = {
@@ -786,6 +788,10 @@ const KITCUT: DealArticle = {
     "Nothing is redeemed on this site. Every rule above is KitCut's.",
   ],
   termsSource: "kitcut.ai -> Docs -> Invite friends, and KitCut's terms.",
+  readMore: {
+    href: "/blog/claude-video",
+    label: "The full guide: how to make a Claude video with KitCut, with eight example films",
+  },
   faqHeading: "KitCut referral code questions",
   faqs: [
     {

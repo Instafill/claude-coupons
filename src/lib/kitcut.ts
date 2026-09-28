@@ -48,7 +48,7 @@ export function filmClip(f: KitCutFilm): string {
   return `/kitcut/${f.slug}.mp4`;
 }
 
-export type KitCutPlacement = "banner" | "stickybar" | "footer" | "email";
+export type KitCutPlacement = "banner" | "stickybar" | "footer" | "email" | "blog";
 
 const UTM = (placement: KitCutPlacement) =>
   new URLSearchParams({ utm_source: "claudecoupons", utm_medium: placement, utm_campaign: "kitcut-business" });
