@@ -1,7 +1,7 @@
 import sgMail from "@sendgrid/mail";
 
 import { Deal, capitalize, dealLink, numberWord } from "@/lib/deals";
-import { KITCUT, kitcutUrl } from "@/lib/kitcut";
+import { KITCUT, KITCUT_FILMS, type KitCutFilm, filmStill, filmUrl, kitcutUrl } from "@/lib/kitcut";
 
 // Must stay on claudecoupons.com, and is not configurable on purpose. A sign-in link for
 // one domain arriving from another is the shape of a phishing mail and filters score it
@@ -107,8 +107,9 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
 }
 
 // Our other product (src/lib/kitcut.ts), as a card at the foot of the watch confirmation: after
-// the one thing the email is for, so confirming stays the obvious action. The image is served
-// from this site, absolute because a mail client has no base URL.
+// the one thing the email is for, so confirming stays the obvious action. The showcased films are
+// a 2x2 table of stills, each linking to its film on kitcut.ai: a table because mail clients
+// ignore grid and flex. Images are absolute because a mail client has no base URL.
 const KITCUT_EMAIL_TEXT = `
 
 ---
@@ -116,13 +117,27 @@ ${KITCUT.label}: ${KITCUT.name}. ${KITCUT.headline} ${KITCUT.free}
 ${kitcutUrl("email")}`;
 function kitcutEmailHtml(): string {
   const url = kitcutUrl("email");
+  const cell = (f: KitCutFilm) => `
+                <td width="50%" valign="top" style="padding: 6px;">
+                  <a href="${filmUrl(f, "email")}" style="text-decoration: none; color: #1f1e1d;"><img src="https://claudecoupons.com${filmStill(f)}" alt="${f.kind}: ${f.what}" width="240" style="display: block; width: 100%; height: auto; border: 0; border-radius: 6px;">
+                  <span style="display: block; margin-top: 5px; font-size: 13px; font-weight: 700;">${f.kind} &middot; ${f.length}</span>
+                  <span style="display: block; font-size: 12px; color: #6e6a63;">${f.what}</span></a>
+                </td>`;
+  const rows = [KITCUT_FILMS.slice(0, 2), KITCUT_FILMS.slice(2, 4)]
+    .map((r) => `
+              <tr>${r.map(cell).join("")}
+              </tr>`)
+    .join("");
   return `
           <div style="margin-top: 28px; border: 2px solid #c9642f; border-radius: 12px; overflow: hidden;">
-            <a href="${url}"><img src="https://claudecoupons.com${KITCUT.image}" alt="${KITCUT.imageAlt}" width="516" style="display: block; width: 100%; height: auto; border: 0;"></a>
-            <div style="padding: 14px 16px 16px;">
+            <div style="padding: 14px 16px 4px;">
               <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a94f20;">${KITCUT.label}</p>
               <p style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: #1f1e1d;">${KITCUT.headline}</p>
-              <p style="margin: 0 0 12px; font-size: 14px; color: #6e6a63;">${KITCUT.pitch} <strong style="color: #1f1e1d;">${KITCUT.free}</strong></p>
+              <p style="margin: 0; font-size: 14px; color: #6e6a63;">${KITCUT.pitch} <strong style="color: #1f1e1d;">${KITCUT.free}</strong></p>
+            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding: 6px 10px;">${rows}
+            </table>
+            <div style="padding: 4px 16px 16px;">
               <a href="${url}" style="display: inline-block; background: #1f1e1d; color: #fff; padding: 9px 18px; border-radius: 8px; text-decoration: none; font-weight: 600;">${KITCUT.cta} &rarr;</a>
             </div>
           </div>`;

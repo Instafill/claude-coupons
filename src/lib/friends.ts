@@ -13,7 +13,7 @@ export const FRIENDS: Friend[] = [
     url: "https://kitcut.ai",
     tag: "Claude video",
     blurb:
-      "Type one sentence and Claude writes, draws, narrates and scores an animated film of it, hand-drawn or painted. The first 30 seconds are free.",
+      "Type one sentence and Claude writes, draws, narrates and scores a film of it: a product ad, an explainer, a brand film. The first 30 seconds are free.",
   },
   {
     name: "InstaShare",
