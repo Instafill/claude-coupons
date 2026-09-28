@@ -163,7 +163,7 @@ const UBER: DealArticle = {
   title: "Uber Promo Code: 50% Off Your First 2 Trips | Claude Coupons",
   h1: "Uber promo code: 50% off your first two trips",
   description:
-    "Working Uber promo codes from real riders. Uber's referral gives a new rider 50% off two trips, up to $10 off each - take a number and unlock a code when your wave opens.",
+    "Working Uber promo codes from real riders. Uber's referral gives a new rider 50% off two trips, up to $10 off each - every code here is shown in full, no sign-up or waiting.",
   keywords: [
     "uber promo code",
     "uber referral code",
@@ -179,7 +179,7 @@ const UBER: DealArticle = {
   imageAlt: "Uber promo codes",
   lead: [
     "Uber's referral is the one discount a rider can actually hand to a stranger: a new rider gets 50% off their first two trips, up to $10 off each, and the rider who invited them gets 50% off two trips of their own once that first trip happens.",
-    "Riders list their invite codes here rather than posting them where they go stale. Take a number, and when your wave opens you unlock a code and enter it in the Uber app.",
+    "Riders list their invite codes here rather than posting them where they go stale. An Uber invite code does not run out, so there is no queue: every code on the board is shown in full. Copy one and enter it in the Uber app.",
   ],
   facts: [
     { term: "What the offer is", def: "Uber's own rider referral - 50% off, both ways." },
@@ -195,8 +195,7 @@ const UBER: DealArticle = {
     {
       h2: "How to use an Uber promo code",
       steps: [
-        "Take a number here and confirm your email - that click is also your sign-in.",
-        "When your wave opens, unlock a code on the board.",
+        "Copy a code from the board - every one is shown in full, no sign-up needed.",
         "Install the Uber app and enter the code while signing up, where it asks for a promo or invite code.",
         "Already signed up and never ridden? Account, then Promotions, then Add promo code.",
         "Take your trip. Half comes off, up to $10. Then tell us whether it worked.",
@@ -214,7 +213,7 @@ const UBER: DealArticle = {
       h2: "Why Uber promo codes from coupon sites usually fail",
       body: [
         "An Uber invite code is personal and one-use-per-rider. The lists you find on aggregator sites are scraped, unverified and typically spent long before you type one, so the app rejects them without saying why.",
-        "On this board, a code is listed by the rider who owns it, offered to a queue in waves, and retired the moment it has been handed out its allotment or someone reports it dead. Everyone who unlocks one is asked whether it worked, and that answer is what takes a dead code off the board.",
+        "On this board, a code is listed by the rider who owns it and shown to everyone, because an Uber invite code does not run out. Signed-in visitors are asked whether it worked, and two reports that it didn't take a code off the board.",
       ],
     },
   ],
@@ -248,11 +247,11 @@ const UBER: DealArticle = {
     },
     {
       q: "Are these Uber codes free?",
-      a: "Yes, and they always will be. Riders list their invite codes, a queue decides who gets the next one, and nothing is sold. A code that has to be bought is not a referral code.",
+      a: "Yes, and they always will be. Riders list their invite codes and every one is shown in full. Nothing is sold, and a code that has to be bought is not a referral code.",
     },
     {
       q: "Why was my Uber promo code rejected?",
-      a: "Nearly always one of three reasons: the account has taken a trip before, the code has already been used by that rider, or the code was spent before you got it. Report it here as not working and your place in the queue is returned to you.",
+      a: "Nearly always one of three reasons: the account has taken a trip before, the code has already been used by that rider, or the code was spent before you got it. Try another code on the board, and if you are signed in, report that it didn't work - two such reports take it down.",
     },
   ],
 };
@@ -352,7 +351,7 @@ const POKEMON_GO: DealArticle = {
   title: "Pokémon GO Referral Code: 100 Poké Balls to Start | Claude Coupons",
   h1: "Pokémon GO referral code: 100 Poké Balls to start",
   description:
-    "Working Pokémon GO referral codes from real Trainers. A code gives a new or returning Trainer 100 Poké Balls and milestone rewards - take a number and unlock one when your wave opens.",
+    "Working Pokémon GO referral codes from real Trainers. A code gives a new or returning Trainer 100 Poké Balls and milestone rewards - every code is shown in full, no waiting.",
   keywords: [
     "pokemon go referral code",
     "pokemon go referral codes",
@@ -367,7 +366,7 @@ const POKEMON_GO: DealArticle = {
   imageAlt: "Pokémon GO referral codes",
   lead: [
     "Pokémon GO's referral pays both Trainers. Enter someone's code while you are setting up and you start with 100 Poké Balls, then earn more as you pass your first milestones - and the Trainer who invited you earns Ultra Balls, incense and encounters at the same moments.",
-    "This is not the same thing as a promo code. Promo codes come from Niantic and expire; a referral code belongs to a Trainer and works as long as they are playing. Trainers list theirs here, and a queue decides who gets the next one.",
+    "This is not the same thing as a promo code. Promo codes come from Niantic and expire; a referral code belongs to a Trainer and works as long as they are playing. Trainers list theirs here, and because a referral code does not run out, every one is shown in full.",
   ],
   facts: [
     { term: "What the offer is", def: "Niantic's own Invite to Pokémon GO referral." },
@@ -383,8 +382,7 @@ const POKEMON_GO: DealArticle = {
     {
       h2: "How to use a Pokémon GO referral code",
       steps: [
-        "Take a number here and confirm your email - that one click is also your sign-in.",
-        "When your wave opens, unlock a code on the board and copy it.",
+        "Copy a code from the board - every one is shown in full, no sign-up needed.",
         "Install Pokémon GO and start creating your Trainer. Enter the code when the game asks for one.",
         "Returning after 90 days or more? The game offers the same prompt when you come back.",
         "Your 100 Poké Balls arrive, and both of you collect more as you hit milestones. Tell us whether it worked.",
@@ -409,7 +407,7 @@ const POKEMON_GO: DealArticle = {
       h2: "Why codes from a list usually do nothing",
       body: [
         "A referral code has to be entered while a Trainer account is being set up. Pasted into an account that is already running, it does nothing at all - which is the single most common reason a code found on a forum looks broken.",
-        "Get the code first, then create the Trainer. The queue here exists so the code is in hand before you install the game.",
+        "Get the code first, then create the Trainer. Copy it from this board before you install the game.",
       ],
     },
   ],
@@ -445,11 +443,11 @@ const POKEMON_GO: DealArticle = {
     },
     {
       q: "How many people can use one referral code?",
-      a: "Niantic states no limit on the invite screen, and a Trainer can refresh their code whenever they like. This board still retires a listing after ten unlocks so that one code does not become the whole queue.",
+      a: "Niantic states no limit on the invite screen, and a Trainer can refresh their code whenever they like. That is why this board shows every code to everyone instead of rationing them; a code only comes off when people report that it stopped working.",
     },
     {
       q: "Do Pokémon GO referral codes cost anything?",
-      a: "No. Trainers list their codes here and a queue decides who gets the next one. Nothing on this site is sold, and a code that has to be bought is not a referral code.",
+      a: "No. Trainers list their codes here and every one is shown in full. Nothing on this site is sold, and a code that has to be bought is not a referral code.",
     },
   ],
 };
@@ -473,7 +471,7 @@ const FIREFLIES: DealArticle = {
   imageAlt: "Fireflies.ai referral links",
   lead: [
     "Fireflies.ai has no public coupon code. What it has is a referral link: sign up through one and 10% comes off every plan, and the person whose link you used gets $5 in credit towards their own renewal.",
-    "The discount rides in the link, not in a box at checkout - which is why it has to be the link you create the account from. Users list theirs here, and a queue decides who gets the next one.",
+    "The discount rides in the link, not in a box at checkout - which is why it has to be the link you create the account from. Users list theirs here, and every link is shown in full - pick one and sign up through it.",
   ],
   facts: [
     { term: "What the offer is", def: "Fireflies.ai's own referral - 10% off for you, $5 credit for them." },
@@ -489,8 +487,7 @@ const FIREFLIES: DealArticle = {
     {
       h2: "How to use a Fireflies.ai referral link",
       steps: [
-        "Take a number here and confirm your email - that click is also your sign-in.",
-        "When your wave opens, unlock a link on the board.",
+        "Pick a link on the board - every one is shown in full, no sign-up here needed.",
         "Open it. It lands on the Fireflies sign-up page with the referral already attached.",
         "Create the account from that page, using a work email address rather than a personal one.",
         "Check that 10% is off at checkout, then tell us whether it worked.",
@@ -541,7 +538,7 @@ const FIREFLIES: DealArticle = {
     },
     {
       q: "Do Fireflies.ai referral links expire?",
-      a: "They belong to a user's account rather than to a campaign, so they keep working while that account does. A listing still comes off this board after ten unlocks, or as soon as someone reports that it stopped applying the discount.",
+      a: "They belong to a user's account rather than to a campaign, so they keep working while that account does. A listing comes off this board when two people report that it stopped applying the discount.",
     },
   ],
 };
@@ -727,7 +724,7 @@ const KITCUT: DealArticle = {
   imageAlt: "KitCut invite links: free minutes of Claude video",
   lead: [
     "KitCut is the Claude video maker: type one sentence and Claude Opus 5.5 writes, draws, narrates and scores a finished animated film - an ad, an explainer, a brand film. The free plan gives 30 seconds of Claude video a month. An invite link adds 2 minutes: four more 30-second films.",
-    "KitCut is made by the people who run this site, so read this page as ours. The board works the same as every other one here: people list their own invite links, you take a number, and when your wave opens you unlock one and sign up through it.",
+    "KitCut is made by the people who run this site, so read this page as ours. Invite links don't run out, so there is no queue here: people list their own links, every one is shown in full, and you pick one and sign up through it.",
   ],
   facts: [
     {
@@ -764,17 +761,16 @@ const KITCUT: DealArticle = {
     {
       h2: "How to use a KitCut invite link",
       steps: [
-        "Take a number here and confirm your email - that one click is also your sign-in.",
-        "When your wave opens, unlock a link on the board and open it.",
+        "Pick an invite link on the board and open it - every one is shown in full, no sign-up here needed.",
         "Sign up on the KitCut page the link opens. It shows a note saying who invited you - that is how you know the invite is attached.",
         "Make your first film. The 2 minutes arrive, for you and for them, the moment it is finished, and you both get an email.",
-        "Tell us whether it worked. One click, and a link that did nothing stops being offered to the person behind you.",
+        "If you are signed in here, tell us whether it worked. Two reports that a link did nothing take it off the board.",
       ],
     },
     {
       h2: "Sharing your own link",
       body: [
-        "Your link is in the Invite friends section of your KitCut account page. Paste the whole link on the submit page and it is offered to twenty people in turn - twenty is where KitCut stops paying the sharer's 2 minutes, although every friend still gets theirs.",
+        "Your link is in the Invite friends section of your KitCut account page. Paste the whole link on the submit page and it is shown to everyone who visits this board. KitCut pays the sharer's 2 minutes for up to twenty friends, and every friend still gets theirs after that.",
         "A friend who subscribes earns you a one-time bonus as big as their plan, up to 10 minutes, 14 days after their first payment if the plan is still renewing. That bonus has no limit on the number of friends.",
       ],
     },
@@ -810,7 +806,7 @@ const KITCUT: DealArticle = {
     },
     {
       q: "Are the links on this board free?",
-      a: "Yes. People list their own invite links and a queue decides who gets the next one. Nothing on this site is sold.",
+      a: "Yes. People list their own invite links and every one is shown in full. Nothing on this site is sold.",
     },
   ],
 };

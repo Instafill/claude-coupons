@@ -239,6 +239,32 @@ function sendOneAlert(
   waiting: number,
   wave: number
 ): Promise<unknown> {
+  // An open board has no turns to take: the code is on the board in full for everyone, so
+  // the mail only says it has arrived.
+  if (deal.openBoard) {
+    return sgMail.send({
+      to: email,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: `A new ${deal.name} ${deal.noun} is on the board`,
+      headers: {
+        "List-Unsubscribe": `<${stopUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      text: `${capitalize(aNoun(deal))} for ${deal.name} was just listed, and it is shown in full on the board - no queue, nothing to unlock.\n\nSee it: ${enterUrl}\n\nStop these emails: ${stopUrl}`,
+      html: `
+      <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
+        <h2 style="color: #c9642f;">A new ${deal.name} ${deal.noun} is up</h2>
+        <p>It was just listed and is shown in full on the board - no queue, nothing to unlock.</p>
+        <p style="margin: 24px 0;">
+          <a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">See it</a>
+        </p>
+        <p style="color: #6e6a63; font-size: 13px;">
+          <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
+        </p>
+      </div>`,
+    });
+  }
+
   // Honest urgency: this went to your wave only, and the wave behind you is minutes away.
   const crowd = `Wave ${wave}: you and ${waiting - 1} other${waiting === 2 ? "" : "s"} at the front of the queue.`;
   const rule = `${capitalize(numberWord(deal.unlocksPerListing))} unlocks and the ${

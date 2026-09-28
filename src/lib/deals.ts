@@ -100,6 +100,12 @@ export interface Deal {
       minutes" is a claim about history, and a board that has never had a listing has none
       to make it with. */
   emptyNote: string;
+  /** Codes that do not run out - a referral code or link anyone can use, as often as people
+      like. The board shows every listing in full to everyone: no queue, no sign-in, no
+      unlock. unlocksPerListing then retires nothing; opens only order the board (least
+      opened first), and a listing still comes off after two "didn't work" reports or at the
+      listing age limit. */
+  openBoard?: boolean;
   /** Set while a board is still waiting for its first listing ever. It keeps the alert
       confirmation from promising codes "again" when there have not been any, and marks the
       board honestly on the hub. Remove it once something has been listed. */
@@ -220,12 +226,13 @@ const UBER: Deal = {
   // about the offer: ten is what keeps one listing from being the whole board.
   unlocksPerListing: 10,
   intentQuestion: "",
+  openBoard: true,
   audience: "For Uber riders",
   supplyAsk: "Ride with Uber?",
   sharePitch:
     "Every rider you send on a first trip is 50% off two of yours. The code costs you nothing to list and the invite screen is three taps away.",
   emptyNote:
-    "Codes are listed as riders remember they have them, and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
+    "Codes are listed as riders remember they have them. Leave your email above and you hear the moment one lands - refreshing this page does not.",
 };
 
 const MUSE: Deal = {
@@ -300,12 +307,13 @@ const POKEMON_GO: Deal = {
   // so ten is our own rationing rather than a claim about the game.
   unlocksPerListing: 10,
   intentQuestion: "",
+  openBoard: true,
   audience: "For Pokémon GO Trainers",
   supplyAsk: "Already playing Pokémon GO?",
   sharePitch:
     "Every Trainer who starts on your code earns you Ultra Balls, incense and encounters as they pass their first milestones - and it costs them nothing but gains them 100 Poké Balls.",
   emptyNote:
-    "Referral codes are listed as Trainers remember they have them, and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
+    "Referral codes are listed as Trainers remember they have them. Leave your email above and you hear the moment one lands - refreshing this page does not.",
 };
 
 const FIREFLIES: Deal = {
@@ -342,12 +350,13 @@ const FIREFLIES: Deal = {
   // the whole board.
   unlocksPerListing: 10,
   intentQuestion: "",
+  openBoard: true,
   audience: "For Fireflies.ai users",
   supplyAsk: "Using Fireflies.ai?",
   sharePitch:
     "Every signup on your link is $5 of credit towards your own Pro renewal, and 10% off for them. Your meetings list is full of people who would use it.",
   emptyNote:
-    "Referral links are listed a few at a time and unlocked within minutes. The list above gets the email the moment one lands. Refreshing this page does not.",
+    "Referral links are listed a few at a time. Leave your email above and you hear the moment one lands - refreshing this page does not.",
 };
 
 const CHATGPT: Deal = {
@@ -439,16 +448,17 @@ const KITCUT: Deal = {
   codeParams: [],
   // /i/<code>, including the film share links (/i/<code>?to=/film/<id>) that carry an invite.
   linkPaths: ["/i/"],
-  // The inviter's 2:00 stops after twenty friends (the friend's never does), so a listing is
-  // offered to twenty people - past that it would earn its lister nothing.
+  // An open board shows a link to everyone, so this retires nothing. Twenty is where KitCut
+  // stops paying the sharer's 2:00 (a friend always gets theirs).
   unlocksPerListing: 20,
   intentQuestion: "",
+  openBoard: true,
   audience: "For KitCut users",
   supplyAsk: "Made a film on KitCut?",
   sharePitch:
     "Every friend who finishes a first film on your link is 2 minutes of film for you and 2 for them, and a friend who subscribes earns you up to 10 minutes more.",
   emptyNote:
-    "Nothing has been listed here yet. The list above gets the email the moment the first link lands. Refreshing this page does not.",
+    "Nothing has been listed here yet. Leave your email above and you hear the moment the first link lands - refreshing this page does not.",
   awaitingFirstListing: true,
 };
 

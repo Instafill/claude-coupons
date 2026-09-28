@@ -29,7 +29,8 @@ export async function POST(
   // nothing worth having.
   if (recorded && result === "dead") {
     const pass = await Pass.findById(id);
-    if (pass) await rejoinAtBack(user.email, dealOf(pass).slug);
+    // An open board has no queue to go back to.
+    if (pass && !dealOf(pass).openBoard) await rejoinAtBack(user.email, dealOf(pass).slug);
   }
   // The whole lifecycle turns on these answers, so record both the ones that counted and
   // the ones that arrived too late to.

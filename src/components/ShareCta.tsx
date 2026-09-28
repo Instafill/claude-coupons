@@ -12,7 +12,9 @@ export default function ShareCta({ deal }: { deal: Deal }) {
     {
       n: "2",
       title: "List it on the board",
-      body: `Paste it and it goes live. We store the code only and show it masked until a signed-in visitor unlocks it, so bots can't scrape your ${deal.nounPlural} in one pass.`,
+      body: deal.openBoard
+        ? `Paste it and it goes live, shown in full to everyone who visits - ${deal.name} ${deal.nounPlural} don't run out, so nobody has to queue for yours.`
+        : `Paste it and it goes live. We store the code only and show it masked until a signed-in visitor unlocks it, so bots can't scrape your ${deal.nounPlural} in one pass.`,
     },
     {
       n: "3",

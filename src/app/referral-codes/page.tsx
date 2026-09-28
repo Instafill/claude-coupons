@@ -66,9 +66,10 @@ export default async function ReferralCodesPage() {
       <section className="mt-8">
         <h1 className="text-[34px] leading-tight font-bold">Referral codes that work</h1>
         <p className="mt-3 max-w-2xl text-[19px] text-muted">
-          Every code here was listed by the person who owns it, offered to a queue ten people
-          at a time, and retired the moment its uses ran out. Nothing is scraped, nothing is
-          sold, and everyone who unlocks one is asked whether it worked.
+          Every code here was listed by the person who owns it. A code with limited uses is
+          offered to a queue ten people at a time and retired the moment its uses run out; a
+          code that never runs out is simply shown to everyone. Nothing is scraped, nothing is
+          sold, and everyone who uses one is asked whether it worked.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -100,9 +101,11 @@ export default async function ReferralCodesPage() {
                 </p>
                 <p className="mt-1.5 text-[15px] text-muted">{deal.summary}</p>
                 <p className="mt-3 text-[13px] text-muted">
-                  {standing
-                    ? `You are number ${standing.position}, wave ${standing.wave}.`
-                    : "Take a number →"}
+                  {deal.openBoard
+                    ? "No queue - see the codes →"
+                    : standing
+                      ? `You are number ${standing.position}, wave ${standing.wave}.`
+                      : "Take a number →"}
                 </p>
               </Link>
             );
@@ -119,8 +122,9 @@ export default async function ReferralCodesPage() {
           </p>
           <p>
             This board is built the other way round. Codes are listed by the people who own
-            them, handed out in order to a queue rather than to whoever refreshes fastest, and
-            taken down as soon as they run out or somebody reports that they stopped working.
+            them, handed out in order to a queue where their uses are limited rather than to
+            whoever refreshes fastest, and taken down as soon as they run out or somebody
+            reports that they stopped working.
             That last part is the whole trick: the person who just tried a code is the only
             check on it that exists, and one click from them is what keeps the board honest.
           </p>

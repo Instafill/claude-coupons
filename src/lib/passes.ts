@@ -86,7 +86,7 @@ export function hashIp(ip: string | null): string {
 
 export interface BoardPass {
   id: string;
-  code: string | null; // present only when this viewer has unlocked it
+  code: string | null; // present when this viewer has unlocked it, or on an open board
   /** What the card prints: the brand's URL shape around the code, or the bare code. */
   display: string;
   /** Where "open it" goes once unlocked. Null until then. */
@@ -122,7 +122,9 @@ export function unlocksLeft(pass: IPass): number {
 // board self-maintains without a cron job.
 function nextStatus(pass: IPass): string | null {
   if (pass.status !== PASS_STATUS.live) return null;
-  if (pass.unlockCount >= dealOf(pass).unlocksPerListing) return PASS_STATUS.exhausted;
+  // A code that does not run out is not used up by being opened (deal.openBoard).
+  if (!dealOf(pass).openBoard && pass.unlockCount >= dealOf(pass).unlocksPerListing)
+    return PASS_STATUS.exhausted;
   if (pass.deadCount >= DEAD_REPORTS_TO_HIDE && pass.deadCount > pass.claimedCount)
     // Hidden either way, but the label matters: "dead" accuses the submitter of listing a
     // broken code. One somebody has actually claimed demonstrably worked, so later dead
@@ -165,7 +167,8 @@ export function dealFilter(deal: DealSlug): Record<string, unknown> {
 }
 
 // The public board: live listings, least-unlocked first so fresh allotments surface.
-// A signed-in viewer sees the codes they already unlocked revealed in place.
+// A signed-in viewer sees the codes they already unlocked revealed in place; on an open
+// board (deal.openBoard) everyone sees every code, and "unlocked" counts opens.
 export async function getBoard(
   deal: DealSlug,
   userId: string | null
@@ -187,13 +190,14 @@ export async function getBoard(
     )
     .map((pass) => {
       const unlock = mine.get(pass._id.toString());
+      const shown = brand.openBoard || Boolean(unlock);
       return {
         id: pass._id.toString(),
-        code: unlock ? pass.code : null,
-        display: unlock
+        code: shown ? pass.code : null,
+        display: shown
           ? dealDisplay(brand, pass.code)
           : dealDisplay(brand, maskCode(pass.code)),
-        url: unlock ? dealLink(brand, pass.code) : null,
+        url: shown ? dealLink(brand, pass.code) : null,
         maskedCode: maskCode(pass.code),
         unlockCount: pass.unlockCount,
         createdAt: pass.createdAt.toISOString(),

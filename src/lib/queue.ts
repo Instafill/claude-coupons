@@ -425,7 +425,8 @@ export async function advanceWaves(): Promise<number> {
       if ((runs.get(deal) ?? 0) >= MAX_WAVES_PER_RUN) continue;
 
       const due = openWaveCount(pass.waveStartedAt);
-      const limit = dealOf(pass).unlocksPerListing;
+      // Opens do not use up a code on an open board, so they never stop its alerts.
+      const limit = dealOf(pass).openBoard ? Infinity : dealOf(pass).unlocksPerListing;
       let current = pass;
       while (current.wavesNotified < due && current.unlockCount < limit) {
         const spent = runs.get(deal) ?? 0;

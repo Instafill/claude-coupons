@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import Board from "@/components/Board";
 import EmptyBoard from "@/components/EmptyBoard";
+import OpenBoardCard from "@/components/OpenBoardCard";
 import PassListCard from "@/components/PassListCard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
@@ -120,20 +121,31 @@ export default async function DealPage({ deal }: { deal: Deal }) {
           that shows the list works, and when it is empty the card says why joining is the
           only move - so the card comes first in both cases. */}
       <div className="mt-6">
-        <PassListCard
-          deal={deal}
-          livePasses={passes.length}
-          inLine={inLine}
-          joinWave={joinWave}
-          served={served}
-          joinedToday={today}
-          standing={standing}
-          openWave={passes[0]?.openWave ?? 0}
-          speed={speed}
-          signedIn={Boolean(user)}
-          email={user?.email}
-          confirmed={false}
-        />
+        {/* A board whose codes never run out has no queue to join: its card only says so,
+            and asks for an email while the board is empty. */}
+        {deal.openBoard ? (
+          <OpenBoardCard
+            deal={deal}
+            livePasses={passes.length}
+            signedIn={Boolean(user)}
+            email={user?.email}
+          />
+        ) : (
+          <PassListCard
+            deal={deal}
+            livePasses={passes.length}
+            inLine={inLine}
+            joinWave={joinWave}
+            served={served}
+            joinedToday={today}
+            standing={standing}
+            openWave={passes[0]?.openWave ?? 0}
+            speed={speed}
+            signedIn={Boolean(user)}
+            email={user?.email}
+            confirmed={false}
+          />
+        )}
       </div>
 
       <div className="mt-6 max-w-2xl text-[19px] text-muted [&_p+p]:mt-3">

@@ -4,7 +4,7 @@ import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Deal } from "@/lib/deals";
+import { aNoun, type Deal } from "@/lib/deals";
 import type { BoardPass } from "@/lib/passes";
 
 type Outcome = "claimed" | "dead";
@@ -65,7 +65,8 @@ export default function Board({
   // emailed are on this page, and their browsers are what turn the clock for the waves
   // behind them. A refresh follows so the newly opened wave sees its button.
   useEffect(() => {
-    if (passes.length === 0) return;
+    // An open board has no waves to turn.
+    if (passes.length === 0 || deal.openBoard) return;
     let stopped = false;
     async function advance() {
       const response = await fetch("/api/waves", { method: "POST" }).catch(() => null);
@@ -79,7 +80,7 @@ export default function Board({
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [passes.length, router]);
+  }, [passes.length, deal.openBoard, router]);
 
   useEffect(() => {
     if (passes.length <= 1 || paused) return;
@@ -135,6 +136,31 @@ export default function Board({
       window.open(data.url, "_blank", "noopener");
     } catch (error) {
       patch(id, { busy: false, error: error instanceof Error ? error.message : "Failed." });
+    }
+  }
+
+  // An open board (deal.openBoard) has nothing to unlock: every code is on the card already.
+  // This counts the open - once per browser - which orders the board, and a signed-in
+  // visitor's open is recorded as theirs, so "did it work?" can be asked when they return.
+  async function opened(id: string) {
+    track("pass_opened", { deal: deal.slug });
+    const key = `cc-opened:${id}`;
+    try {
+      if (window.localStorage.getItem(key)) {
+        if (state[id]?.ask === "hidden") pending.current = id;
+        return;
+      }
+      window.localStorage.setItem(key, "1");
+    } catch {
+      // Storage refused (private mode): the open is still counted, just not deduplicated.
+    }
+    const response = await fetch(`/api/passes/${id}/open`, { method: "POST", keepalive: true }).catch(
+      () => null
+    );
+    const data = response?.ok ? await response.json().catch(() => ({})) : {};
+    if (data.ask) {
+      patch(id, { ask: "hidden" });
+      pending.current = id;
     }
   }
 
@@ -197,8 +223,10 @@ export default function Board({
             {card.code ? `${deal.displayPrefix}${card.code}` : pass.display}
           </span>
           <span className="text-[13px] text-muted">
-            {`${pass.unlockCount} of ${deal.unlocksPerListing} unlocked`} &middot; wave{" "}
-            {pass.openWave} open &middot; listed{" "}
+            {deal.openBoard
+              ? `${pass.unlockCount} ${pass.unlockCount === 1 ? "person" : "people"} opened it`
+              : `${pass.unlockCount} of ${deal.unlocksPerListing} unlocked · wave ${pass.openWave} open`}{" "}
+            &middot; listed{" "}
             {new Date(pass.createdAt).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -208,7 +236,50 @@ export default function Board({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2.5">
-          {myWave === null ? (
+          {deal.openBoard && card.code ? (
+            // Open board: the code is already on the card. Copy it, or open it; either
+            // counts as an open, and a signed-in visitor is asked "did it work?" on return.
+            <>
+              <button
+                onClick={() => {
+                  void copy(pass.id, deal.needsCode ? card.code! : (card.url ?? card.code!));
+                  void opened(pass.id);
+                }}
+                className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 font-mono text-[15px] hover:border-accent"
+              >
+                {card.copied ? "Copied" : deal.needsCode ? `${card.code} ⧉` : "Copy link ⧉"}
+              </button>
+              <a
+                href={card.url ?? deal.redeemUrl}
+                target="_blank"
+                rel="nofollow noopener"
+                onClick={() => void opened(pass.id)}
+                className="rounded-lg bg-good px-4 py-2 text-[15px] font-semibold text-white hover:brightness-90"
+              >
+                {deal.needsCode ? `Open ${deal.name}` : `Open this ${deal.noun}`} ↗
+              </a>
+              {card.ask === "asking" && (
+                <span className="outcome-pulse flex flex-wrap items-center gap-1.5 text-sm text-muted">
+                  Did it work?
+                  <button
+                    onClick={() => answer(pass.id, "claimed")}
+                    className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-accent"
+                  >
+                    &#10003; It worked
+                  </button>
+                  <button
+                    onClick={() => answer(pass.id, "dead")}
+                    className="cursor-pointer rounded-md border border-line bg-surface px-2.5 py-0.5 text-[13px] hover:border-bad hover:text-bad"
+                  >
+                    &#10007; Didn&rsquo;t work
+                  </button>
+                </span>
+              )}
+              {card.ask === "done" && (
+                <span className="text-sm text-good">Thanks - that keeps the board honest.</span>
+              )}
+            </>
+          ) : myWave === null ? (
             <a
               href="#join"
               onClick={() => track("join_prompted", { from: "board", deal: deal.slug })}
@@ -244,7 +315,7 @@ export default function Board({
                 }}
                 className="rounded-lg bg-good px-4 py-2 text-[15px] font-semibold text-white hover:brightness-90"
               >
-                {deal.needsCode ? `Open ${deal.name}` : `Open your ${deal.noun}`} &nearr;
+                {deal.needsCode ? `Open ${deal.name}` : `Open your ${deal.noun}`} ↗
               </a>
               {card.ask === "asking" && (
                 <span className="outcome-pulse flex flex-wrap items-center gap-1.5 text-sm text-muted">
@@ -324,9 +395,20 @@ export default function Board({
       )}
 
       <p className="pt-4 text-sm text-muted">
-        Each {deal.noun} is offered to the queue in waves of ten, five minutes apart, and comes
-        off the board after {deal.unlocksPerListing} unlocks. A {deal.noun} can still run dry
-        before the board knows; say so and you keep your place in the queue.
+        {deal.openBoard ? (
+          <>
+            {deal.name} {deal.nounPlural} don&rsquo;t run out, so every one listed here is shown
+            in full - no queue, no unlocking. The least-opened come first, so every listing
+            gets its turn at the top. Signed in, you are asked whether it worked, and two
+            &ldquo;didn&rsquo;t work&rdquo; answers take {aNoun(deal)} off the board.
+          </>
+        ) : (
+          <>
+            Each {deal.noun} is offered to the queue in waves of ten, five minutes apart, and
+            comes off the board after {deal.unlocksPerListing} unlocks. A {deal.noun} can still
+            run dry before the board knows; say so and you keep your place in the queue.
+          </>
+        )}
       </p>
     </div>
   );
