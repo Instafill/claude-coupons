@@ -4,23 +4,26 @@
 // the reader down, a footer line, and a card in the watch confirmation email. It is our own
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
-// It leads with films made for businesses (a launch, a product update, an explainer) because a business
-// is the reader who pays for film; a film of a fox seeing snow sells the craft but not the use.
+// The words speak to who reads this site: people who already use Claude. So the headline is the
+// one new fact for them (Claude can make the whole video) and the pitch is what sets KitCut apart
+// from an AI clip generator (script, picture, voice and music, finished). Every claim is one
+// kitcut.ai's own docs make: 30 free seconds a month, a 30 s film in 16-24 minutes, so no "in
+// minutes" and no "any language". The tiles show the films; the words don't list genres.
 //
 // One place for the words and the links, so the four placements cannot drift apart. The utm_*
 // parameters say which placement brought a visitor.
 
 export const KITCUT = {
   name: "KitCut",
-  headline: "Ads, explainers and brand films for your business, from one sentence.",
-  pitch: "Claude writes, draws, narrates and scores the film in minutes, in any language.",
-  free: "Your first 30 seconds of film are free, no card needed.",
+  headline: "Describe a video. Claude makes the whole thing.",
+  pitch: "Script, animation, voice-over and music: a finished film you can post, not clips to stitch together.",
+  free: "30 seconds free every month, no card.",
   cta: "Make a free film",
   label: "New from the maker of ClaudeCoupons",
   logo: "/kitcut-logo.png",
 };
 
-// The films the banner and the email show: KitCut films made for businesses, one per industry.
+// The films the banner and the email show: four KitCut films, each a different use.
 // Each has a still and a few seconds of the film as a small silent clip (public/kitcut/<slug>.jpg
 // and .mp4, cut from the film), and opens the whole film with sound: its page on kitcut.ai, or
 // YouTube for a film made outside the studio. No lengths: the tile sells the look, not the runtime.

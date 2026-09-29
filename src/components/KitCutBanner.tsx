@@ -5,7 +5,7 @@ import { KITCUT, KITCUT_FILMS, kitcutUrl } from "@/lib/kitcut";
 
 // The KitCut banner at the top of every page (the layout places it between the header and the
 // page). Deliberately loud, because KitCut needs its first users, and it names itself as our own
-// product so nobody mistakes it for a pass. It sells by showing: four films KitCut made for businesses,
+// product so nobody mistakes it for a pass. It sells by showing: four films KitCut made,
 // playing silently in their tiles, beside the pitch and a filled button. On a phone the films
 // become a row you swipe, so the banner does not push the board a screen down.
 export default function KitCutBanner() {

@@ -54,7 +54,7 @@ export default function KitCutBar() {
         <img src={KITCUT.logo} alt="" width={32} height={32} className="flex-none rounded-lg" />
         <p className="min-w-0 flex-1 text-[14px] leading-snug">
           <strong>{KITCUT.headline}</strong>{" "}
-          <span className="hidden text-white/70 sm:inline">First 30 seconds free.</span>
+          <span className="hidden text-white/70 sm:inline">30 seconds free every month.</span>
         </p>
         <a
           href={kitcutUrl("stickybar")}
