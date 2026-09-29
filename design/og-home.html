@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- The home page's social card (public/og-home.png, 1200x630): what X, LinkedIn and chats show
+     when claudecoupons.com is shared. Same look as the original og.png (its ticket artwork is
+     ticket.png, cropped from it), but it names every board, not only Claude.
+     Regenerate after changing the words or the list of boards:
+       node ~/.claude/skills/screenshots/shoot.mjs --url file:///<repo>/design/og-home.html \
+         --clip "#card" --out public/og-home.png   (spec: viewport {width:1200,height:630,scale:1})
+     and give the file a new name when it changes: X caches a card by its image URL. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@700;800&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; }
+  #card { position: relative; width: 1200px; height: 630px; overflow: hidden; background: #ec0b7c;
+          font-family: Archivo, sans-serif; }
+  .top { position: absolute; inset: 0 0 auto 0; height: 18px; background: #141414; }
+  .left { position: absolute; left: 0; top: 18px; bottom: 28px; width: 80px; background: #3fd9ff; }
+  .right { position: absolute; right: 0; top: 18px; bottom: 28px; width: 54px; background: #ffdf4a; }
+  .bottom { position: absolute; inset: auto 0 0 0; height: 28px; background: #b8f23a; }
+  .ticket { position: absolute; left: 60px; top: 100px; width: 460px; height: 440px;
+            background: url(ticket.png) no-repeat; }
+  .words { position: absolute; left: 560px; top: 92px; width: 580px; }
+  .h { font-family: Anton, sans-serif; font-size: 92px; line-height: 0.98; color: #141414;
+       text-transform: uppercase; letter-spacing: 0.5px; }
+  .h span { display: inline-block; padding: 4px 18px 0 16px; }
+  .h .y { background: #ffdf4a; }
+  .h .c { background: #3fd9ff; margin-top: 8px; }
+  .pill { display: inline-block; margin-top: 26px; background: #141414; color: #fff;
+          font-weight: 800; font-size: 25px; letter-spacing: 1px; padding: 13px 18px;
+          border-radius: 6px; text-transform: uppercase; }
+  .more { margin-top: 26px; color: #fff; font-weight: 800; font-size: 21px;
+          letter-spacing: 0.6px; text-transform: uppercase; }
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 11px; }
+  .chips b { background: #fff; color: #141414; font-size: 21px; font-weight: 800;
+             padding: 7px 12px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="top"></div><div class="left"></div><div class="right"></div><div class="bottom"></div>
+  <div class="ticket"></div>
+  <div class="words">
+    <div class="h"><span class="y">Claude Code</span><br><span class="c">Passes</span></div>
+    <div class="pill">A free week of Claude Pro</div>
+    <div class="more">+ free referral codes for</div>
+    <div class="chips"><b>Uber</b><b>Waymo</b><b>ChatGPT</b><b>KitCut</b><b>Fireflies</b><b>Pokémon GO</b><b>muse.ai</b></div>
+  </div>
+</div>
+</body>
+</html>

@@ -30,6 +30,12 @@ const TITLE = "Claude Code Passes | Claude Coupons";
 const DESCRIPTION =
   "Claude coupons that actually work: free Claude Code passes, each a week of Claude Pro. Anthropic issues no Claude Code coupon or promo codes, so a guest pass is the real Claude AI coupon - claim one or share yours.";
 
+const SOCIAL_TITLE = "Free Claude Code passes, plus referral codes for Uber, Waymo and more";
+const SOCIAL_DESCRIPTION =
+  "Claim a free week of Claude Pro, Claude Code included, from a pass someone would let expire - or share yours. Plus referral codes for Uber, Waymo, ChatGPT, KitCut, Fireflies, Pokémon GO and muse.ai.";
+const SOCIAL_IMAGE_ALT =
+  "Claude Code passes: a free week of Claude Pro, plus referral codes for Uber, Waymo, ChatGPT, KitCut, Fireflies, Pokémon GO and muse.ai";
+
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
@@ -47,21 +53,23 @@ export const metadata: Metadata = {
     "claude groupon",
     "claude promo code",
   ],
+  // The social card says what the page holds now, not only the Claude board it started as.
+  // The <title> and description above stay tuned for search; these are for a shared link.
   openGraph: {
     type: "website",
     url: "https://claudecoupons.com/",
     siteName: "Claude Coupons",
-    title: TITLE,
-    description: DESCRIPTION,
+    title: SOCIAL_TITLE,
+    description: SOCIAL_DESCRIPTION,
     images: [
-      { url: "/og.png", width: 1200, height: 630, alt: "Claude Code Coupons" },
+      { url: "/og-home.png", width: 1200, height: 630, alt: SOCIAL_IMAGE_ALT },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
-    description: DESCRIPTION,
-    images: ["/og.png"],
+    title: SOCIAL_TITLE,
+    description: SOCIAL_DESCRIPTION,
+    images: [{ url: "/og-home.png", alt: SOCIAL_IMAGE_ALT }],
   },
 };
 

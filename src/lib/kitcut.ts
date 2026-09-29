@@ -4,7 +4,7 @@
 // the reader down, a footer line, and a card in the watch confirmation email. It is our own
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
-// It leads with films made for businesses (a launch, an explainer, an opening) because a business
+// It leads with films made for businesses (a launch, a product update, an explainer) because a business
 // is the reader who pays for film; a film of a fox seeing snow sells the craft but not the use.
 //
 // One place for the words and the links, so the four placements cannot drift apart. The utm_*
@@ -34,10 +34,10 @@ export interface KitCutFilm {
 }
 
 export const KITCUT_FILMS: KitCutFilm[] = [
+  { slug: "icecream", kind: "History explainer", company: "A Brief History of Ice Cream", youtube: "db9y25DuwGU" },
+  { slug: "instafill-gpt6", kind: "Product update", company: "Instafill, now on GPT-6 Sol", id: "studio-20260928-135513-pizula" },
+  { slug: "paperwork", kind: "Industry explainer", company: "A Brief History of Paperwork", youtube: "MX1iBcJ-qwU" },
   { slug: "thatchers-wine", kind: "Champagne launch", company: "Thatcher's Wine", id: "studio-20260928-110106-skiird" },
-  { slug: "instafill-bpo", kind: "Product explainer", company: "Instafill, for real-estate agents", youtube: "1bEBQp96rb8" },
-  { slug: "marisol", kind: "Restaurant opening", company: "Marisol, an example brand", id: "studio-20260928-110110-2ohqb3" },
-  { slug: "brightfold", kind: "Software launch", company: "Brightfold, an example brand", id: "studio-20260928-102314-adduja" },
 ];
 
 export function filmStill(f: KitCutFilm): string {
