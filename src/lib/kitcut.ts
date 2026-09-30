@@ -5,8 +5,9 @@
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
 // The words speak to who reads this site: people who already use Claude. So the headline is the
-// one new fact for them (Claude can make the whole video) and the pitch is what sets KitCut apart
-// from an AI clip generator (script, picture, voice and music, finished). Every claim is one
+// one new fact for them, in four words, and the pitch is what sets KitCut apart from an AI clip
+// generator (script, picture, voice and music, finished). Short beats complete: the user asked
+// for punchy. Every claim is one
 // kitcut.ai's own docs make: 30 free seconds a month, a 30 s film in 16-24 minutes, so no "in
 // minutes" and no "any language". The tiles show the films; the words don't list genres.
 //
@@ -15,9 +16,9 @@
 
 export const KITCUT = {
   name: "KitCut",
-  headline: "Describe a video. Claude makes the whole thing.",
-  pitch: "Script, animation, voice-over and music: a finished film you can post, not clips to stitch together.",
-  free: "30 seconds free every month, no card.",
+  headline: "Claude makes videos now.",
+  pitch: "Type an idea, get a finished film: script, animation, voice-over, music.",
+  free: "30 seconds free every month.",
   cta: "Make a free film",
   label: "New from the maker of ClaudeCoupons",
   logo: "/kitcut-logo.png",
