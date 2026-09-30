@@ -725,7 +725,7 @@ const KITCUT: DealArticle = {
   ],
   imageAlt: "KitCut invite links: free minutes of Claude video",
   lead: [
-    "KitCut is the Claude video maker: type one sentence and Claude Opus 5.5 writes, draws, narrates and scores a finished animated film - an ad, an explainer, a brand film. The free plan gives 30 seconds of Claude video a month. An invite link adds 2 minutes: four more 30-second films.",
+    "Claude makes videos now. KitCut is the Claude video maker: type an idea and Claude Opus 5.5 makes the finished film - script, animation, voice-over, music. Free gets you 30 seconds a month. An invite link adds 2 minutes: four more 30-second films.",
     "KitCut is made by the people who run this site, so read this page as ours. Invite links don't run out, so there is no queue here: people list their own links, every one is shown in full, and you pick one and sign up through it.",
   ],
   facts: [

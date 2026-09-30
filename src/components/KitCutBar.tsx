@@ -53,6 +53,7 @@ export default function KitCutBar() {
         {/* eslint-disable-next-line @next/next/no-img-element -- a 32px logo; next/image adds nothing here */}
         <img src={KITCUT.logo} alt="" width={32} height={32} className="flex-none rounded-lg" />
         <p className="min-w-0 flex-1 text-[14px] leading-snug">
+          <span className="hidden text-white/70 sm:inline">KitCut, by us: </span>
           <strong>{KITCUT.headline}</strong>{" "}
           <span className="hidden text-white/70 sm:inline">30 seconds free every month.</span>
         </p>
