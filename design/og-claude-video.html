@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- The Claude video guide's social card (public/blog/claude-video/og-claude-video-2.jpg, 1200x630):
+     the headline beside four stills from the guide's own example films, one per look.
+     Regenerate after changing the words or the stills:
+       node ~/.claude/skills/screenshots/shoot.mjs --url file:///<repo>/design/og-claude-video.html \
+         --clip "#card" --out public/blog/claude-video/og-claude-video-<n>.jpg
+     and give the file a new name when it changes: X caches a card by its image URL. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; }
+  #card { position: relative; width: 1200px; height: 630px; overflow: hidden; background: #1f1e1d;
+          font-family: "Segoe UI", system-ui, sans-serif; color: #faf9f5; }
+  .words { position: absolute; left: 56px; top: 84px; width: 470px; }
+  .h { font-size: 78px; font-weight: 800; line-height: 1.0; letter-spacing: -1px; }
+  .h em { font-style: normal; color: #d97757; }
+  .sub { margin-top: 22px; font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .foot { position: absolute; left: 56px; bottom: 44px; font-size: 22px; color: #b8b3a8; }
+  .grid { position: absolute; left: 560px; top: 120px; display: grid;
+          grid-template-columns: 300px 300px; gap: 14px; }
+  .grid img { width: 300px; height: 169px; object-fit: cover; border-radius: 6px; display: block; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="words">
+    <div class="h">Claude<br><em>makes videos</em><br>now.</div>
+    <div class="sub">8 real films, the steps and the prices</div>
+  </div>
+  <div class="grid">
+    <img src="../public/blog/claude-video/shipping-container-history.jpg">
+    <img src="../public/blog/claude-video/thatchers-wine-champagne.jpg">
+    <img src="../public/blog/claude-video/apollo-13.jpg">
+    <img src="../public/blog/claude-video/how-taxes-work.jpg">
+  </div>
+  <div class="foot">claudecoupons.com &middot; KitCut guide</div>
+</div>
+</body>
+</html>

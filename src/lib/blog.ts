@@ -153,73 +153,75 @@ function kitcutFilm(id: string, film: Omit<BlogVideo, "src" | "pageUrl">): BlogV
 }
 
 const CLAUDE_VIDEO_FILMS: BlogVideo[] = [
-  kitcutFilm("studio-20260928-102317-awn3zx", {
-    title: "Marisol - a restaurant opening ad",
+  kitcutFilm("studio-20260929-124153-46uy2s", {
+    title: "The Box - how the shipping container shrank the world",
     prompt:
-      "A 30-second ad for the opening of Marisol, a new seafood restaurant by the harbour: fish from the morning's boats, cooked over a wood fire, served at a long table…",
-    poster: `${GUIDE_IMG}/marisol-restaurant-ad.jpg`,
+      "A 2-minute explainer: how a plain steel box shrank the world - the shipping container. Who it is for: curious adults who like business history…",
+    poster: `${GUIDE_IMG}/shipping-container-history.jpg`,
+    duration: "PT2M",
+    meta: "2:00 · collage · made in 39 min",
+    uploadDate: "2026-09-29",
+  }),
+  kitcutFilm("studio-20260929-144139-4r5esx", {
+    title: "How taxes work in America",
+    prompt: "Explain how taxes work in america.",
+    poster: `${GUIDE_IMG}/how-taxes-work.jpg`,
     duration: "PT30S",
-    meta: "0:30 · painted · made in 9 min",
+    meta: "0:30 · collage · made in 14 min",
+    uploadDate: "2026-09-29",
+  }),
+  kitcutFilm("studio-20260928-110106-skiird", {
+    title: "Thatcher's Wine - a Champagne launch ad",
+    prompt:
+      "A 30-second launch ad for Thatcher's Wine, a wine shop: the Champagne of Emmanuel Brochet has just arrived. The audience is people who love wine and buy it from a good independent shop…",
+    poster: `${GUIDE_IMG}/thatchers-wine-champagne.jpg`,
+    duration: "PT30S",
+    meta: "0:30 · hand-drawn, clean · made in 25 min",
     uploadDate: "2026-09-28",
   }),
-  kitcutFilm("studio-20260928-041445-2p46v3", {
-    title: "Turing Complete - a game launch ad",
-    prompt: 'Create a 10-second high-end advertisement for the Steam game "Turing Complete".',
-    poster: `${GUIDE_IMG}/turing-complete-launch-ad.jpg`,
-    duration: "PT10S",
-    meta: "0:10 · hand-drawn · made in 13 min",
+  kitcutFilm("studio-20260929-121012-w3vfyn", {
+    title: "Apollo 13 - a painted documentary",
+    prompt:
+      "A cinematic 2-minute-30 documentary: Apollo 13 - \"Houston, we've had a problem.\" How three astronauts 200,000 miles from Earth, and the engineers on the ground, turned a failed Moon landing into NASA's \"successful failure\"…",
+    poster: `${GUIDE_IMG}/apollo-13.jpg`,
+    duration: "PT2M30S",
+    meta: "2:30 · painted · made in 29 min",
+    uploadDate: "2026-09-29",
+  }),
+  kitcutFilm("studio-20260929-135720-qahfmu", {
+    title: "What is an AI agent? - an explainer",
+    prompt:
+      "A 90-second explainer: what is an AI agent? Who it is for: people who use ChatGPT or Claude for questions and keep hearing the word \"agent\"…",
+    poster: `${GUIDE_IMG}/what-is-an-ai-agent.jpg`,
+    duration: "PT1M30S",
+    meta: "1:30 · collage · made in 26 min",
+    uploadDate: "2026-09-29",
+  }),
+  kitcutFilm("studio-20260928-135513-pizula", {
+    title: "Instafill runs on GPT-6 Sol - a product update",
+    prompt:
+      "…we recently upgraded all users to gpt 6 Sol model as default model. We need a video about this that explains that it's smarter and faster…",
+    poster: `${GUIDE_IMG}/instafill-gpt6-sol.jpg`,
+    duration: "PT45S",
+    meta: "0:45 · hand-drawn, clean · made in 15 min",
     uploadDate: "2026-09-28",
   }),
-  kitcutFilm("studio-20260927-223145-5wo5i4", {
-    title: "queensgame.io - a product ad",
-    prompt:
-      "…Show queensgame.io as a modern, addictive online logic puzzle game. Focus on a polished puzzle board, queen placement…",
-    poster: `${GUIDE_IMG}/queensgame-product-ad.jpg`,
-    duration: "PT10S",
-    meta: "0:10 · hand-drawn, clean · made in 11 min",
-    uploadDate: "2026-09-27",
-  }),
-  kitcutFilm("studio-20260927-061617-q6t772", {
-    title: "Clamly - a brand values film",
-    prompt: "create something for https://clamly.app to show Clamly values",
-    poster: `${GUIDE_IMG}/clamly-brand-film.jpg`,
+  kitcutFilm("studio-20260929-220610-py7ko5", {
+    title: "The last penalty - a story",
+    prompt: "The last penalty of a cup final, from the goalkeeper's point of view",
+    poster: `${GUIDE_IMG}/last-penalty.jpg`,
     duration: "PT30S",
-    meta: "0:30 · hand-drawn · made in 15 min",
-    uploadDate: "2026-09-27",
+    meta: "0:30 · hand-drawn, crayon · made in 19 min",
+    uploadDate: "2026-09-29",
   }),
-  kitcutFilm("studio-20260927-171047-mgkibw", {
-    title: "Dell vs HP - an 8-minute business documentary",
+  kitcutFilm("studio-20260929-103129-i4d52n", {
+    title: "The start grid - 11 bike brands in 8 minutes",
     prompt:
-      'An 8-minute hand-drawn documentary explainer titled "Dell Went Private. HP Split in Two. AI Picked a Winner." Two PC giants hit the same wall, made opposite bets…',
-    poster: `${GUIDE_IMG}/dell-hp-documentary.jpg`,
+      "Create a video about major bike brands. Make it interesting, exciting, dramatic. Not boring. Make it fun to watch…",
+    poster: `${GUIDE_IMG}/xc-bike-brands.jpg`,
     duration: "PT8M",
-    meta: "8:00 · hand-drawn · made in 2 h 21 min",
-    uploadDate: "2026-09-27",
-  }),
-  kitcutFilm("studio-20260927-084459-7xaoci", {
-    title: "How a fuel cell works - a painted science film",
-    prompt:
-      "Create a visually stunning 30-second hand-painted scientific film explaining how a proton exchange membrane fuel cell works…",
-    poster: `${GUIDE_IMG}/fuel-cell-explainer.jpg`,
-    duration: "PT30S",
-    meta: "0:30 · painted · made in 16 min",
-    uploadDate: "2026-09-27",
-  }),
-  kitcutFilm("studio-20260927-033619-iucict", {
-    title: "How a lever lifts a car - a blueprint explainer",
-    prompt: "How a lever lets one person lift a car, drawn as a blueprint",
-    poster: `${GUIDE_IMG}/lever-blueprint-explainer.jpg`,
-    duration: "PT10S",
-    meta: "0:10 · hand-drawn, blueprint · made in 12 min",
-    uploadDate: "2026-09-27",
-  }),
-  kitcutFilm("studio-20260926-195810-6kj2uw", {
-    title: "Pip the fox sees snow - a story",
-    prompt: "Pip the fox sees snow for the first time.",
-    poster: `${GUIDE_IMG}/pip-fox-snow.jpg`,
-    duration: "PT20S",
-    meta: "0:20 · hand-drawn, crayon · made in 14 min",
-    uploadDate: "2026-09-26",
+    meta: "8:00 · collage · made in 1 h 44 min",
+    uploadDate: "2026-09-29",
   }),
 ];
 
@@ -228,13 +230,13 @@ const CLAUDE_VIDEO_FILMS: BlogVideo[] = [
 const CLAUDE_VIDEO_GUIDE: BlogPost = {
   slug: "claude-video",
   title: "Claude Video: Make Videos with Claude Opus 5.5 (2026 Guide)",
-  h1: "Claude video: how to make a finished film with Claude Opus 5.5",
+  h1: "Claude makes videos now: how to make a finished film with Claude Opus 5.5",
   metaDescription:
-    "Can Claude make videos? With KitCut, Claude Opus 5.5 writes, draws, narrates and scores a 1080p film from one sentence. Real examples, steps and prices.",
+    "Can Claude make videos? Yes: with KitCut, Claude Opus 5.5 writes, animates, narrates and scores a finished 1080p film from your idea. Eight real films, steps and prices.",
   summary:
-    "Claude does not export a video file on its own - but with KitCut, Claude Opus 5.5 turns one sentence into a narrated, scored 1080p film. Eight real examples, how it works, how to use it from inside Claude, and what it costs.",
+    "Claude makes videos now. Type an idea into KitCut and Claude Opus 5.5 makes the whole film: script, animation, voice-over and music, hand-drawn, painted or collage. Eight real films, how it works, how to use it from inside Claude, and what it costs.",
   publishedAt: "2026-09-28T18:00:00Z",
-  updatedAt: "2026-09-28T18:00:00Z",
+  updatedAt: "2026-09-30T17:00:00Z",
   readingTime: "11 min read",
   category: "Claude Video",
   tags: ["Claude video", "Opus 5.5", "KitCut", "AI video", "Claude animation", "MCP"],
@@ -261,14 +263,14 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
     "kitcut",
   ],
   imageAlt: "Claude video: films made with Claude Opus 5.5 on KitCut",
-  image: `${GUIDE_IMG}/og-claude-video.jpg`,
+  image: `${GUIDE_IMG}/og-claude-video-2.jpg`,
   featured: true,
   badge: "Hands-on guide",
   takeaways: [
     {
       mark: "yes",
       title: "Claude can make videos with KitCut:",
-      text: "type one sentence; Claude Opus 5.5 writes, draws, animates, narrates and scores the film, and KitCut renders a 1920x1080 MP4.",
+      text: "type an idea; Claude Opus 5.5 writes, animates, narrates and scores the whole film, and KitCut renders a 1920x1080 MP4.",
     },
     {
       mark: "yes",
@@ -283,13 +285,13 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
     {
       mark: "no",
       title: "Not a video generator:",
-      text: "no photoreal footage or real people moving - films are drawn or painted animation, in 16:9.",
+      text: "no photoreal footage or real people moving - films are hand-drawn, painted or paper-collage animation, in 16:9.",
     },
   ],
   faqHeading: "Claude video: frequently asked questions",
   cta: {
     title: "Make your first Claude video",
-    text: "Type one sentence and watch Claude Opus 5.5 make the film. 30 seconds of film free every month, no card needed.",
+    text: "Type an idea and watch Claude Opus 5.5 make the film. 30 seconds free every month.",
     primary: { href: kitcutUrl("blog"), label: "Make a free Claude video →" },
     secondary: { href: "/kitcut-referral-code", label: "Get 2 extra minutes" },
   },
@@ -297,26 +299,16 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
     {
       id: "can-claude-make-videos",
       h2: "Can Claude make videos?",
-      lead: "Yes, with the right tool around it. On its own, Claude writes text and code; it does not hand you an MP4. KitCut is the missing half: it gives Claude Opus 5.5 a drawing engine, a narrator, an orchestra and a renderer, so one sentence comes back as a finished, narrated film.",
+      lead: "Yes. On its own Claude writes text and code, not MP4s. KitCut is the missing half: it gives Claude Opus 5.5 a drawing engine, a narrator, an orchestra and a renderer, so an idea comes back as a finished film - script, animation, voice-over and music.",
       body: [
         "That is a different thing from an AI video generator. Sora, Veo or Runway turn a prompt into moving pixels a few seconds at a time. On KitCut, Claude writes the whole film as a program - every drawing, camera move, word on screen and music cue - and KitCut renders it. So a film can run from 5 seconds to 8 minutes as one planned piece, with the picture, the narration and the music timed to each other, word by word.",
         "A disclosure before the praise: we built KitCut, so read this as the maker's guide. Everything below is what the product does today, shown with real films made on it, and the limits are listed as plainly as the strengths. KitCut is an independent product built on Claude; it is not made or endorsed by Anthropic.",
       ],
-      images: [
-        {
-          src: `${GUIDE_IMG}/kitcut-home.jpg`,
-          alt: "The KitCut home page: 'Type an idea. Get a Claude video.', the idea box, the look, the length slider and the Make the film button",
-          caption: "kitcut.ai: every Claude video starts in the idea box. Pick a look and a length, and press Make the film.",
-          width: 1440,
-          height: 610,
-          label: "Screenshot",
-        },
-      ],
     },
     {
       id: "claude-video-examples",
-      h2: "Claude video examples: eight films, each from one prompt",
-      lead: "Every film below was made on KitCut from the prompt under it, and none was edited afterwards - KitCut has no edit step. Press play; the small kitcut.ai mark on some is the Free plan's.",
+      h2: "Claude video examples: eight films, three looks",
+      lead: "Every film below was made on KitCut from the prompt under it, and none was edited afterwards - KitCut has no edit step. Some prompts are one line, some a paragraph-long brief; both work. Press play; the small kitcut.ai mark on some is the Free plan's.",
       videos: CLAUDE_VIDEO_FILMS,
     },
     {
@@ -326,7 +318,7 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
       steps: [
         "Open kitcut.ai and describe the film in the idea box: what it is about, who it is for, the tone, and anything it must say or show. One sentence is enough; up to 12,000 characters are allowed.",
         "Add pictures or voice notes if you have them - a logo, a product shot, a sketch or a spoken brief. Up to 6 pictures and 3 voice notes a film.",
-        "Pick a look (hand-drawn or painted) and a length, then press Make the film. You sign in the first time, and nothing you typed is lost.",
+        "Pick a look (hand-drawn, painted or collage) and a length, then press Make the film. You sign in the first time, and nothing you typed is lost.",
         "Watch it being made. The film's page shows what Claude is doing and the stills it is checking, then plays the finished film. A 30-second film takes about 16 to 24 minutes once its turn comes.",
       ],
       callout: {
@@ -337,10 +329,10 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
       images: [
         {
           src: `${GUIDE_IMG}/kitcut-composer.webp`,
-          alt: "The KitCut idea box with numbered red circles: the idea text, the + button for pictures, the microphone for voice notes, the look, the length slider and Make the film",
+          alt: "The KitCut idea box with numbered red circles: the idea text, the + button for pictures, the microphone for voice notes, the three looks, the length slider and Make the film",
           caption: "The idea box: ① the idea, ② pictures, ③ voice notes, ④ the look, ⑤ the length and ⑥ Make the film.",
-          width: 2408,
-          height: 824,
+          width: 2064,
+          height: 808,
           label: "Screenshot",
         },
         {
@@ -381,7 +373,7 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
           },
           {
             step: "Picture",
-            what: "Claude draws and animates every scene in code on KitCut's sketch engine - or, in the painted look, has the scenes painted and animates the paintings.",
+            what: "Claude draws and animates every scene in code on KitCut's sketch engine. In the painted look it has the scenes painted and animates the paintings; in the collage look it has each picture cut out and builds the pages round them.",
           },
           {
             step: "Review",
@@ -403,11 +395,12 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
       ],
     },
     {
-      id: "two-looks",
-      h2: "Two looks: hand-drawn Claude animation or painted scenes",
+      id: "three-looks",
+      h2: "Three looks: hand-drawn, painted or collage",
       body: [
-        "Hand-drawn: Claude draws every frame in code. The default crayon style has lines that boil slightly from frame to frame, off-register fills and paper grain; the clean style is crisp editorial line art with flat fills. There are ten grounds, from paper and kraft to chalkboard and blueprint.",
-        "Painted: an image model paints the scenes from Claude's descriptions, and Claude animates them - camera moves across each painting, cross-fades on spoken words, and words drawn on top. Styles range from 1950s travel poster and ink wash to claymation and watercolour.",
+        "Hand-drawn: Claude draws every frame in code. The crayon style has lines that boil slightly from frame to frame and paper grain; the clean style is crisp editorial line art with flat fills, like the Thatcher's Wine and Instafill films above. There are ten grounds, from paper and kraft to chalkboard and blueprint.",
+        "Painted: an image model paints the scenes from Claude's descriptions, and Claude animates them - camera moves across each painting, cross-fades on spoken words, and words drawn on top. Styles range from 1950s travel poster and ink wash to claymation and cinematic photoreal, as in Apollo 13.",
+        "Collage: every picture is a cut-out with a white scissor edge, and Claude builds the pages round them in code - torn paper, print type, tape labels, rubber stamps, marker arrows - with everything shaking slightly like stop-motion. It is the newest look, and the one behind The Box, the taxes film and the bike brands.",
         "You pick the look; Claude picks everything inside it, and your idea can steer it in plain words.",
       ],
       images: [
@@ -431,6 +424,14 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
           src: `${GUIDE_IMG}/kitcut-look-painted.webp`,
           alt: "A painted KitCut still: glowing particles over a dark painted landscape, with the word proton drawn on top by Claude",
           caption: "Painted: the scene is painted, the word on top is drawn.",
+          width: 1280,
+          height: 720,
+          label: "Still",
+        },
+        {
+          src: `${GUIDE_IMG}/kitcut-look-collage.webp`,
+          alt: "A collage KitCut still: a wooden ice-cream churn and a thermometer cut out of old engravings, pasted on green paper under the headline The Salt Trick, with tape labels reading ICE and SALT",
+          caption: "Collage: the pictures are cut-outs; the page, the type and the labels are built in code.",
           width: 1280,
           height: 720,
           label: "Still",
@@ -479,7 +480,7 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
           { what: "Your logo", gen: "re-imagined by the model", kitcut: "the picture you attached, placed as it is" },
           { what: "The same character", gen: "drifts between clips", kitcut: "kept as code and reused in later films" },
           { what: "Narration and music", gen: "usually added with other tools", kitcut: "written, recorded and mixed with the film, subtitles included" },
-          { what: "Style", gen: "photoreal or painterly motion", kitcut: "hand-drawn animation, or painted scenes with camera moves" },
+          { what: "Style", gen: "photoreal or painterly motion", kitcut: "hand-drawn animation, painted scenes with camera moves, or paper collage" },
         ],
         caption: "Summarised from kitcut.ai/docs/compared.",
       },
@@ -492,11 +493,10 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
       id: "what-to-make",
       h2: "What people make with Claude video",
       bullets: [
-        "Launch and product ads - a Steam game, a web puzzle game, a restaurant opening.",
-        "Explainers and lessons - a fuel cell, a lever, how bees make honey - where every label has to be right.",
-        "Brand films - a company's values in 30 seconds, from nothing but its web address.",
-        "Long-form business documentaries - up to 8 minutes on Pro, like the Dell vs HP film above.",
-        "Stories and series - Pip the fox came back for three films with the same scarf, look and voice.",
+        "Launch ads and product updates - a Champagne arriving at a wine shop, a software product moving to a new AI model.",
+        "Explainers - taxes, AI agents, the shipping container - where every number and label has to be right.",
+        "Documentaries up to 8 minutes on Pro - Apollo 13, eleven bike brands, a company's history.",
+        "Stories and series - a cup-final penalty through the keeper's eyes; Pip the fox came back for three films with the same scarf, look and voice.",
         "Versions in other languages - the narration follows the language of your idea; words on screen cover Latin and Cyrillic alphabets.",
       ],
       images: [
@@ -551,7 +551,7 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
       id: "limits",
       h2: "What KitCut doesn't do (yet)",
       bullets: [
-        "No photorealistic motion or real people moving: films are drawn or painted animation.",
+        "No photorealistic motion or real people moving: films are hand-drawn, painted or collage animation.",
         "16:9 only for now - no vertical Shorts, Reels or TikToks.",
         "No editing a finished film: make a new one, and its characters, look, voice and music can come back.",
         "Instrumental music only - no songs or sung vocals.",
@@ -586,7 +586,7 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
     },
     {
       q: "Which AI models make the film?",
-      a: "Claude Opus 5.5 does the direction, the script, every drawing and animation, the music and sound-effect scores, and the review of its own frames. Gemini's text-to-speech is the narrator, Meta's Muse paints the scenes of painted films, and Whisper times each spoken word. There is no video-generation model and no stock footage.",
+      a: "Claude Opus 5.5 does the direction, the script, every drawing and animation, the music and sound-effect scores, and the review of its own frames. Gemini's text-to-speech is the narrator, Meta's Muse paints the scenes of painted films, OpenAI's GPT Image paints the cut-outs of collage films, and Whisper times each spoken word. There is no video-generation model and no stock footage.",
     },
     {
       q: "Can I use Claude videos commercially?",
