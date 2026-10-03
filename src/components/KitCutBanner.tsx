@@ -4,9 +4,10 @@ import KitCutFilmTile from "@/components/KitCutFilmTile";
 import { KITCUT, KITCUT_FILMS, kitcutUrl } from "@/lib/kitcut";
 
 // The KitCut banner at the top of every page (the layout places it between the header and the
-// page). Deliberately loud, because KitCut needs its first users, and it names itself as our own
-// product so nobody mistakes it for a pass. It sells by showing: four films KitCut made,
-// playing silently in their tiles, beside the pitch and a filled button. On a phone the films
+// page). Deliberately loud, because KitCut needs its first users. No "new from the maker of"
+// line over the headline (the owner's call, 2026-10-03); the logo stands beside it instead. It
+// sells by showing: four films KitCut made, playing silently in their tiles, beside the pitch
+// and a filled button. On a phone the films
 // become a row you swipe, so the banner does not push the board a screen down.
 export default function KitCutBanner() {
   return (
@@ -14,11 +15,10 @@ export default function KitCutBanner() {
       <div className="rounded-2xl border-2 border-accent bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
           <div className="flex flex-col gap-1.5">
-            <p className="flex items-center gap-2 text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-              <Image src={KITCUT.logo} alt="" width={18} height={18} className="rounded" />
-              {KITCUT.label} &middot; kitcut.ai
+            <p className="flex items-center gap-2.5 text-[21px] leading-snug font-bold text-ink">
+              <Image src={KITCUT.logo} alt="" width={28} height={28} className="flex-none rounded-md" />
+              {KITCUT.headline}
             </p>
-            <p className="text-[21px] leading-snug font-bold text-ink">{KITCUT.headline}</p>
             <p className="text-[14.5px] text-muted">
               <span className="hidden sm:inline">{KITCUT.pitch} </span>
               <strong className="text-ink">{KITCUT.uses}</strong>
