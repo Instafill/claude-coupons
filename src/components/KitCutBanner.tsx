@@ -21,7 +21,7 @@ export default function KitCutBanner() {
             <p className="text-[21px] leading-snug font-bold text-ink">{KITCUT.headline}</p>
             <p className="text-[14.5px] text-muted">
               <span className="hidden sm:inline">{KITCUT.pitch} </span>
-              <strong className="text-ink">{KITCUT.free}</strong>
+              <strong className="text-ink">{KITCUT.uses}</strong>
             </p>
           </div>
           <a

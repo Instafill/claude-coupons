@@ -185,7 +185,7 @@ export default async function RootLayout({
             <a className="font-semibold text-accent-dark underline" href={kitcutUrl("footer")} rel="noopener">
               Also by us: KitCut
             </a>{" "}
-            &mdash; {KITCUT.headline} {KITCUT.free}
+            &mdash; {KITCUT.headline} {KITCUT.uses}
           </p>
         </footer>
         <KitCutBar />

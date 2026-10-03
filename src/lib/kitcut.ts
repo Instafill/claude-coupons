@@ -4,22 +4,24 @@
 // the reader down, a footer line, and a card in the watch confirmation email. It is our own
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
-// The words speak to who reads this site: people who already use Claude. So the headline is the
-// one new fact for them, in four words, and the pitch is what sets KitCut apart from an AI clip
-// generator (script, picture, voice and music, finished). Short beats complete: the user asked
-// for punchy. Every claim is one
-// kitcut.ai's own docs make: 30 free seconds a month, a 30 s film in 16-24 minutes, so no "in
-// minutes" and no "any language". The tiles show the films; the words don't list genres.
+// The words speak business: KitCut makes the videos a business needs, so the headline says that
+// and the uses line names them (product launches, explainers, marketing videos, video ads,
+// conference and event promos). The pitch is what sets KitCut apart from an AI clip generator
+// (script, picture, voice and music, finished). The free plan is not the pitch: no placement
+// leads with "free" (the owner's call, 2026-10-03). Every claim is one kitcut.ai's own docs make:
+// a 30 s film takes 16-24 minutes, so no "in minutes" and no "any language".
 //
 // One place for the words and the links, so the four placements cannot drift apart. The utm_*
 // parameters say which placement brought a visitor.
 
 export const KITCUT = {
   name: "KitCut",
-  headline: "Claude makes videos now.",
+  headline: "Claude makes your business videos.",
   pitch: "Type an idea, get a finished film: script, animation, voice-over, music.",
-  free: "30 seconds free every month.",
-  cta: "Make a free film",
+  uses: "Product launches, explainers, marketing videos, video ads, conference and event promos.",
+  // the short form, where the full list does not fit (the sticky bar)
+  usesShort: "Launch videos, explainers, ads, event promos.",
+  cta: "Make a business video",
   label: "New from the maker of ClaudeCoupons",
   logo: "/kitcut-logo.png",
 };

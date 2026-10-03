@@ -113,7 +113,7 @@ export async function sendMagicLink(email: string, link: string): Promise<void> 
 const KITCUT_EMAIL_TEXT = `
 
 ---
-${KITCUT.label}: ${KITCUT.name}. ${KITCUT.headline} ${KITCUT.free}
+${KITCUT.label}: ${KITCUT.name}. ${KITCUT.headline} ${KITCUT.uses}
 ${kitcutUrl("email")}`;
 function kitcutEmailHtml(): string {
   const url = kitcutUrl("email");
@@ -133,7 +133,7 @@ function kitcutEmailHtml(): string {
             <div style="padding: 14px 16px 4px;">
               <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #a94f20;">${KITCUT.label}</p>
               <p style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: #1f1e1d;">${KITCUT.headline}</p>
-              <p style="margin: 0; font-size: 14px; color: #6e6a63;">${KITCUT.pitch} <strong style="color: #1f1e1d;">${KITCUT.free}</strong></p>
+              <p style="margin: 0; font-size: 14px; color: #6e6a63;">${KITCUT.pitch} <strong style="color: #1f1e1d;">${KITCUT.uses}</strong></p>
             </div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding: 6px 10px;">${rows}
             </table>

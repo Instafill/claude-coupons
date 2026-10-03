@@ -55,7 +55,7 @@ export default function KitCutBar() {
         <p className="min-w-0 flex-1 text-[14px] leading-snug">
           <span className="hidden text-white/70 sm:inline">KitCut, by us: </span>
           <strong>{KITCUT.headline}</strong>{" "}
-          <span className="hidden text-white/70 sm:inline">30 seconds free every month.</span>
+          <span className="hidden text-white/70 sm:inline">{KITCUT.usesShort}</span>
         </p>
         <a
           href={kitcutUrl("stickybar")}
