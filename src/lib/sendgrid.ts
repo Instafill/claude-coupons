@@ -37,6 +37,8 @@ export async function notifyNewPass(pass: {
   livePasses: number;
 }): Promise<void> {
   const { deal } = pass;
+  // muse.ai listings come in often enough that the alert is noise; its board goes unannounced.
+  if (deal.slug === "muse") return;
   const url = dealLink(deal, pass.code);
   const who = pass.submitterName
     ? pass.submitterEmail
