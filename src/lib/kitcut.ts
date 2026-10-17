@@ -4,24 +4,24 @@
 // the reader down, a footer line, and a card in the watch confirmation email. It is our own
 // product, so every placement says so rather than dressing it up as a third-party ad.
 //
-// The words speak business: KitCut makes the videos a business needs, so the headline says that
-// and the uses line names them (product launches, explainers, marketing videos, video ads,
-// conference and event promos). The pitch is what sets KitCut apart from an AI clip generator
-// (script, picture, voice and music, finished). The free plan is not the pitch: no placement
-// leads with "free" (the owner's call, 2026-10-03). Every claim is one kitcut.ai's own docs make:
-// a 30 s film takes 16-24 minutes, so no "in minutes" and no "any language".
+// The words are about launching a YouTube channel (the owner's call, 2026-10-16): KitCut makes
+// the episodes, writes each one's title, description and thumbnails, and publishes them to the
+// person's channel on a schedule, so the headline sells the channel, not a single video. The
+// links land on kitcut.ai/faceless-youtube, the sign-up page built for channel starters. The
+// free plan is not the pitch: no placement leads with "free" (2026-10-03). Every claim is one
+// kitcut.ai can keep: a 30 s film takes 16-24 minutes, so no "in minutes" and no "any language".
 //
 // One place for the words and the links, so the four placements cannot drift apart. The utm_*
 // parameters say which placement brought a visitor.
 
 export const KITCUT = {
   name: "KitCut",
-  headline: "Claude makes your business videos.",
-  pitch: "Type an idea, get a finished film: script, animation, voice-over, music.",
-  uses: "Product launches, explainers, marketing videos, video ads, conference and event promos.",
+  headline: "Launch a YouTube channel. Claude makes the videos.",
+  pitch: "Pick a niche, get finished episodes: script, animation, voice-over, music.",
+  uses: "Titles, thumbnails and a posting schedule, published to your channel for you.",
   // the short form, where the full list does not fit (the sticky bar)
-  usesShort: "Launch videos, explainers, ads, event promos.",
-  cta: "Make a business video",
+  usesShort: "Episodes, thumbnails and a schedule, done for you.",
+  cta: "Start your channel",
   label: "New from the maker of ClaudeCoupons",
   logo: "/kitcut-logo.png",
 };
@@ -57,10 +57,10 @@ export function filmClip(f: KitCutFilm): string {
 export type KitCutPlacement = "banner" | "stickybar" | "footer" | "email" | "blog";
 
 const UTM = (placement: KitCutPlacement) =>
-  new URLSearchParams({ utm_source: "claudecoupons", utm_medium: placement, utm_campaign: "kitcut-business" });
+  new URLSearchParams({ utm_source: "claudecoupons", utm_medium: placement, utm_campaign: "kitcut-youtube" });
 
 export function kitcutUrl(placement: KitCutPlacement): string {
-  return `https://kitcut.ai/?${UTM(placement)}`;
+  return `https://kitcut.ai/faceless-youtube?${UTM(placement)}`;
 }
 
 // Where a showcased film plays in full, with sound.
