@@ -6,7 +6,7 @@ import { KITCUT, KITCUT_FILMS, kitcutUrl } from "@/lib/kitcut";
 // The KitCut banner at the top of every page (the layout places it between the header and the
 // page). Deliberately loud, because KitCut needs its first users. No "new from the maker of"
 // line over the headline (the owner's call, 2026-10-03); the logo stands beside it instead. It
-// sells by showing: four films KitCut made, playing silently in their tiles, beside the pitch
+// sells by showing: four channel episodes KitCut made, playing silently in their tiles, beside the pitch
 // and a filled button. On a phone the films
 // become a row you swipe, so the banner does not push the board a screen down.
 export default function KitCutBanner() {
@@ -32,7 +32,7 @@ export default function KitCutBanner() {
             {KITCUT.cta} <span aria-hidden="true">&rarr;</span>
           </a>
         </div>
-        <p className="mt-4 mb-2 text-[12px] font-semibold tracking-wider text-muted uppercase">Made on KitCut</p>
+        <p className="mt-4 mb-2 text-[12px] font-semibold tracking-wider text-muted uppercase">Episodes made on KitCut</p>
         <div className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0">
           {KITCUT_FILMS.map((f) => (
             <KitCutFilmTile key={f.slug} film={f} />

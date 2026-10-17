@@ -17,7 +17,8 @@
 export const KITCUT = {
   name: "KitCut",
   headline: "Launch a YouTube channel. Claude makes the videos.",
-  pitch: "Pick a niche, get finished episodes: script, animation, voice-over, music.",
+  pitch:
+    "Pick a niche, get finished episodes: script, animation, voice-over, music.",
   uses: "Titles, thumbnails and a posting schedule, published to your channel for you.",
   // the short form, where the full list does not fit (the sticky bar)
   usesShort: "Episodes, thumbnails and a schedule, done for you.",
@@ -26,10 +27,11 @@ export const KITCUT = {
   logo: "/kitcut-logo.png",
 };
 
-// The films the banner and the email show: four KitCut films, each a different use.
-// Each has a still and a few seconds of the film as a small silent clip (public/kitcut/<slug>.jpg
-// and .mp4, cut from the film), and opens the whole film with sound: its page on kitcut.ai, or
-// YouTube for a film made outside the studio. No lengths: the tile sells the look, not the runtime.
+// The films the banner and the email show: four episodes from YouTube channels KitCut makes, each
+// a different niche, so the tiles back the headline (a channel, not one video). Each has a still
+// and eight seconds of the episode as a small silent clip (public/kitcut/<slug>.jpg and .mp4, cut
+// from the film), and opens the whole episode on YouTube with sound. No lengths or view counts:
+// the tile sells the look, and a number written here would go stale.
 export interface KitCutFilm {
   slug: string;
   kind: string;
@@ -40,10 +42,30 @@ export interface KitCutFilm {
 }
 
 export const KITCUT_FILMS: KitCutFilm[] = [
-  { slug: "icecream", kind: "History explainer", company: "A Brief History of Ice Cream", youtube: "db9y25DuwGU" },
-  { slug: "instafill-gpt6", kind: "Product update", company: "Instafill, now on GPT-6 Sol", id: "studio-20260928-135513-pizula" },
-  { slug: "paperwork", kind: "Industry explainer", company: "A Brief History of Paperwork", youtube: "MX1iBcJ-qwU" },
-  { slug: "thatchers-wine", kind: "Champagne launch", company: "Thatcher's Wine", id: "studio-20260928-110106-skiird" },
+  {
+    slug: "padel-tactics",
+    kind: "Sports channel",
+    company: "Padel Tactics: How Points Are Really Won",
+    youtube: "18vtgi2e-AI",
+  },
+  {
+    slug: "duchess-box",
+    kind: "Kids' cartoon",
+    company: "Duchess and The Box",
+    youtube: "GfVhDQmxz6o",
+  },
+  {
+    slug: "openrouter",
+    kind: "Tech explainer",
+    company: "Why Stripe Paid $7.5B for OpenRouter",
+    youtube: "zskY4h5xu0o",
+  },
+  {
+    slug: "icecream",
+    kind: "History explainer",
+    company: "A Brief History of Ice Cream",
+    youtube: "db9y25DuwGU",
+  },
 ];
 
 export function filmStill(f: KitCutFilm): string {
@@ -54,10 +76,15 @@ export function filmClip(f: KitCutFilm): string {
   return `/kitcut/${f.slug}.mp4`;
 }
 
-export type KitCutPlacement = "banner" | "stickybar" | "footer" | "email" | "blog";
+export type KitCutPlacement =
+  "banner" | "stickybar" | "footer" | "email" | "blog";
 
 const UTM = (placement: KitCutPlacement) =>
-  new URLSearchParams({ utm_source: "claudecoupons", utm_medium: placement, utm_campaign: "kitcut-youtube" });
+  new URLSearchParams({
+    utm_source: "claudecoupons",
+    utm_medium: placement,
+    utm_campaign: "kitcut-youtube",
+  });
 
 export function kitcutUrl(placement: KitCutPlacement): string {
   return `https://kitcut.ai/faceless-youtube?${UTM(placement)}`;

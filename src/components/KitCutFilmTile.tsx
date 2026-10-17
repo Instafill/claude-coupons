@@ -46,7 +46,7 @@ export default function KitCutFilmTile({ film }: { film: KitCutFilm }) {
         {/* eslint-disable-next-line @next/next/no-img-element -- a 640px still already sized for this box */}
         <img
           src={filmStill(film)}
-          alt={`${film.kind} for ${film.company}, made with KitCut`}
+          alt={`${film.company}, a ${film.kind.toLowerCase()} episode made with KitCut`}
           width={640}
           height={360}
           className="absolute inset-0 h-full w-full object-cover"
