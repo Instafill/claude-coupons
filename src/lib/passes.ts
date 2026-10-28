@@ -120,8 +120,8 @@ export function unlocksLeft(pass: IPass): number {
 
 // The hiding rules, evaluated lazily on read. Writes back only on a transition, so the
 // board self-maintains without a cron job.
-function nextStatus(pass: IPass): string | null {
-  if (pass.status !== PASS_STATUS.live) return null;
+function nextStatus(pass: IPass, held = false): string | null {
+  if (pass.status !== (held ? PASS_STATUS.held : PASS_STATUS.live)) return null;
   // A code that does not run out is not used up by being opened (deal.openBoard).
   if (!dealOf(pass).openBoard && pass.unlockCount >= dealOf(pass).unlocksPerListing)
     return PASS_STATUS.exhausted;
@@ -134,6 +134,14 @@ function nextStatus(pass: IPass): string | null {
   const cutoff = Date.now() - LISTING_LIFETIME_DAYS * 24 * 60 * 60 * 1000;
   if (pass.lastRefreshedAt.getTime() < cutoff) return PASS_STATUS.expired;
   return null;
+}
+
+/**
+ * The same rules for a listing held for the live draw: what it would be retired as were it on
+ * the board (used up, reported dead, too old), or null while it is still good to give out.
+ */
+export function heldRetirement(pass: IPass): string | null {
+  return nextStatus(pass, true);
 }
 
 /** Every live listing on one board, retiring the ones whose rules have caught up with them. */

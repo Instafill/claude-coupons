@@ -110,6 +110,9 @@ export interface Deal {
       confirmation from promising codes "again" when there have not been any, and marks the
       board honestly on the hub. Remove it once something has been listed. */
   awaitingFirstListing?: boolean;
+  /** Given out in live draws (lib/draw.ts) instead of waves: new listings are held for the
+      next draw, never shown on the board, and the line is invited rather than alerted. */
+  liveDraw?: boolean;
 }
 
 const CLAUDE: Deal = {
@@ -143,6 +146,7 @@ const CLAUDE: Deal = {
   // A Pro/Max subscriber holds about this many passes, so after three unlocks the listing
   // has nothing left to give.
   unlocksPerListing: 3,
+  liveDraw: true,
   intentQuestion: "After your free week of Claude Pro, do you expect to",
   audience: "For Claude Pro & Max subscribers",
   supplyAsk: "Have Claude Pro or Max?",

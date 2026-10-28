@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 
 import { findOrCreateUser, setSessionCookie } from "@/lib/auth";
 import { getDeal } from "@/lib/deals";
@@ -19,8 +20,12 @@ export async function GET(request: NextRequest) {
   const user = await findOrCreateUser(result.email);
   // The alert said which board had filled, and the link carries it, so the button lands on
   // that board rather than making someone watching two of them go looking.
+  // A draw invite lands in its room instead. Only an id is taken from the link, never a path.
+  const draw = request.nextUrl.searchParams.get("draw");
   const board = getDeal(request.nextUrl.searchParams.get("deal")).path;
-  const response = NextResponse.redirect(`${baseUrl()}${board}`);
+  const response = NextResponse.redirect(
+    draw && Types.ObjectId.isValid(draw) ? `${baseUrl()}/draw/${draw}` : `${baseUrl()}${board}`
+  );
   setSessionCookie(response, user);
   return response;
 }

@@ -45,10 +45,12 @@ export function stopUrl(value: string): string {
 }
 
 /** The button in an alert. It carries the board the alert was about, so someone watching
-    two of them lands on the one that just filled rather than on the home page. */
-export function enterUrl(value: string, deal?: DealSlug): string {
+    two of them lands on the one that just filled rather than on the home page. A draw
+    invite carries its draw instead, and lands in that room. */
+export function enterUrl(value: string, deal?: DealSlug, draw?: string): string {
   const board = deal && deal !== DEFAULT_DEAL ? `&deal=${deal}` : "";
-  return `${baseUrl()}/api/watch/enter?token=${value}${board}`;
+  const room = draw ? `&draw=${draw}` : "";
+  return `${baseUrl()}/api/watch/enter?token=${value}${board}${room}`;
 }
 
 /**

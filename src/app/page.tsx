@@ -1,23 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import Board from "@/components/Board";
-import EmptyBoard from "@/components/EmptyBoard";
-import PassListCard from "@/components/PassListCard";
+import DrawCard from "@/components/DrawCard";
+import DrawListCard from "@/components/DrawListCard";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { OTHER_DEALS, getDeal } from "@/lib/deals";
+import { drawSummary } from "@/lib/draw";
 import { FAQS } from "@/lib/faqs";
-import { claimSpeed, getBoard } from "@/lib/passes";
-import {
-  ensureQueueAdopted,
-  joinedToday,
-  queueSize,
-  servedThisWeek,
-  standingFor,
-  waveForNewcomer,
-} from "@/lib/queue";
+import { ensureQueueAdopted, joinedToday, servedThisWeek, standingFor } from "@/lib/queue";
 
 // The Claude board, and the page that ranks. Its copy is tuned against real queries and is
 // deliberately not generated from lib/deals.ts like the other boards are - the machinery is
@@ -86,14 +78,12 @@ export default async function Home({
   // Before any standing is read: somebody holding a number from before the boards existed
   // would otherwise be shown the join form and quietly lose their place in line.
   await ensureQueueAdopted();
-  // Every number the card shows comes from here. Nothing on it is a constant.
-  const [passes, inLine, joinWave, served, today, speed, standing] = await Promise.all([
-    getBoard(DEAL.slug, user?.id ?? null),
-    queueSize(DEAL.slug),
-    waveForNewcomer(DEAL.slug),
+  // Every number the card shows comes from here. Nothing on it is a constant. Claude passes
+  // are given out in live draws (lib/draw.ts), so the board is the draw, not a list of codes.
+  const [summary, served, today, standing] = await Promise.all([
+    drawSummary(DEAL.slug, user?.email),
     servedThisWeek(DEAL.slug),
     joinedToday(DEAL.slug),
-    claimSpeed(DEAL.slug),
     user ? standingFor(user.email, DEAL.slug) : Promise.resolve(null),
   ]);
 
@@ -138,16 +128,12 @@ export default async function Home({
           that shows the list works, and when it is empty the card says why joining is the
           only move - so the card comes first in both cases. */}
       <div className="mt-6">
-        <PassListCard
+        <DrawListCard
           deal={DEAL}
-          livePasses={passes.length}
-          inLine={inLine}
-          joinWave={joinWave}
+          summary={summary}
           served={served}
           joinedToday={today}
           standing={standing}
-          openWave={passes[0]?.openWave ?? 0}
-          speed={speed}
           signedIn={Boolean(user)}
           email={user?.email}
           confirmed={watch === "confirmed"}
@@ -160,23 +146,18 @@ export default async function Home({
           exactly where they start looking. */}
       <p className="mt-6 max-w-2xl text-[19px] text-muted">
         A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
-        Subscribers list their spare passes here, and each one goes to the queue: the first ten
-        in line get it, then ten more every five minutes. Take a number and it only gets better
-        as the people ahead of you are served.
+        Subscribers list their spare passes here, and each link is good for three people. They
+        are given out in a live draw: the front of the line is invited, and the winners are drawn
+        from whoever is in the room. Take a number and it only gets better as the people ahead of
+        you are served.
       </p>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
           <h2 className="mb-4 text-2xl font-semibold">
-            Available Claude passes
+            Live Claude pass draws
           </h2>
-          {/* Branched here rather than inside Board: an empty board needs none of the
-              carousel, unlock or outcome machinery. */}
-          {passes.length === 0 ? (
-            <EmptyBoard deal={DEAL} />
-          ) : (
-            <Board passes={passes} myWave={standing?.wave ?? null} deal={DEAL} />
-          )}
+          <DrawCard deal={DEAL} summary={summary} />
         </section>
 
         <ShareCard deal={DEAL} />
@@ -230,12 +211,13 @@ export default async function Home({
         <h2>How to redeem a Claude coupon</h2>
         <ol className="list-decimal space-y-1 pl-6">
           <li>
-            <strong>Sign in</strong> with Google or your email - no password to
+            <strong>Take a number</strong> with your email - no password to
             invent.
           </li>
           <li>
-            <strong>Unlock a Claude pass</strong> on the board to reveal its
-            claude.ai invite link.
+            <strong>Win a spot in a live draw.</strong> When you reach the front
+            of the line you are invited; be in the room when it starts, then
+            press Get my pass to reveal its claude.ai invite link.
           </li>
           <li>
             <strong>Redeem it on claude.ai</strong> - open the link and create
@@ -254,8 +236,8 @@ export default async function Home({
           Anthropic asks for a payment card at signup, and unless you cancel
           within the 7 days the account becomes a regular paid Claude Pro
           subscription. Passes are limited per subscriber and first-come,
-          first-served, so a listed link can be exhausted before anyone reports
-          it. All program rules are Anthropic&rsquo;s - see the{" "}
+          first-served, so a listed link can be exhausted before everyone it
+          was drawn for has used it. All program rules are Anthropic&rsquo;s - see the{" "}
           <a
             className="text-accent-dark underline"
             href={GUEST_PASS_DOC}
@@ -275,8 +257,9 @@ export default async function Home({
 
         <h2>Other referral codes on this board</h2>
         <p>
-          The same queue now runs for a few other programs, each one a code its owner would
-          otherwise let expire. Every one of them pays the person who claims it:
+          The same queue runs for a few other programs, each one a code its owner would
+          otherwise let expire; those are offered down the line in small waves rather than
+          drawn. Every one of them pays the person who claims it:
         </p>
         <ul className="mt-3 list-disc space-y-1 pl-6">
           {OTHER_DEALS.map((deal) => (

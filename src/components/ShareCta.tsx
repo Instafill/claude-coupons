@@ -11,10 +11,12 @@ export default function ShareCta({ deal }: { deal: Deal }) {
     },
     {
       n: "2",
-      title: "List it on the board",
-      body: deal.openBoard
-        ? `Paste it and it goes live, shown in full to everyone who visits - ${deal.name} ${deal.nounPlural} don't run out, so nobody has to queue for yours.`
-        : `Paste it and it goes live. We store the code only and show it masked until a signed-in visitor unlocks it, so bots can't scrape your ${deal.nounPlural} in one pass.`,
+      title: deal.liveDraw ? "List it for the next draw" : "List it on the board",
+      body: deal.liveDraw
+        ? `Paste it and it's saved for the next live draw. We store the code only and never show it on the board: each of its ${deal.unlocksPerListing} uses goes to one winner, revealed to them alone.`
+        : deal.openBoard
+          ? `Paste it and it goes live, shown in full to everyone who visits - ${deal.name} ${deal.nounPlural} don't run out, so nobody has to queue for yours.`
+          : `Paste it and it goes live. We store the code only and show it masked until a signed-in visitor unlocks it, so bots can't scrape your ${deal.nounPlural} in one pass.`,
     },
     {
       n: "3",

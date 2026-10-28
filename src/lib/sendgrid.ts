@@ -160,24 +160,32 @@ export async function sendWatchConfirmation(
   // "again" is a claim about the past. On a board still waiting for its first listing it
   // would be the one false word in an email whose whole job is to be trusted.
   const again = deal.awaitingFirstListing ? "" : " again";
+  // What they will get, said the way it happens: a draw invite, or their turn in a wave.
+  const promise = deal.liveDraw
+    ? "You'll get an invite to a live draw when passes have been listed and you're near the front of the line - at most one email a day, never a newsletter."
+    : `You'll get an email when ${deal.mailDescription} are listed and your turn in the line comes up - never a newsletter.`;
+  const ask = deal.liveDraw
+    ? `Someone asked us to put this address in the line for ${deal.mailDescription} at claudecoupons.com.`
+    : `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription}${again}.`;
 
   try {
     init();
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: `Confirm you want ${deal.name} ${deal.noun} alerts`,
-      text: `Someone asked us to email this address when claudecoupons.com has ${deal.mailDescription}${again}.\n\nConfirm here:\n${confirmUrl}\n\nWe will only email you when the board goes from empty to having passes - never a newsletter, and never more than once every 12 hours. If this wasn't you, ignore this email and nothing further will be sent.${KITCUT_EMAIL_TEXT}`,
+      subject: deal.liveDraw
+        ? `Confirm your place in line for ${deal.name} ${deal.nounPlural}`
+        : `Confirm you want ${deal.name} ${deal.noun} alerts`,
+      text: `${ask}\n\nConfirm here:\n${confirmUrl}\n\n${promise} If this wasn't you, ignore this email and nothing further will be sent.${KITCUT_EMAIL_TEXT}`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
-          <h2 style="color: #c9642f;">One click and you&rsquo;re watching</h2>
-          <p>Someone asked us to email this address when the board at claudecoupons.com has ${deal.mailDescription}${again}.</p>
+          <h2 style="color: #c9642f;">One click and you&rsquo;re ${deal.liveDraw ? "in line" : "watching"}</h2>
+          <p>${ask}</p>
           <p style="margin: 24px 0;">
-            <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Confirm and start watching</a>
+            <a href="${confirmUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">${deal.liveDraw ? "Confirm my place" : "Confirm and start watching"}</a>
           </p>
           <p style="color: #6e6a63; font-size: 13px;">
-            You&rsquo;ll hear from us only when the board goes from empty to having passes, and never more than
-            once every 12 hours. No newsletter, and we don&rsquo;t share your address. Every alert carries a
+            ${promise.replace(/'/g, "&rsquo;")} We don&rsquo;t share your address, and every email carries a
             one-click link to stop.
           </p>
           <p style="color: #6e6a63; font-size: 13px;">If this wasn&rsquo;t you, ignore this email &mdash; nothing further will be sent.</p>${kitcutEmailHtml()}
@@ -232,6 +240,125 @@ export async function sendPassAlerts(
   }
 
   return delivered;
+}
+
+export interface InviteRecipient extends AlertRecipient {
+  /** Their IANA zone, from where they last were (lib/geo.ts), for the time in their own words. */
+  timezone?: string;
+}
+
+export interface DrawInvite {
+  id: string;
+  drawAt: Date;
+  spots: number;
+  links: number;
+  invited: number;
+  claimSeconds: number;
+}
+
+// The live draw invite: one email per draw, to the front of the line. Same shape as an alert
+// (one message each, for its own List-Unsubscribe header), and the same contract with the
+// caller: it returns who was actually accepted.
+export async function sendDrawInvites(
+  recipients: InviteRecipient[],
+  deal: Deal,
+  draw: DrawInvite
+): Promise<string[]> {
+  if (!process.env.SENDGRID_API_KEY) {
+    for (const recipient of recipients) {
+      console.log(`[draw-invite] ${recipient.email}: enter ${recipient.enterUrl}`);
+    }
+    return recipients.map((recipient) => recipient.email);
+  }
+
+  init();
+  const delivered: string[] = [];
+  for (let i = 0; i < recipients.length; i += MAX_ALERT_BATCH) {
+    const chunk = recipients.slice(i, i + MAX_ALERT_BATCH);
+    const results = await Promise.allSettled(chunk.map((r) => sendOneInvite(r, deal, draw)));
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") delivered.push(chunk[index].email);
+      else console.error("Draw invite send failed:", result.reason);
+    });
+  }
+  return delivered;
+}
+
+/**
+ * "Wed 14:00 UTC", and the same moment in their own zone when we know it and it differs.
+ * With the weekday, because 14:00 UTC is already tomorrow in Sydney: "today" would be wrong
+ * for somebody.
+ */
+function drawTime(at: Date, timezone?: string): { utc: string; local?: string } {
+  const format = (timeZone: string) =>
+    new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone }).format(at);
+  const utc = `${format("UTC")} UTC`;
+  if (!timezone) return { utc };
+  try {
+    const local = format(timezone);
+    return local === format("UTC") ? { utc } : { utc, local: `${local} your time` };
+  } catch {
+    // An unknown zone name from an old row: UTC alone is still true.
+    return { utc };
+  }
+}
+
+/** A Google Calendar "add event" link: works from any mail client, no attachment. */
+function calendarUrl(deal: Deal, draw: DrawInvite, roomUrl: string): string {
+  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const start = new Date(draw.drawAt.getTime() - 5 * 60 * 1000);
+  const end = new Date(draw.drawAt.getTime() + 15 * 60 * 1000);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `${deal.name} live draw - claudecoupons.com`,
+    dates: `${stamp(start)}/${stamp(end)}`,
+    details: `Be in the room when the draw starts: ${roomUrl}`,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+function sendOneInvite(
+  { email, enterUrl, stopUrl, timezone }: InviteRecipient,
+  deal: Deal,
+  draw: DrawInvite
+): Promise<unknown> {
+  const time = drawTime(draw.drawAt, timezone);
+  const when = time.local ? `${time.utc} (${time.local})` : time.utc;
+  const spots = `${draw.spots} ${draw.spots === 1 ? "spot" : "spots"}`;
+  const links = `${draw.links} ${deal.name} ${draw.links === 1 ? "link" : "links"}`;
+  // The calendar entry carries the room's plain address, not the signed-in link: a calendar
+  // event gets shared and synced, and the room offers a sign-in to anyone invited.
+  const roomUrl = `https://claudecoupons.com/draw/${draw.id}`;
+  const others = draw.invited - 1;
+  const how = `Open the room before it starts and join with your first name. Winners are drawn from the people in the room. A winner has ${draw.claimSeconds} seconds to claim, and any spot that isn't claimed is re-drawn straight away among the people still there, so stay until the room closes.`;
+  const miss = `Can't make it? You keep your place in line. Miss three invites and your number moves to the back.`;
+
+  return sgMail.send({
+    to: email,
+    from: { email: FROM_EMAIL, name: FROM_NAME },
+    subject: `You're invited to a live draw, ${time.local ?? time.utc}: ${spots}, each a free week of Claude Pro`,
+    headers: {
+      "List-Unsubscribe": `<${stopUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    text: `You're invited to a live draw.\n\nWhen: ${when}\nWhat: ${links}, ${spots}. Each spot is a free week of Claude Pro.\nWho: you and ${others} other${others === 1 ? "" : "s"} from the front of the line.\n\nOpen the room: ${enterUrl}\nAdd it to your calendar: ${calendarUrl(deal, draw, roomUrl)}\n\n${how}\n\n${miss}\n\nStop these emails: ${stopUrl}`,
+    html: `
+      <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; color: #1f1e1d;">
+        <h2 style="color: #c9642f; margin-bottom: 4px;">You&rsquo;re invited to a live draw</h2>
+        <p style="margin-top: 0; font-size: 17px;"><strong>${when}</strong></p>
+        <p>${links}, <strong>${spots}</strong>. Each spot is a free week of Claude Pro. You and ${others} other${others === 1 ? "" : "s"} from the front of the line are invited.</p>
+        <p style="margin: 24px 0;">
+          <a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open the draw room</a>
+          &nbsp;
+          <a href="${calendarUrl(deal, draw, roomUrl)}" style="color: #a94f20; font-size: 14px;">Add to calendar</a>
+        </p>
+        <p style="color: #6e6a63; font-size: 14px;">${how}</p>
+        <p style="color: #6e6a63; font-size: 14px;">${miss}</p>
+        <p style="color: #6e6a63; font-size: 13px;">
+          <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
+        </p>
+      </div>`,
+  });
 }
 
 function sendOneAlert(

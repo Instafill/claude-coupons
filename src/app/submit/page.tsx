@@ -41,7 +41,8 @@ export default async function SubmitPage({
         Only the code is stored - where a program has a personal link, we rebuild it ourselves,
         so an arbitrary link cannot reach the board. Automated checks reject malformed or
         abusive submissions, and anonymous submissions are rate-limited. Your listing is masked
-        until a signed-in visitor unlocks it, and comes down once its uses run out.
+        until a signed-in visitor unlocks it, and comes down once its uses run out. Claude passes
+        are never shown at all: each use goes to one winner of a live draw.
       </p>
 
       {user ? (

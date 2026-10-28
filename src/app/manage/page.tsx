@@ -72,7 +72,7 @@ export default async function ManagePage() {
                           STATUS_STYLE[pass.status] ?? "bg-[#f0ede6]"
                         }`}
                       >
-                        {pass.status}
+                        {pass.status === PASS_STATUS.held ? "saved for the live draw" : pass.status}
                       </span>
                     </td>
                     <td className="border-b border-line px-2.5 py-2">{pass.unlockCount}</td>

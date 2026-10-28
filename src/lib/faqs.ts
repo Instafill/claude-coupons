@@ -19,7 +19,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do I redeem a Claude coupon?",
-    a: "Take a number on the home page: leave your email and confirm it once, which is also your sign-in. When a pass is listed it is offered to the first ten in the queue, then ten more every five minutes. When your wave opens, unlock the pass to reveal its claude.ai invite link and open it. You redeem it on claude.ai itself by creating your account there; nothing is entered on this site.",
+    a: "Take a number on the home page: leave your email and confirm it once, which is also your sign-in. Passes are given out in live draws: on a day links are listed, the front of the line is invited by email to a draw at 14:00 UTC. Be in the room when it starts; winners are drawn from the people there, and a winner presses Get my pass to reveal the claude.ai invite link. You redeem it on claude.ai itself by creating your account there; nothing is entered on this site.",
   },
   {
     q: "Are Claude Code passes really free?",
@@ -35,19 +35,19 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How does the queue work?",
-    a: "You get a number when you confirm your email, and numbers are never reused. A new pass is offered to the first ten people in the queue; five minutes later to the next ten, and so on until three people have unlocked it and it comes off the board. Unlock one and you leave the queue, so everyone behind you moves up. Let three turns go by without unlocking and your number moves to the back, which keeps a sleeping front row from holding up the people behind it.",
+    a: "You get a number when you confirm your email, and numbers are never reused. Each Claude pass link is good for three people, so it becomes three spots in a live draw. The front of the line is invited - fifteen people for every spot, at least fifty - and the winners are drawn from whoever is in the room when it starts. A winner has a minute to claim; a spot that isn't claimed is re-drawn straight away among the people still there. Win a spot and you leave the queue, so everyone behind you moves up. Skip three invites and your number moves to the back, which keeps a sleeping front row from holding up the people behind it.",
   },
   {
     q: "How do I share my own Claude Code passes?",
-    a: "If you subscribe to Claude Pro or Max, run /passes in Claude Code or open Settings in the Claude apps to find your invite link, then list it here. Each subscriber has a limited number of passes, and a listing retires itself once three people report claiming it.",
+    a: "If you subscribe to Claude Pro or Max, run /passes in Claude Code or open Settings in the Claude apps to find your invite link, then list it here. Each subscriber has a limited number of passes, and each link you list goes to up to three people in the next live draw.",
   },
   {
     q: "What do I get for sharing my passes?",
     a: "You give someone who may not be able to afford Claude Pro a full week to experience it. A pass that might otherwise expire can help another person learn, build, create or solve a real problem. As a secondary benefit, Anthropic sometimes issues usage credits when a referral stays subscribed after the free week - the amount is not published, whatever other sites claim.",
   },
   {
-    q: "The board is empty. Can you tell me when a pass appears?",
-    a: "Yes. Leave an email address in the list at the top of the board and confirm it once. Everyone on the list gets one email the moment the board goes from empty to having passes - only then, never more than once every 12 hours, and never anything else. Passes are first come, first served, so the email is worth opening quickly. Every message carries a one-click link to stop.",
+    q: "How will I know when there is a draw?",
+    a: "Leave an email address in the list at the top of the page and confirm it once. When passes have been listed and you are near the front of the line, you get one invite for that day's draw - at most one email a day, and never anything else. The draw is live, so the invite is worth opening: the spots go to the people in the room. Every message carries a one-click link to stop.",
   },
 ];
 

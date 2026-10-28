@@ -166,7 +166,7 @@ export default function BlogIndexPage() {
           </h3>
           <p className="mt-1 text-sm text-muted">
             Subscribers list their spare Claude Code & Cowork guest passes here so they don’t
-            expire. Take a number in our queue and unlock one when your wave opens.
+            expire. Take a number in our queue and win one in a live draw.
           </p>
         </div>
         <Link

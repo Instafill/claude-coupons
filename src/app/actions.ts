@@ -11,7 +11,6 @@ import { dbConnect } from "@/lib/mongodb";
 import {
   DEFAULT_DEAL,
   Deal,
-  DealSlug,
   getDeal,
   isDealSlug,
   parseDealCode,
@@ -30,12 +29,6 @@ export interface SubmitState {
 }
 
 const ANONYMOUS_SUBMISSIONS_PER_DAY = 5;
-
-// Boards whose new listings are saved for the live draw instead of going on the board and
-// out in alert waves. Claude, from 2026-10-28, while the draw page is built: when it ships,
-// held passes are released into the draw and this set empties. Release by hand until then
-// with status "live" plus fresh waveStartedAt and lastRefreshedAt.
-const HELD_DEALS: ReadonlySet<DealSlug> = new Set<DealSlug>(["claude"]);
 
 // Keeps the raw paste when the form turns someone away, so the next validator bug is
 // diagnosable from our own records instead of a user's screenshot. Stored in Mongo, not
@@ -88,7 +81,9 @@ export async function submitPass(
   // field was added after the form existed, and a submission is too valuable to lose to it.
   const slug = String(formData.get("deal") || "");
   const deal = getDeal(isDealSlug(slug) ? slug : DEFAULT_DEAL);
-  const held = HELD_DEALS.has(deal.slug);
+  // A board given out by live draw (deal.liveDraw) saves new listings for its next draw
+  // instead of putting them on the board and out in alert waves.
+  const held = deal.liveDraw === true;
   const ip = await getSubmitterIp();
   const ipHash = hashIp(ip);
 

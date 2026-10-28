@@ -203,6 +203,12 @@ export async function servedThisWeek(deal: DealSlug): Promise<number> {
   });
 }
 
+/** The first `count` people in one line, in order: who a live draw invites. */
+export async function frontOfLine(deal: DealSlug, count: number) {
+  await dbConnect();
+  return Membership.find(active(deal)).sort({ position: 1 }).limit(count);
+}
+
 /** Their turn has come if the listing has opened as far down its line as they stand. */
 export async function mayUnlock(
   email: string,
@@ -384,7 +390,7 @@ export async function ensureQueueAdopted(): Promise<number> {
 }
 
 // Rows from before the enter link existed have no token; mint one before they are mailed.
-async function ensureEnterTokens(watchers: IWatcher[]): Promise<void> {
+export async function ensureEnterTokens(watchers: IWatcher[]): Promise<void> {
   const missing = watchers.filter((watcher) => !watcher.enterToken);
   if (missing.length === 0) return;
   const crypto = await import("crypto");

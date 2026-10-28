@@ -67,9 +67,214 @@ body {
   animation: pass-card-previous 420ms ease-out;
 }
 
+/* Windows ships no flag emoji: a flag renders as its two letters ("PT"). Twemoji's flags as a
+   font (public/fonts, from country-flag-emoji-polyfill) cover only the flag code points, so
+   every other character keeps the site's font. Scoped to the draw room, the one page that
+   shows flags. */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  src: url("/fonts/TwemojiCountryFlags.woff2") format("woff2");
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077,
+    U+E007F;
+  font-display: swap;
+}
+
+#draw-room {
+  font-family: "Twemoji Country Flags", var(--font-sans);
+}
+
+/* The live draw room (src/components/draw): people popping in, reactions floating up off a
+   tile, a winner's tile breathing while their claim clock runs. */
+@keyframes draw-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+    background: #f7e5da;
+    border-color: var(--color-accent);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+}
+
+.draw-pop {
+  animation: draw-pop 520ms ease-out;
+}
+
+@keyframes draw-float {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1.1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(1);
+  }
+}
+
+.draw-float {
+  animation: draw-float 2s ease-out forwards;
+}
+
+@keyframes draw-glow {
+  50% {
+    box-shadow: 0 0 0 5px rgb(29 122 79 / 0.18);
+  }
+}
+
+.draw-glow {
+  animation: draw-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes draw-pin {
+  from {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.5);
+  }
+}
+
+.draw-pin {
+  transform-origin: 0 0;
+  animation: draw-pin 420ms ease-out;
+}
+
+/* Until the visitor joins, everything about the way in moves: the button breathes and
+   catches the light, the "not in yet" dot blinks, the dashed spot in the grid pulses. */
+@keyframes draw-beckon {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(201 100 47 / 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 14px rgb(201 100 47 / 0);
+  }
+}
+
+.draw-beckon {
+  animation: draw-beckon 1.2s ease-in-out infinite;
+}
+
+@keyframes draw-shine {
+  55%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.draw-beckon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.5) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: draw-shine 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes draw-dot {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.draw-dot {
+  animation: draw-dot 1s ease-in-out infinite;
+}
+
+@keyframes draw-ghost {
+  50% {
+    border-color: #f0b493;
+    background-color: #f7e5da;
+    transform: scale(1.04);
+  }
+}
+
+.draw-ghost {
+  animation: draw-ghost 1.3s ease-in-out infinite;
+}
+
+/* A tile arriving in the room: fades and settles into place, then its peach glow ebbs.
+   `scale`, not transform, so it composes with the slide the other tiles make. */
+@keyframes draw-arrive {
+  0% {
+    opacity: 0;
+    scale: 0.82;
+    background-color: #f7e5da;
+    border-color: var(--color-accent);
+  }
+  30% {
+    opacity: 1;
+    scale: 1;
+    background-color: #f7e5da;
+    border-color: var(--color-accent);
+  }
+}
+
+.draw-arrive {
+  animation: draw-arrive 1.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* "Maya joined the room": slides in from the right, holds, fades. Its duration is set inline
+   from TOAST_MS so the fade lands as the toast is removed. */
+@keyframes draw-toast {
+  from {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+  8% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.draw-toast {
+  animation: draw-toast 3.6s ease-out forwards;
+}
+
+@keyframes draw-attention {
+  50% {
+    border-color: #f0b493;
+  }
+}
+
+.draw-attention {
+  animation: draw-attention 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pass-card-next,
-  .pass-card-previous {
+  .pass-card-previous,
+  .draw-pop,
+  .draw-glow,
+  .draw-pin,
+  .draw-beckon,
+  .draw-beckon::after,
+  .draw-dot,
+  .draw-ghost,
+  .draw-attention,
+  .draw-toast,
+  .draw-arrive {
     animation: none;
+  }
+
+  .draw-float {
+    animation: none;
+    transform: translate(-50%, -12px);
   }
 }

@@ -569,8 +569,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     Claim 7 Days of Claude Pro with Claude Code Included
                   </h3>
                   <p className="mt-2 text-sm sm:text-base text-muted max-w-md">
-                    Take a number in our automated queue. Unlock a pass when your wave
-                    opens and activate it on claude.ai for $0.
+                    Take a number in our queue. Win a pass in a live draw and activate it
+                    on claude.ai for $0.
                   </p>
                   <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
                     <Link

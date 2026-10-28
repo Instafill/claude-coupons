@@ -23,7 +23,7 @@ export default function SubmitForm({ initialDeal }: { initialDeal: DealSlug }) {
       <div className="mt-5 rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
         <p className="font-semibold">{state.success}</p>
         <Link className="mt-2 inline-block underline" href={deal.path}>
-          See it on the board &rarr;
+          {deal.liveDraw ? "See the next draw" : "See it on the board"} &rarr;
         </Link>
       </div>
     );

@@ -104,7 +104,9 @@ export default async function ReferralCodesPage() {
                   {deal.openBoard
                     ? "No queue - see the codes →"
                     : standing
-                      ? `You are number ${standing.position}, wave ${standing.wave}.`
+                      ? deal.liveDraw
+                        ? `You are number ${standing.position}, with ${standing.ahead} ahead of you.`
+                        : `You are number ${standing.position}, wave ${standing.wave}.`
                       : "Take a number →"}
                 </p>
               </Link>
@@ -134,6 +136,7 @@ export default async function ReferralCodesPage() {
             <li>Leave your email on the board you want and confirm it once. That click is also your sign-in.</li>
             <li>You get a number. Numbers are handed out in order and never reused.</li>
             <li>When something is listed, the first ten in that line get it, then ten more every five minutes.</li>
+            <li>Claude passes are drawn instead: the front of the line is invited to a live draw, and winners are picked from the people in the room.</li>
             <li>Unlock it and you leave that queue, so everyone behind you moves up.</li>
             <li>Each board has its own line. Unlocking a Waymo code costs you nothing on the Claude one.</li>
           </ol>
