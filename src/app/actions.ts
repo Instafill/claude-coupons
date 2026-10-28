@@ -191,7 +191,7 @@ export async function submitPass(
   if (user) redirect("/manage");
   return {
     success: held
-      ? `Thank you. Your ${deal.name} ${deal.noun} is saved and goes out in the next live draw, where someone waiting wins it.`
+      ? `Thank you. Your ${deal.name} ${deal.noun} is saved for the next live draw, where up to ${deal.unlocksPerListing} people waiting win a place on it.`
       : deal.slug === DEFAULT_DEAL
         ? "Your pass is live. Thank you for giving someone a chance to use Claude."
         : `Your ${deal.name} ${deal.noun} is live. Thank you - someone in the queue gets ${deal.reward}.`,
