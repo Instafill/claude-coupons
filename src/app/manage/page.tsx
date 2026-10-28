@@ -18,6 +18,7 @@ const STATUS_STYLE: Record<string, string> = {
   live: "bg-[#e2f2e9] text-good",
   dead: "bg-[#f9e5e0] text-bad",
   expired: "bg-[#f9e5e0] text-bad",
+  held: "bg-[#f4e4da] text-accent-dark",
 };
 
 export default async function ManagePage() {

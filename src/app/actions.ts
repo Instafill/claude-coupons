@@ -11,6 +11,7 @@ import { dbConnect } from "@/lib/mongodb";
 import {
   DEFAULT_DEAL,
   Deal,
+  DealSlug,
   getDeal,
   isDealSlug,
   parseDealCode,
@@ -29,6 +30,12 @@ export interface SubmitState {
 }
 
 const ANONYMOUS_SUBMISSIONS_PER_DAY = 5;
+
+// Boards whose new listings are saved for the live draw instead of going on the board and
+// out in alert waves. Claude, from 2026-10-28, while the draw page is built: when it ships,
+// held passes are released into the draw and this set empties. Release by hand until then
+// with status "live" plus fresh waveStartedAt and lastRefreshedAt.
+const HELD_DEALS: ReadonlySet<DealSlug> = new Set<DealSlug>(["claude"]);
 
 // Keeps the raw paste when the form turns someone away, so the next validator bug is
 // diagnosable from our own records instead of a user's screenshot. Stored in Mongo, not
@@ -81,6 +88,7 @@ export async function submitPass(
   // field was added after the form existed, and a submission is too valuable to lose to it.
   const slug = String(formData.get("deal") || "");
   const deal = getDeal(isDealSlug(slug) ? slug : DEFAULT_DEAL);
+  const held = HELD_DEALS.has(deal.slug);
   const ip = await getSubmitterIp();
   const ipHash = hashIp(ip);
 
@@ -132,10 +140,14 @@ export async function submitPass(
       await recordRejection(raw, "already_live", user?.id, ipHash, deal.slug);
       return { error: `This ${deal.name} ${deal.noun} is already on the board.` };
     }
+    if (existing.status === PASS_STATUS.held) {
+      await recordRejection(raw, "already_live", user?.id, ipHash, deal.slug);
+      return { error: `This ${deal.name} ${deal.noun} is already saved for the next live draw.` };
+    }
     // Back on the board, with the expiry clock and the dead-report count reset - the
     // unlocks it already served still stand against the sender's allotment. The wave clock
     // restarts too, so a relisted pass is offered from the front of the queue again.
-    existing.status = PASS_STATUS.live;
+    existing.status = held ? PASS_STATUS.held : PASS_STATUS.live;
     existing.lastRefreshedAt = new Date();
     existing.waveStartedAt = new Date();
     existing.wavesNotified = 0;
@@ -147,7 +159,7 @@ export async function submitPass(
       pass: existing._id.toString(),
       user: user?.id || "anonymous",
     });
-    await notify(deal, code, user, "back on the board");
+    await notify(deal, code, user, held ? "relisted, held for the live draw" : "back on the board");
   } else {
     if (!user) {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -163,21 +175,24 @@ export async function submitPass(
       code,
       ...(submitterUserId ? { submitterUserId } : {}),
       submitterIpHash: ipHash,
+      ...(held ? { status: PASS_STATUS.held } : {}),
     });
     logEvent("pass_submitted", {
       deal: deal.slug,
       pass: created._id.toString(),
       user: user?.id || "anonymous",
+      ...(held ? { held: true } : {}),
     });
-    await notify(deal, code, user, "listed");
+    await notify(deal, code, user, held ? "listed, held for the live draw" : "listed");
   }
 
   revalidatePath(deal.path);
   revalidatePath("/manage");
   if (user) redirect("/manage");
   return {
-    success:
-      deal.slug === DEFAULT_DEAL
+    success: held
+      ? `Thank you. Your ${deal.name} ${deal.noun} is saved and goes out in the next live draw, where someone waiting wins it.`
+      : deal.slug === DEFAULT_DEAL
         ? "Your pass is live. Thank you for giving someone a chance to use Claude."
         : `Your ${deal.name} ${deal.noun} is live. Thank you - someone in the queue gets ${deal.reward}.`,
   };

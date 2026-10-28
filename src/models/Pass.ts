@@ -8,6 +8,11 @@ export const PASS_STATUS = {
   dead: "dead", // claimers reported the link no longer works
   expired: "expired", // the submitter stopped refreshing it
   removed: "removed", // taken down by the submitter
+  // Accepted but kept off the board and out of the alert waves, for a board whose listings
+  // are being saved for the live draw (HELD_DEALS in app/actions.ts). Nothing reads it as
+  // live, so it neither shows, nor alerts, nor expires; releasing one is setting it to live
+  // with fresh waveStartedAt and lastRefreshedAt.
+  held: "held",
 } as const;
 
 export type PassStatus = (typeof PASS_STATUS)[keyof typeof PASS_STATUS];
