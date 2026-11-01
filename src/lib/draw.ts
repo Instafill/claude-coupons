@@ -659,6 +659,8 @@ export interface DrawView {
   invited: number;
   /** A show: the whole line was invited. */
   everyone: boolean;
+  /** Whether anyone can still post: not once the host closed it, nor long after the room closed. */
+  chatOpen: boolean;
   spots: {
     n: number;
     link: number;
@@ -929,6 +931,7 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
     links: draw.passIds.length,
     invited: draw.invitedCount ?? 0,
     everyone: !!draw.everyone,
+    chatOpen: chatOpen(draw),
     spots: draw.spots.map((s) => ({
       n: s.n,
       link: spotLink(draw, s),
@@ -1156,12 +1159,11 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
 
   await dbConnect();
   const [draw, entrant] = await Promise.all([
-    Draw.findById(id).select("status closedAt").lean<Pick<LeanDraw, "status" | "closedAt">>(),
+    Draw.findById(id).select("status closedAt chatClosedAt").lean<Pick<LeanDraw, "status" | "closedAt" | "chatClosedAt">>(),
     DrawEntrant.findOne({ drawId: id, userId: user.id }).lean<LeanEntrant>(),
   ]);
   if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
-  if (draw.closedAt && Date.now() - new Date(draw.closedAt).getTime() > CHAT_AFTER_CLOSE_MS)
-    return { ok: false, error: "The chat for this draw has closed.", status: 409 };
+  if (!chatOpen(draw)) return { ok: false, error: "The chat for this draw has closed.", status: 409 };
 
   let speaker: { tile?: string; name: string; host?: boolean };
   if (entrant) speaker = { tile: entrant._id.toString(), name: entrant.name };
@@ -1178,6 +1180,24 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
   await DrawMessage.create({ drawId: id, at: new Date(), kind: MESSAGE_KIND.chat, userId: user.id, text, ...speaker });
   forget(id);
   return { ok: true };
+}
+
+function chatOpen(draw: Pick<LeanDraw, "closedAt" | "chatClosedAt">): boolean {
+  if (draw.chatClosedAt) return false;
+  return !draw.closedAt || Date.now() - new Date(draw.closedAt).getTime() <= CHAT_AFTER_CLOSE_MS;
+}
+
+/** The host closes the chat: the room stays up, read-only, with everything that was said. */
+export async function closeChat(id: string): Promise<boolean> {
+  if (!Types.ObjectId.isValid(id)) return false;
+  await dbConnect();
+  const result = await Draw.updateOne({ _id: id, chatClosedAt: { $exists: false } }, { $set: { chatClosedAt: new Date() } });
+  if (result.modifiedCount) {
+    await postSystem(id, [{ at: Date.now(), event: "chat_closed", text: "🔒 The chat is closed. Thanks for coming!" }]);
+    logEvent("draw_chat_closed", { draw: id });
+  }
+  forget(id);
+  return result.matchedCount > 0;
 }
 
 /** The host takes a line down. It stays in the record, marked, and leaves every room. */

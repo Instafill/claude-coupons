@@ -5,6 +5,7 @@ import { DEFAULT_DEAL } from "@/lib/deals";
 import {
   TEST_CODE_PREFIX,
   chatRecord,
+  closeChat,
   drawStatus,
   nextDrawAt,
   openDraw,
@@ -32,6 +33,7 @@ import { EMAIL_SHAPE, baseUrl } from "@/lib/watchers";
 //                                marks nobody: the real email, seen first by the operator.
 //   {"status": "<draw id>"}      where a draw stands: invited, sent, joined, here, spots.
 //   {"chat": "<draw id>"}        the draw's whole chat, in order, as it scrolled past.
+//   {"closeChat": "<draw id>"}   closes the chat now; the room stays up, read-only.
 //   anything else                a test: given addresses, test codes, nobody in the line touched.
 
 // A show mails the whole line from one request; SEND_BUDGET_MS in lib/draw.ts stays inside this.
@@ -76,6 +78,12 @@ export async function POST(request: NextRequest) {
   if (typeof body.status === "string") {
     const status = await drawStatus(body.status);
     return status ? NextResponse.json(status) : NextResponse.json({ error: "No such draw." }, { status: 404 });
+  }
+
+  if (typeof body.closeChat === "string") {
+    return (await closeChat(body.closeChat))
+      ? NextResponse.json({ closed: true })
+      : NextResponse.json({ error: "No such draw." }, { status: 404 });
   }
 
   if (typeof body.chat === "string") {

@@ -87,6 +87,8 @@ export interface IDraw extends Document {
   spectators: string[];
   /** A show: everyone waiting was invited, so not coming costs nobody their place. */
   everyone: boolean;
+  /** The host closed the chat: the room is read-only from then on. */
+  chatClosedAt?: Date;
   jobs: { spot: number; redraw: boolean }[];
   nextJobAt?: Date;
   sweep?: ISweep;
@@ -133,6 +135,7 @@ const DrawSchema = new Schema<IDraw>(
     sent: [{ type: String, lowercase: true }],
     spectators: [{ type: String, lowercase: true }],
     everyone: { type: Boolean, default: false },
+    chatClosedAt: { type: Date },
     jobs: [{ _id: false, spot: Number, redraw: Boolean }],
     nextJobAt: { type: Date },
     sweep: {

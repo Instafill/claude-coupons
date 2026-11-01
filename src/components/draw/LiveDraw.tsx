@@ -387,7 +387,15 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
   );
 
   const joined = !!view.me;
-  const chatMode: ChatMode = server.viewer.spectator ? "host" : joined ? "chat" : view.closed ? "closed" : "join";
+  const chatMode: ChatMode = !server.chatOpen
+    ? "closed"
+    : server.viewer.spectator
+      ? "host"
+      : joined
+        ? "chat"
+        : view.closed
+          ? "closed"
+          : "join";
 
   const send = async (body: Record<string, unknown>) => {
     const sentAt = Date.now();
