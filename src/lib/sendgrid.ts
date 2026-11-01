@@ -260,11 +260,10 @@ export interface DrawInvite {
 
 // Pictures in the show invite. Served from the site's public/email folder, so they exist once
 // the release that sends the mail is deployed. The guest-pass picture (what a winner sees on
-// Claude's side) goes in only once public/email/guest-pass.png is in the release: set this to
-// its address then, never before, or every invite shows a broken image.
+// Claude's side) is public/email/guest-pass.jpg; both ship in the same release as this code.
 const EMAIL_IMAGES = "https://claudecoupons.com/email";
 const ROOM_PICTURE = `${EMAIL_IMAGES}/live-draw-room.png`;
-const GUEST_PASS_PICTURE: string = "";
+const GUEST_PASS_PICTURE: string = `${EMAIL_IMAGES}/guest-pass.jpg`;
 
 // The live draw invite: one email per draw, to the front of the line. Same shape as an alert
 // (one message each, for its own List-Unsubscribe header), and the same contract with the
