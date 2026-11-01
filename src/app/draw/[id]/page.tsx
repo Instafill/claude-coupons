@@ -81,10 +81,13 @@ export default async function DrawPage({ params }: { params: Promise<{ id: strin
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={KITCUT.logo} alt="" width={16} height={16} className="h-4 w-4 rounded-sm" />
         <span className="truncate">
-          Live draw sponsored by <strong className="font-semibold text-ink">KitCut.ai</strong>
+          <span className="hidden sm:inline">Live draw sponsored</span>
+          <span className="sm:hidden">Sponsored</span> by <strong className="font-semibold text-ink">KitCut.ai</strong>
           <span className="hidden sm:inline"> &middot; {KITCUT.headline}</span>
         </span>
-        <span className="shrink-0 font-semibold text-accent-dark">{KITCUT.cta} &rarr;</span>
+        <span className="shrink-0 font-semibold text-accent-dark">
+          <span className="hidden sm:inline">{KITCUT.cta} </span>&rarr;
+        </span>
       </a>
       <LiveDrawClient
         initial={view}
