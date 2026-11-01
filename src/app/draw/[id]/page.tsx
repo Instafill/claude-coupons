@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import LiveDrawClient from "@/components/draw/LiveDrawClient";
 import { getUser } from "@/lib/auth";
 import { placeForRequest, roomFor, seedFor } from "@/lib/draw";
-import { KITCUT } from "@/lib/kitcut";
+import { KITCUT, kitcutUrl } from "@/lib/kitcut";
 
 // A live draw's room. Invited people land here from the email (the link signs them in on the
 // way); anyone else sees why they can't come in, and how to be invited next time.
@@ -71,6 +71,21 @@ export default async function DrawPage({ params }: { params: Promise<{ id: strin
       {/* The layout's KitCut banner and sticky bar would push the room below the fold and sit
           on top of it; on this page only, they step aside. */}
       <style>{`body:has(#draw-room) [aria-label="${KITCUT.label}"] { display: none; }`}</style>
+      {/* In their place, one thin line: the draw's sponsor, which is our own other product. */}
+      <a
+        href={kitcutUrl("draw-room")}
+        target="_blank"
+        rel="noopener"
+        className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-muted hover:border-accent hover:text-ink"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={KITCUT.logo} alt="" width={16} height={16} className="h-4 w-4 rounded-sm" />
+        <span className="truncate">
+          Live draw sponsored by <strong className="font-semibold text-ink">KitCut.ai</strong>
+          <span className="hidden sm:inline"> &middot; {KITCUT.headline}</span>
+        </span>
+        <span className="shrink-0 font-semibold text-accent-dark">{KITCUT.cta} &rarr;</span>
+      </a>
       <LiveDrawClient
         initial={view}
         known={{ name: firstName, picture: user!.picture, seed: seedFor(id, user!.id) }}

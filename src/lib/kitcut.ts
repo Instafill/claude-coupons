@@ -77,7 +77,7 @@ export function filmClip(f: KitCutFilm): string {
 }
 
 export type KitCutPlacement =
-  "banner" | "stickybar" | "footer" | "email" | "blog";
+  "banner" | "stickybar" | "footer" | "email" | "blog" | "draw-room" | "draw-email";
 
 const UTM = (placement: KitCutPlacement) =>
   new URLSearchParams({

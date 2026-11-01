@@ -414,6 +414,7 @@ export function showInviteContent(
     html: `
       <div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d; font-size: 15px; line-height: 1.5;">
         <span style="display: none; max-height: 0; overflow: hidden;">All ${everyone} people waiting for a Claude pass are invited, and everyone in the room has the same chance.</span>
+        <a href="${kitcutUrl("draw-email")}" style="display: block; margin: 0 0 18px; padding: 7px 12px; border: 1px solid #e6e1d8; border-radius: 8px; font-size: 13px; color: #6e6a63; text-decoration: none; text-align: center;"><img src="https://claudecoupons.com${KITCUT.logo}" width="14" height="14" alt="" style="vertical-align: -2px; border-radius: 3px;">&nbsp; Live draw sponsored by <strong style="color: #1f1e1d;">KitCut.ai</strong> &middot; ${KITCUT.headline} <span style="color: #a94f20; font-weight: 600;">${KITCUT.cta} &rarr;</span></a>
         <p style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #a94f20;">Live draw &middot; Claude Pro</p>
         <h1 style="margin: 4px 0 2px; font-size: 26px; line-height: 1.2;">You&rsquo;re invited to a live draw</h1>
         <p style="margin: 0 0 18px; font-size: 18px;"><strong>${when}</strong></p>
