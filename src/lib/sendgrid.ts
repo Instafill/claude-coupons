@@ -409,6 +409,7 @@ export function showInviteContent(
       `Open the draw room: ${enterUrl}`,
       `Add it to your calendar: ${calendar}`,
       more,
+      `Live draw sponsored by KitCut.ai: ${KITCUT.headline} ${kitcutUrl("draw-email")}`,
       `Stop these emails: ${stopUrl}`,
     ].join("\n\n"),
     html: `
