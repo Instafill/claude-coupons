@@ -262,7 +262,8 @@ export interface DrawInvite {
 // the release that sends the mail is deployed. The guest-pass picture (what a winner sees on
 // Claude's side) is public/email/guest-pass.jpg; both ship in the same release as this code.
 const EMAIL_IMAGES = "https://claudecoupons.com/email";
-const ROOM_PICTURE = `${EMAIL_IMAGES}/live-draw-room.png`;
+// The version tag steps past a 404 the CDN cached before the picture was deployed.
+const ROOM_PICTURE = `${EMAIL_IMAGES}/live-draw-room.png?v=2`;
 const GUEST_PASS_PICTURE: string = `${EMAIL_IMAGES}/guest-pass.jpg`;
 
 // The live draw invite: one email per draw, to the front of the line. Same shape as an alert
