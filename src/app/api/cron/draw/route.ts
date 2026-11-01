@@ -105,7 +105,10 @@ export async function POST(request: NextRequest) {
     drawAt = new Date(String(body.at));
     const ahead = drawAt.getTime() - Date.now();
     if (Number.isNaN(ahead) || ahead < 60_000 || ahead > 7 * 24 * 60 * 60 * 1000) {
-      return NextResponse.json({ error: "at must be an ISO time between a minute and a week from now." }, { status: 400 });
+      return NextResponse.json(
+        { error: "at must be an ISO time between a minute and a week from now." },
+        { status: 400 }
+      );
     }
   } else {
     const minutes = Math.min(Math.max(Number(body.inMinutes) || 3, 0.25), 180);

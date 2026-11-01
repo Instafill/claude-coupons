@@ -3,6 +3,7 @@
 import { memo, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 
 import type { ChatLine } from "@/lib/draw";
+import { CHAT_REACTIONS } from "@/lib/drawRules";
 
 import { Avatar } from "./Avatar";
 import type { Person } from "./roomView";
@@ -13,7 +14,101 @@ import type { Person } from "./roomView";
 
 const MAX = 200;
 
-export type ChatMode = "chat" | "host" | "join" | "closed";
+export type ChatMode = "chat" | "host" | "join" | "closed" | "watch" | "blocked";
+
+const NO_COUNTS: Record<string, number> = {};
+const NO_MINE: string[] = [];
+
+/**
+ * Under a line: its reactions as chips (yours highlighted, a press toggles yours), and, on
+ * hover or a tap on the line, the emoji to add - plus, for the host, Hide and Block.
+ */
+function LineActions({
+  id,
+  counts,
+  mine,
+  open,
+  onReact,
+  onHide,
+  onBlock,
+}: {
+  id: string;
+  counts: Record<string, number>;
+  mine: string[];
+  open: boolean;
+  onReact?: (id: string, emoji: string) => void;
+  onHide?: (id: string) => void;
+  onBlock?: (id: string) => void;
+}) {
+  const chips = Object.entries(counts).filter(([, n]) => n > 0);
+  const tools = !!(onReact || onHide || onBlock);
+  if (!chips.length && !tools) return null;
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+      {chips.map(([emoji, n]) => (
+        <button
+          key={emoji}
+          type="button"
+          disabled={!onReact}
+          onClick={(event) => {
+            event.stopPropagation();
+            onReact?.(id, emoji);
+          }}
+          className={`rounded-full border px-1.5 text-[12px] leading-5 tabular-nums ${
+            mine.includes(emoji) ? "border-accent bg-[#f4e4da] text-accent-dark" : "border-line bg-surface text-muted"
+          } ${onReact ? "hover:border-accent" : "cursor-default"}`}
+        >
+          {emoji} {n}
+        </button>
+      ))}
+      {tools && (
+        <span className={`${open ? "flex" : "hidden group-hover:flex"} items-center gap-0.5`}>
+          {onReact &&
+            CHAT_REACTIONS.filter((emoji) => !mine.includes(emoji)).map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReact(id, emoji);
+                }}
+                className="rounded-full px-1 text-[14px] leading-5 opacity-70 hover:bg-line hover:opacity-100"
+                aria-label={`React ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          {onHide && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onHide(id);
+              }}
+              className="ml-1 rounded px-1.5 text-[12px] leading-5 text-muted hover:bg-line hover:text-bad"
+              title="Take this message down"
+            >
+              Hide
+            </button>
+          )}
+          {onBlock && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onBlock(id);
+              }}
+              className="rounded px-1.5 text-[12px] leading-5 font-semibold text-bad hover:bg-[#fbebe7]"
+              title="Block this person: all their messages go, and they can't post again"
+            >
+              Block
+            </button>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
 
 const TONE: Record<string, string> = {
   started: "font-semibold text-accent-dark",
@@ -56,8 +151,12 @@ function LiveChat({
   meId,
   mode,
   live,
+  reactions,
+  reacted,
   onSend,
   onHide,
+  onBlock,
+  onReact,
   onJoin,
 }: {
   lines: ChatLine[];
@@ -65,10 +164,16 @@ function LiveChat({
   meId?: string;
   mode: ChatMode;
   live: boolean;
+  reactions: Record<string, Record<string, number>>;
+  reacted: Record<string, string[]>;
   onSend: (text: string) => Promise<string | null>;
   onHide?: (id: string) => void;
+  onBlock?: (id: string) => void;
+  onReact?: (id: string, emoji: string) => void;
   onJoin: () => void;
 }) {
+  // A tap on a line opens its emoji on a touch screen, where there is no hover.
+  const [openLine, setOpenLine] = useState<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
   const [unseen, setUnseen] = useState(0);
@@ -170,20 +275,37 @@ function LiveChat({
                 );
               }
               const { line } = row;
+              const actions = (
+                <LineActions
+                  id={line.id}
+                  counts={reactions[line.id] ?? NO_COUNTS}
+                  mine={reacted[line.id] ?? NO_MINE}
+                  open={openLine === line.id}
+                  onReact={onReact}
+                  onHide={line.kind === "chat" && !line.host ? onHide : undefined}
+                  onBlock={line.kind === "chat" && !line.host ? onBlock : undefined}
+                />
+              );
               if (line.kind === "system") {
                 return (
                   <li
                     key={line.id}
-                    className={`draw-pop px-4 py-1 text-[13px] ${TONE[line.event ?? ""] ?? "text-muted"}`}
+                    onClick={() => setOpenLine((open) => (open === line.id ? null : line.id))}
+                    className={`group draw-pop px-4 py-1 text-[13px] hover:bg-paper ${TONE[line.event ?? ""] ?? "text-muted"}`}
                   >
                     {line.text}
+                    {actions}
                   </li>
                 );
               }
               const person = line.tile ? people.get(line.tile) : undefined;
               const mine = !!meId && line.tile === meId;
               return (
-                <li key={line.id} className="group flex items-start gap-2.5 px-4 py-1 hover:bg-paper">
+                <li
+                  key={line.id}
+                  onClick={() => setOpenLine((open) => (open === line.id ? null : line.id))}
+                  className="group flex items-start gap-2.5 px-4 py-1 hover:bg-paper"
+                >
                   {line.host ? (
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] text-white">
                       ★
@@ -197,28 +319,21 @@ function LiveChat({
                       className="mt-0.5"
                     />
                   )}
-                  <p className="min-w-0 flex-1 text-[15px] leading-snug break-words">
-                    <span className={`mr-1.5 font-semibold ${mine ? "text-accent-dark" : "text-muted"}`}>
-                      {line.name}
-                      {person && <span className="ml-1 font-normal">{person.flag}</span>}
-                    </span>
-                    {line.host && (
-                      <span className="mr-1.5 rounded bg-accent px-1 py-px align-[1px] text-[10px] font-bold tracking-wide text-white uppercase">
-                        Host
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] leading-snug break-words">
+                      <span className={`mr-1.5 font-semibold ${mine ? "text-accent-dark" : "text-muted"}`}>
+                        {line.name}
+                        {person && <span className="ml-1 font-normal">{person.flag}</span>}
                       </span>
-                    )}
-                    {line.text}
-                  </p>
-                  {onHide && !line.host && (
-                    <button
-                      type="button"
-                      onClick={() => onHide(line.id)}
-                      className="hidden shrink-0 rounded px-1.5 text-[12px] text-muted group-hover:block hover:bg-line hover:text-bad"
-                      title="Take this message down"
-                    >
-                      Hide
-                    </button>
-                  )}
+                      {line.host && (
+                        <span className="mr-1.5 rounded bg-accent px-1 py-px align-[1px] text-[10px] font-bold tracking-wide text-white uppercase">
+                          Host
+                        </span>
+                      )}
+                      {line.text}
+                    </p>
+                    {actions}
+                  </div>
                 </li>
               );
             })}
@@ -247,8 +362,14 @@ function LiveChat({
               Join
             </button>
           </div>
-        ) : mode === "closed" ? (
-          <p className="rounded-xl bg-paper px-3 py-2.5 text-center text-[14px] text-muted">The chat has closed.</p>
+        ) : mode === "closed" || mode === "watch" || mode === "blocked" ? (
+          <p className="rounded-xl bg-paper px-3 py-2.5 text-center text-[14px] text-muted">
+            {mode === "closed"
+              ? "The chat has closed."
+              : mode === "watch"
+                ? "You\u2019re watching. Only people in this draw can chat."
+                : "The host has turned off chat for you in this room."}
+          </p>
         ) : (
           <form onSubmit={send}>
             <div className="flex items-center gap-2">

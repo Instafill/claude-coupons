@@ -12,7 +12,9 @@ const ROWS = LAND_ROWS.length;
 const DOTS: [number, number][] = LAND_ROWS.flatMap((row, y) =>
   [...row].flatMap((hex, i) => {
     const nibble = parseInt(hex, 16);
-    return [0, 1, 2, 3].flatMap((b) => ((nibble >> (3 - b)) & 1 ? [[i * 4 + b + 0.5, y + 0.5] as [number, number]] : []));
+    return [0, 1, 2, 3].flatMap((b) =>
+      (nibble >> (3 - b)) & 1 ? [[i * 4 + b + 0.5, y + 0.5] as [number, number]] : []
+    );
   })
 );
 

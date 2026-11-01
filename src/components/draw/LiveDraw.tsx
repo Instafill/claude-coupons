@@ -70,12 +70,24 @@ function nextDue(s: DrawView, now: number): number {
  * The room's people as tiles. A person whose tile reads the same as last time keeps the very
  * same object, so with hundreds in the room only the tiles that changed draw again.
  */
-function toPeople(list: DrawPerson[], absent: Set<string>, meId: string | undefined, held: Map<string, Person>): Person[] {
+function toPeople(
+  list: DrawPerson[],
+  absent: Set<string>,
+  meId: string | undefined,
+  held: Map<string, Person>
+): Person[] {
   return list.map((p) => {
     const left = absent.has(p.id);
     const me = p.id === meId;
     const had = held.get(p.id);
-    if (had && had.left === left && had.me === me && had.name === p.name && had.photo === p.picture && had.city === p.city)
+    if (
+      had &&
+      had.left === left &&
+      had.me === me &&
+      had.name === p.name &&
+      had.photo === p.picture &&
+      had.city === p.city
+    )
       return had;
     const person: Person = {
       id: p.id,
@@ -202,6 +214,7 @@ function toView(s: Full, people: Person[], now: number, loadedAt: number, shown:
     test: s.test,
     everyone: s.everyone,
     spectator: s.viewer.spectator,
+    invited: s.viewer.invited,
     links: s.links,
     drawStarted,
     closed: s.status === "closed",
@@ -269,6 +282,11 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
     if (answer.chat.length) {
       lastChatAt.current = Math.max(lastChatAt.current, ...answer.chat.map((line) => line.at));
       setChat((held) => mergeChat(held, answer.chat));
+    }
+    // Lines the host took down since this page showed them, however old.
+    if (answer.chatHidden.length) {
+      const gone = new Set(answer.chatHidden);
+      setChat((held) => (held.some((line) => gone.has(line.id)) ? held.filter((line) => !gone.has(line.id)) : held));
     }
     // Reactions are shown from the moment this page first sees them: one sent just after the
     // last ask would otherwise be nearly over by the time it arrived.
@@ -386,16 +404,50 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
     [id]
   );
 
+  const reactToLine = useCallback(
+    async (message: string, emoji: string) => {
+      const sentAt = Date.now();
+      const response = await fetch(`/api/draw/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "chatReact", message, emoji }),
+      }).catch(() => null);
+      const data = await response?.json().catch(() => ({}));
+      if (data?.view) apply(data.view, sentAt);
+    },
+    [id, apply]
+  );
+
+  const blockAuthor = useCallback(
+    async (message: string) => {
+      const sentAt = Date.now();
+      const response = await fetch(`/api/draw/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "block", message }),
+      }).catch(() => null);
+      const data = await response?.json().catch(() => ({}));
+      if (data?.view) apply(data.view, sentAt);
+    },
+    [id, apply]
+  );
+
   const joined = !!view.me;
+  const host = server.viewer.spectator;
   const chatMode: ChatMode = !server.chatOpen
     ? "closed"
-    : server.viewer.spectator
-      ? "host"
-      : joined
-        ? "chat"
-        : view.closed
-          ? "closed"
-          : "join";
+    : server.viewer.blocked
+      ? "blocked"
+      : host
+        ? "host"
+        : joined
+          ? "chat"
+          : !server.viewer.invited
+            ? "watch"
+            : view.closed
+              ? "closed"
+              : "join";
+  const canReact = server.chatOpen && !server.viewer.blocked && (host || joined);
 
   const send = async (body: Record<string, unknown>) => {
     const sentAt = Date.now();
@@ -457,7 +509,11 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
         peopleById={peopleById}
         chatMode={chatMode}
         onChat={sendChat}
-        onHideChat={server.viewer.spectator ? hideChat : undefined}
+        onHideChat={host ? hideChat : undefined}
+        onBlockChat={host ? blockAuthor : undefined}
+        onReactChat={canReact ? reactToLine : undefined}
+        chatReactions={server.chatReactions}
+        chatReacted={server.viewer.reacted}
         onClaim={() => send({ action: "claim" })}
         onPassOn={() => send({ action: "passon" })}
         onReact={(emoji) => {

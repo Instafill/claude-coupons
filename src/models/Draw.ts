@@ -89,6 +89,8 @@ export interface IDraw extends Document {
   everyone: boolean;
   /** The host closed the chat: the room is read-only from then on. */
   chatClosedAt?: Date;
+  /** People the host blocked from the chat (User ids): their lines are hidden, they can't post. */
+  chatBlocked?: string[];
   jobs: { spot: number; redraw: boolean }[];
   nextJobAt?: Date;
   sweep?: ISweep;
@@ -136,6 +138,7 @@ const DrawSchema = new Schema<IDraw>(
     spectators: [{ type: String, lowercase: true }],
     everyone: { type: Boolean, default: false },
     chatClosedAt: { type: Date },
+    chatBlocked: [{ type: String }],
     jobs: [{ _id: false, spot: Number, redraw: Boolean }],
     nextJobAt: { type: Date },
     sweep: {

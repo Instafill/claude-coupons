@@ -20,3 +20,5 @@ export const REDRAW_SWEEP_MS = 2000;
 export const PAUSE_MS = 1600;
 /** What the room may send. Anything else is dropped. */
 export const REACTIONS = ["👋", "🔥", "🤞", "🍀", "😬", "🎉"];
+/** What can be put on a chat line. */
+export const CHAT_REACTIONS = ["👍", "❤️", "😂", "🎉", "🔥", "😮"];

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import type { ChatLine } from "@/lib/draw";
@@ -68,6 +69,10 @@ export default function Room({
   chatMode,
   onChat,
   onHideChat,
+  onBlockChat,
+  onReactChat,
+  chatReactions,
+  chatReacted,
 }: {
   view: View;
   speed: number;
@@ -85,10 +90,14 @@ export default function Room({
   chatMode: ChatMode;
   onChat: (text: string) => Promise<string | null>;
   onHideChat?: (id: string) => void;
+  onBlockChat?: (id: string) => void;
+  onReactChat?: (id: string, emoji: string) => void;
+  chatReactions: Record<string, Record<string, number>>;
+  chatReacted: Record<string, string[]>;
 }) {
   const t = view.t;
   const joined = !!view.me;
-  const canJoin = !joined && !view.closed && !view.spectator;
+  const canJoin = !joined && !view.closed && !view.spectator && view.invited;
 
   // The sticky "you're not in yet" bar shows only once the join panel has scrolled away, so
   // the invitation is always on screen without ever showing twice.
@@ -231,7 +240,16 @@ export default function Room({
           missingName={missingName}
         />
       )}
-      {!joined && view.closed && !view.spectator && (
+      {!joined && !view.spectator && !view.invited && (
+        <p className="rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] text-muted">
+          You&rsquo;re watching this draw. It&rsquo;s for the people who were invited; take a number on the{" "}
+          <Link href="/" className="font-semibold text-accent-dark underline">
+            home page
+          </Link>{" "}
+          to be invited to the next one.
+        </p>
+      )}
+      {!joined && view.closed && !view.spectator && view.invited && (
         <section className="rounded-2xl border border-line bg-surface px-6 py-5">
           <h2 className="text-[22px] font-semibold">You missed this draw</h2>
           <p className="mt-1 text-[15px] text-muted">
@@ -434,6 +452,10 @@ export default function Room({
             live={!view.closed}
             onSend={onChat}
             onHide={onHideChat}
+            onBlock={onBlockChat}
+            onReact={onReactChat}
+            reactions={chatReactions}
+            reacted={chatReacted}
             onJoin={onJoin}
           />
         </div>

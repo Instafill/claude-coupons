@@ -29,6 +29,8 @@ export interface IDrawMessage extends Document {
   event?: string;
   /** Taken down by the host. Kept, but no room shows it. */
   hidden?: boolean;
+  /** Emoji people put on this line, one per person per emoji. */
+  reactions?: { userId: string; emoji: string }[];
   createdAt: Date;
 }
 
@@ -44,6 +46,7 @@ const DrawMessageSchema = new Schema<IDrawMessage>(
     host: { type: Boolean },
     event: { type: String },
     hidden: { type: Boolean },
+    reactions: [{ _id: false, userId: String, emoji: String }],
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

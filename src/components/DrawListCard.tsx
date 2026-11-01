@@ -41,8 +41,6 @@ export default function DrawListCard({
   confirmed: boolean;
 }) {
   const { next, last } = summary;
-  const invites = next?.invited ?? summary.invites;
-  const atFront = standing !== null && standing.rank <= invites;
 
   let heading: React.ReactNode;
   let body: React.ReactNode;
@@ -68,9 +66,8 @@ export default function DrawListCard({
         You&rsquo;re <span className="text-accent">{ordinal(standing.rank)}</span> in line.
       </>
     );
-    body = atFront
-      ? `That's the front: the next draw invites the first ${invites}, so the invite comes to you.`
-      : `${standing.ahead.toLocaleString("en-US")} ${standing.ahead === 1 ? "person is" : "people are"} ahead of you, and nobody who joins now can get in front. Each draw invites the first ${invites}.`;
+    body =
+      "You're on the list for the next live draw. When Claude links come in, everyone in line gets the invite by email, and everyone in the room has the same chance.";
   } else {
     heading = (
       <>
@@ -81,15 +78,10 @@ export default function DrawListCard({
   }
 
   const rules: React.ReactNode[] = [
-    "Numbers are handed out in order and never reused. Join later and you start further back, always.",
     `Each ${deal.name} link listed here is good for ${deal.unlocksPerListing} people, so it is ${deal.unlocksPerListing} spots in a live draw.`,
-    <>
-      On a day links are listed, the first {invites} in line are invited by email to a draw at{" "}
-      <LocalTime at={summary.nextScheduled} />.
-    </>,
-    "Winners are drawn from the people in the room. A spot not claimed within a minute is re-drawn among those still there.",
-    "Win a spot and you leave the queue - everyone behind you moves up a place.",
-    "Skip three invites and your number goes to the back.",
+    "When links come in, everyone in line is invited by email to a live draw that starts a few minutes later.",
+    "Everyone in the room when it starts has the same chance. Winners are drawn live, and a spot not claimed within a minute is re-drawn among the people still there.",
+    "Win a spot and you leave the line. Miss a draw and nothing changes: you're invited to the next one.",
   ];
 
   return (
@@ -160,8 +152,8 @@ export default function DrawListCard({
               </p>
               <p className="mt-1 text-sm">
                 {standing.ahead === 0
-                  ? "You are first in line. The next draw invites you before anyone else."
-                  : `${standing.ahead.toLocaleString("en-US")} ahead of you. Each one who wins a spot leaves the queue and you move up.`}
+                  ? "You're on the list. The next draw's invite comes to you."
+                  : "You're on the list. Every live draw's invite comes to you, with the same chance as everyone."}
               </p>
               {/* Renders nothing. Someone holding a number is the person we could not place
                   from anything stored, and this is the one moment we see them. */}

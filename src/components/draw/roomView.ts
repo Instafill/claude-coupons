@@ -77,6 +77,8 @@ export interface View {
   everyone: boolean;
   /** Watching, not playing: the operator, or the recorder filming it. */
   spectator: boolean;
+  /** Invited to this draw, so able to join it. Anyone else watches. */
+  invited: boolean;
   links: number;
   drawStarted: boolean;
   closed: boolean;

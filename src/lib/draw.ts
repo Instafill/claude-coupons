@@ -9,6 +9,7 @@ import {
   MAIN_SWEEP_MS,
   PAUSE_MS,
   PRESENT_MS,
+  CHAT_REACTIONS,
   REACTIONS,
   REDRAW_SWEEP_MS,
 } from "@/lib/drawRules";
@@ -90,9 +91,7 @@ function present(ctx: Ctx, userId: string | undefined): boolean {
 function goneSince(ctx: Ctx, userId: string): number {
   const person = ctx.people.get(userId);
   if (!person) return ctx.now.getTime();
-  return person.leftAt
-    ? new Date(person.leftAt).getTime()
-    : new Date(person.lastSeenAt).getTime() + PRESENT_MS;
+  return person.leftAt ? new Date(person.leftAt).getTime() : new Date(person.lastSeenAt).getTime() + PRESENT_MS;
 }
 
 /** Who a sweep could land on: in the room, and never a winner of this draw before. */
@@ -439,7 +438,8 @@ export async function joinDraw(
   const draw = await Draw.findById(id).select(UNREAD_LISTS).lean<LeanDraw>();
   if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
   const access = await accessTo(draw._id, user.email);
-  if (access === "spectator") return { ok: false, error: "You're watching this one: spectators can't join.", status: 403 };
+  if (access === "spectator")
+    return { ok: false, error: "You're watching this one: spectators can't join.", status: 403 };
   if (access !== "invited") return { ok: false, error: "This draw is for the people invited to it.", status: 403 };
   if (draw.status === DRAW_STATUS.closed) return { ok: false, error: "This draw is over.", status: 409 };
   const name = cleanName(input.name);
@@ -706,6 +706,10 @@ export interface DrawView {
   reactions: { id: string; at: number; who: string; emoji: string }[];
   /** The latest chat lines, or those since the page last asked. */
   chat: ChatLine[];
+  /** Recent lines the host took down since a page may have shown them: pages drop these. */
+  chatHidden: string[];
+  /** Reactions on recent lines: line id -> emoji -> how many. */
+  chatReactions: Record<string, Record<string, number>>;
   eligible: number;
   viewer: {
     invited: boolean;
@@ -717,6 +721,10 @@ export interface DrawView {
     everWon: boolean;
     /** Their pass, once they have claimed one: the link, and whether they said it worked. */
     mine?: { url: string; code: string; passId: string; outcome: string };
+    /** The emoji this visitor put on recent lines: line id -> emoji. */
+    reacted: Record<string, string[]>;
+    /** Blocked from the chat by the host. */
+    blocked: boolean;
   };
 }
 
@@ -752,6 +760,8 @@ interface Shared {
   /** prefix[i] names the first i people, so a page that holds them is sent only the rest. */
   prefix: string[];
   chat: ChatLine[];
+  /** Who put which emoji on each recent line, to tell each visitor which are theirs. */
+  lineReactions: Map<string, { userId: string; emoji: string }[]>;
   /** Each claimed winner's pass, read once per beat rather than on each of their asks. */
   mine: Map<string, Mine>;
 }
@@ -788,7 +798,16 @@ async function flushSeen(id: string): Promise<void> {
   await DrawEntrant.bulkWrite(
     [...waiting].flatMap(([userId, { at, back }]) => [
       { updateOne: { filter: { drawId, userId, lastSeenAt: { $lt: at } }, update: { $set: { lastSeenAt: at } } } },
-      ...(back ? [{ updateOne: { filter: { drawId, userId, leftAt: { $lt: at } }, update: { $unset: { leftAt: "" as const } } } }] : []),
+      ...(back
+        ? [
+            {
+              updateOne: {
+                filter: { drawId, userId, leftAt: { $lt: at } },
+                update: { $unset: { leftAt: "" as const } },
+              },
+            },
+          ]
+        : []),
     ]),
     { ordered: false }
   );
@@ -871,7 +890,9 @@ function sharedRoom(id: string, { fresh = false }: { fresh?: boolean } = {}): Pr
   }
   if (upToDate) return Promise.resolve(beat.ready!);
   if (beat.building) {
-    return beat.ready !== undefined && now - beat.at < STALE_OK_MS ? Promise.resolve(beat.ready) : beat.building.promise;
+    return beat.ready !== undefined && now - beat.at < STALE_OK_MS
+      ? Promise.resolve(beat.ready)
+      : beat.building.promise;
   }
   // This ask noticed: it builds the next beat and waits for it.
   return buildBeat(id, beat);
@@ -919,7 +940,13 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
   const prefix = [""];
   for (const p of people) {
     const last = prefix[prefix.length - 1];
-    prefix.push(crypto.createHash("sha1").update(`${last}|${p.id}:${p.name}:${p.picture ?? ""}`).digest("hex").slice(0, 12));
+    prefix.push(
+      crypto
+        .createHash("sha1")
+        .update(`${last}|${p.id}:${p.name}:${p.picture ?? ""}`)
+        .digest("hex")
+        .slice(0, 12)
+    );
   }
 
   const base: Shared["base"] = {
@@ -969,6 +996,16 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
     reactions: (draw.reactions ?? [])
       .filter((r) => new Date(r.at).getTime() > cutoff)
       .map((r) => ({ id: r.id, at: ms(r.at)!, who: who(r.userId)!, emoji: r.emoji })),
+    chatHidden: lines.filter((m) => m.hidden).map((m) => m._id.toString()),
+    chatReactions: Object.fromEntries(
+      lines
+        .filter((m) => !m.hidden && m.reactions?.length)
+        .map((m) => {
+          const counts: Record<string, number> = {};
+          for (const r of m.reactions!) counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+          return [m._id.toString(), counts];
+        })
+    ),
     eligible: free.length,
   };
 
@@ -983,6 +1020,7 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
     peopleJson: JSON.stringify(people),
     prefix,
     chat: lines.map(chatLine),
+    lineReactions: new Map(lines.filter((m) => m.reactions?.length).map((m) => [m._id.toString(), m.reactions!])),
     mine,
   };
 }
@@ -1065,7 +1103,15 @@ function viewerFor(shared: Shared, user: SessionUser | null, access: Access): Dr
     spectator: access === "spectator",
     eligible: !!user && shared.eligible.has(user.id),
     everWon: !!user && shared.draw.awards.some((a) => a.userId === user.id),
+    reacted: {},
+    blocked: !!user && !!shared.draw.chatBlocked?.includes(user.id),
   };
+  if (user) {
+    for (const [line, marks] of shared.lineReactions) {
+      const mine = marks.filter((m) => m.userId === user.id).map((m) => m.emoji);
+      if (mine.length) viewer.reacted[line] = mine;
+    }
+  }
   if (user && shared.tile.has(user.id)) viewer.id = shared.tile.get(user.id);
   const mine = user && shared.mine.get(user.id);
   if (mine) viewer.mine = mine;
@@ -1105,7 +1151,11 @@ export async function roomFor(
  * The same, as JSON, for a page's two-second ask: the shared part was serialised once for the
  * beat, so an answer is a few small strings joined, however many people are in the room.
  */
-export async function roomJson(id: string, user: SessionUser | null, have: Have): Promise<{ json: string; access: Access } | null> {
+export async function roomJson(
+  id: string,
+  user: SessionUser | null,
+  have: Have
+): Promise<{ json: string; access: Access } | null> {
   const seen = await visit(id, user);
   if (!seen) return null;
   const { shared, viewer, access } = seen;
@@ -1126,17 +1176,25 @@ const CHAT_MAX = 200;
 const CHAT_GAP_MS = 1200;
 // After the room closes, the chat stays open this long for the goodbyes.
 const CHAT_AFTER_CLOSE_MS = 15 * 60 * 1000;
-const LINKISH = /(https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(com|net|org|io|ai|app|dev|co|me|ly|gg|xyz|link|ru|info|biz|site|online|shop|top)\b|\S+@\S+\.\S+)/i;
+const LINKISH =
+  /(https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(com|net|org|io|ai|app|dev|co|me|ly|gg|xyz|link|ru|info|biz|site|online|shop|top)\b|\S+@\S+\.\S+)/i;
 
 // Control characters, zero-width marks and direction overrides: built from code points, so the
 // source holds no invisible characters itself.
 const INVISIBLE = new RegExp(
-  `[${([[0x00, 0x1f], [0x7f, 0x9f], [0x200b, 0x200f], [0x2028, 0x202e], [0x2066, 0x2069]] as const)
+  `[${(
+    [
+      [0x00, 0x1f],
+      [0x7f, 0x9f],
+      [0x200b, 0x200f],
+      [0x2028, 0x202e],
+      [0x2066, 0x2069],
+    ] as const
+  )
     .map(([from, to]) => `${String.fromCharCode(from)}-${String.fromCharCode(to)}`)
     .join("")}]`,
   "g"
 );
-
 
 /** What the chat will show of a message: one line, no control characters, at most CHAT_MAX. */
 export function cleanChat(raw: unknown): string {
@@ -1159,7 +1217,9 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
 
   await dbConnect();
   const [draw, entrant] = await Promise.all([
-    Draw.findById(id).select("status closedAt chatClosedAt").lean<Pick<LeanDraw, "status" | "closedAt" | "chatClosedAt">>(),
+    Draw.findById(id)
+      .select("status closedAt chatClosedAt")
+      .lean<Pick<LeanDraw, "status" | "closedAt" | "chatClosedAt">>(),
     DrawEntrant.findOne({ drawId: id, userId: user.id }).lean<LeanEntrant>(),
   ]);
   if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
@@ -1170,6 +1230,8 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
   else if ((await accessTo(id, user.email)) === "spectator")
     speaker = { name: user.name?.trim().split(/\s+/)[0]?.slice(0, 20) || "Host", host: true };
   else return { ok: false, error: "Join the draw to chat.", status: 403 };
+  if (await Draw.exists({ _id: id, chatBlocked: user.id }))
+    return { ok: false, error: "The host has turned off chat for you in this room.", status: 403 };
 
   const last = await DrawMessage.findOne({ drawId: id, userId: user.id }).sort({ at: -1 }).lean<IDrawMessage>();
   if (last && Date.now() - new Date(last.at).getTime() < CHAT_GAP_MS)
@@ -1191,7 +1253,10 @@ function chatOpen(draw: Pick<LeanDraw, "closedAt" | "chatClosedAt">): boolean {
 export async function closeChat(id: string): Promise<boolean> {
   if (!Types.ObjectId.isValid(id)) return false;
   await dbConnect();
-  const result = await Draw.updateOne({ _id: id, chatClosedAt: { $exists: false } }, { $set: { chatClosedAt: new Date() } });
+  const result = await Draw.updateOne(
+    { _id: id, chatClosedAt: { $exists: false } },
+    { $set: { chatClosedAt: new Date() } }
+  );
   if (result.modifiedCount) {
     await postSystem(id, [{ at: Date.now(), event: "chat_closed", text: "🔒 The chat is closed. Thanks for coming!" }]);
     logEvent("draw_chat_closed", { draw: id });
@@ -1200,12 +1265,69 @@ export async function closeChat(id: string): Promise<boolean> {
   return result.matchedCount > 0;
 }
 
+/** Who may react to or post in a room's chat: someone with a tile, or a host. */
+async function chatter(id: string, user: SessionUser): Promise<boolean> {
+  if (await DrawEntrant.exists({ drawId: id, userId: user.id })) return true;
+  return (await accessTo(id, user.email)) === "spectator";
+}
+
+/** An emoji on a chat line, or off it again if it was already theirs. */
+export async function reactToChat(
+  id: string,
+  user: SessionUser,
+  messageId: unknown,
+  emoji: unknown
+): Promise<DrawResult> {
+  if (!Types.ObjectId.isValid(id) || typeof messageId !== "string" || !Types.ObjectId.isValid(messageId))
+    return { ok: false, error: "Bad request.", status: 400 };
+  if (typeof emoji !== "string" || !CHAT_REACTIONS.includes(emoji))
+    return { ok: false, error: "Bad request.", status: 400 };
+  await dbConnect();
+  const draw = await Draw.findById(id).select("closedAt chatClosedAt chatBlocked").lean<LeanDraw>();
+  if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
+  if (!chatOpen(draw)) return { ok: false, error: "The chat for this draw has closed.", status: 409 };
+  if (draw.chatBlocked?.includes(user.id))
+    return { ok: false, error: "The host has turned off chat for you in this room.", status: 403 };
+  if (!(await chatter(id, user))) return { ok: false, error: "Join the draw to react.", status: 403 };
+  const mark = { userId: user.id, emoji };
+  const removed = await DrawMessage.updateOne(
+    { _id: messageId, drawId: id, reactions: { $elemMatch: mark } },
+    { $pull: { reactions: mark } }
+  );
+  if (!removed.modifiedCount)
+    await DrawMessage.updateOne(
+      { _id: messageId, drawId: id, hidden: { $ne: true } },
+      { $addToSet: { reactions: mark } }
+    );
+  forget(id);
+  return { ok: true };
+}
+
+/** The host blocks whoever wrote a line: everything they said leaves the room, and they can't post again. */
+export async function blockFromChat(id: string, user: SessionUser, messageId: unknown): Promise<DrawResult> {
+  if (!Types.ObjectId.isValid(id) || typeof messageId !== "string" || !Types.ObjectId.isValid(messageId))
+    return { ok: false, error: "Bad request.", status: 400 };
+  await dbConnect();
+  if ((await accessTo(id, user.email)) !== "spectator")
+    return { ok: false, error: "Only the host can do that.", status: 403 };
+  const line = await DrawMessage.findOne({ _id: messageId, drawId: id }).lean<IDrawMessage>();
+  if (!line?.userId || line.host) return { ok: false, error: "That line can't be blocked.", status: 400 };
+  await Promise.all([
+    Draw.updateOne({ _id: id }, { $addToSet: { chatBlocked: line.userId } }),
+    DrawMessage.updateMany({ drawId: id, userId: line.userId, kind: MESSAGE_KIND.chat }, { $set: { hidden: true } }),
+  ]);
+  logEvent("draw_chat_blocked", { draw: id, user: line.userId });
+  forget(id);
+  return { ok: true };
+}
+
 /** The host takes a line down. It stays in the record, marked, and leaves every room. */
 export async function hideChat(id: string, user: SessionUser, messageId: unknown): Promise<DrawResult> {
   if (!Types.ObjectId.isValid(id) || typeof messageId !== "string" || !Types.ObjectId.isValid(messageId))
     return { ok: false, error: "Bad request.", status: 400 };
   await dbConnect();
-  if ((await accessTo(id, user.email)) !== "spectator") return { ok: false, error: "Only the host can do that.", status: 403 };
+  if ((await accessTo(id, user.email)) !== "spectator")
+    return { ok: false, error: "Only the host can do that.", status: 403 };
   await DrawMessage.updateOne({ _id: messageId, drawId: id }, { $set: { hidden: true } });
   logEvent("draw_chat_hidden", { draw: id, message: messageId });
   forget(id);
@@ -1274,11 +1396,18 @@ function systemLines(draw: LeanDraw, ctx: Ctx, before: { feedSeq: number; status
               : `⏱️ ${name} didn't claim spot ${f.spot} in time`,
       });
     else if (f.kind === "winner_left")
-      lines.push({ ...base, text: `🚪 ${name} left the room. Spot ${f.spot} goes back in ${GRACE_SECONDS} s unless they return` });
-    else if (f.kind === "winner_back") lines.push({ ...base, text: `👋 ${name} is back. Spot ${f.spot} is still theirs` });
+      lines.push({
+        ...base,
+        text: `🚪 ${name} left the room. Spot ${f.spot} goes back in ${GRACE_SECONDS} s unless they return`,
+      });
+    else if (f.kind === "winner_back")
+      lines.push({ ...base, text: `👋 ${name} is back. Spot ${f.spot} is still theirs` });
     else if (f.kind === "unfilled") lines.push({ ...base, text: `Nobody was left to draw spot ${f.spot} for` });
     else if (f.kind === "closed")
-      lines.push({ ...base, text: `🏁 Room closed: ${f.claimed ?? 0} of ${total} ${total === 1 ? "spot" : "spots"} claimed` });
+      lines.push({
+        ...base,
+        text: `🏁 Room closed: ${f.claimed ?? 0} of ${total} ${total === 1 ? "spot" : "spots"} claimed`,
+      });
   }
   return lines;
 }
@@ -1544,7 +1673,8 @@ export async function openDraw(input: OpenInput): Promise<OpenResult> {
   });
 
   const lean = (await Draw.findById(id).select(UNREAD_LISTS).lean<LeanDraw>())!;
-  if (input.send === false) return { draw: lean, created: true, delivered: 0, remaining: invitees.length, spectatorLinks };
+  if (input.send === false)
+    return { draw: lean, created: true, delivered: 0, remaining: invitees.length, spectatorLinks };
   const sent = await sendInvites(id);
   return { draw: lean, created: true, delivered: sent.delivered, remaining: sent.remaining, spectatorLinks };
 }
@@ -1718,10 +1848,8 @@ async function runCheck(id: Types.ObjectId, eligibleAtClose: number): Promise<vo
     else {
       if (new Date(entrant.joinedAt) > new Date(a.sweepStart))
         problems.push(`spot ${a.spot} went to ${a.userId}, who joined after its sweep began`);
-      if (!invited.has(entrant.email))
-        problems.push(`spot ${a.spot} went to ${a.userId}, who wasn't invited`);
-      if (spectators.has(entrant.email))
-        problems.push(`spot ${a.spot} went to ${a.userId}, a spectator`);
+      if (!invited.has(entrant.email)) problems.push(`spot ${a.spot} went to ${a.userId}, who wasn't invited`);
+      if (spectators.has(entrant.email)) problems.push(`spot ${a.spot} went to ${a.userId}, a spectator`);
     }
   }
   for (const [user, n] of wins) if (n > 1) problems.push(`${user} won ${n} times`);

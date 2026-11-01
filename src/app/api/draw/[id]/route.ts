@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
 import {
+  blockFromChat,
   claimSpot,
   editEntrant,
   hideChat,
@@ -11,6 +12,7 @@ import {
   passOnSpot,
   placeForRequest,
   postChat,
+  reactToChat,
   react,
   roomFor,
   roomJson,
@@ -37,13 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     chatSince: since > 0 ? since : undefined,
   });
   if (!room) return NextResponse.json({ error: "This draw doesn't exist." }, { status: 404, headers: NO_STORE });
-  // Only the people invited (and the hosts watching) see who is in the room.
-  if (room.access !== "invited" && room.access !== "spectator") {
-    return NextResponse.json(
-      { error: "This draw is for the people invited to it." },
-      { status: 403, headers: NO_STORE }
-    );
-  }
+  // Anyone may watch - someone who came late, or was sent the link. Only the invited can join.
   return new NextResponse(room.json, { headers: { ...NO_STORE, "Content-Type": "application/json" } });
 }
 
@@ -78,6 +74,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return answer(id, user, await editEntrant(id, user, { name: body.name, usePhoto: body.usePhoto }));
     case "chat":
       return answer(id, user, await postChat(id, user, body.text));
+    case "chatReact":
+      return answer(id, user, await reactToChat(id, user, body.message, body.emoji));
+    case "block":
+      return answer(id, user, await blockFromChat(id, user, body.message));
     case "hide":
       return answer(id, user, await hideChat(id, user, body.message));
     case "passon":
