@@ -1122,7 +1122,7 @@ export async function roomJson(id: string, user: SessionUser | null, have: Have)
 const CHAT_MAX = 200;
 const CHAT_GAP_MS = 1200;
 // After the room closes, the chat stays open this long for the goodbyes.
-const CHAT_AFTER_CLOSE_MS = 10 * 60 * 1000;
+const CHAT_AFTER_CLOSE_MS = 15 * 60 * 1000;
 const LINKISH = /(https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(com|net|org|io|ai|app|dev|co|me|ly|gg|xyz|link|ru|info|biz|site|online|shop|top)\b|\S+@\S+\.\S+)/i;
 
 // Control characters, zero-width marks and direction overrides: built from code points, so the
