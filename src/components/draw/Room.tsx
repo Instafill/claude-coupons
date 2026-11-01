@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import type { ChatLine } from "@/lib/draw";
 import { GRACE_SECONDS } from "@/lib/drawRules";
 
 import { Avatar } from "./Avatar";
 import JoinPanel, { EditMe, GhostTile, type Draft } from "./JoinPanel";
-import { TOAST_MS, type Mine, type Pass, type Person, type View } from "./roomView";
+import LiveChat, { type ChatMode } from "./LiveChat";
+import { TOAST_MS, type Mine, type Pass, type Person, type Reaction, type View } from "./roomView";
 import { clock } from "./time";
 import WorldMap, { type Pin } from "./WorldMap";
 
@@ -18,6 +20,8 @@ const TONE = {
 };
 
 const EMOJI = ["👋", "🔥", "🤞", "🍀", "😬", "🎉"];
+// Past this many tiles a room stops animating tiles into their new places.
+const BIG_ROOM = 80;
 
 /** Seconds left on a claim, and the window it is counting down (the grace once they've left). */
 function claimLeft(pass: Pass, t: number, claim: number): { left: number; of: number } {
@@ -59,6 +63,11 @@ export default function Room({
   onPassOn,
   onReact,
   onOutcome,
+  chat,
+  peopleById,
+  chatMode,
+  onChat,
+  onHideChat,
 }: {
   view: View;
   speed: number;
@@ -71,10 +80,15 @@ export default function Room({
   onPassOn: () => void;
   onReact: (emoji: string) => void;
   onOutcome: (passId: string, result: "claimed" | "dead") => void;
+  chat: ChatLine[];
+  peopleById: Map<string, Person>;
+  chatMode: ChatMode;
+  onChat: (text: string) => Promise<string | null>;
+  onHideChat?: (id: string) => void;
 }) {
   const t = view.t;
   const joined = !!view.me;
-  const canJoin = !joined && !view.closed;
+  const canJoin = !joined && !view.closed && !view.spectator;
 
   // The sticky "you're not in yet" bar shows only once the join panel has scrolled away, so
   // the invitation is always on screen without ever showing twice.
@@ -103,7 +117,9 @@ export default function Room({
     ? view.passes.flatMap((p) => p.history.map((h) => ({ ...h, n: p.n }))).find((h) => h.id === meId)
     : undefined;
   const stillOpen = view.passes.some((p) => p.status !== "claimed" && p.status !== "unclaimed");
-  const compact = view.people.length > 60;
+  // Tiles shrink as the room fills, so a few hundred people still fit beside the chat.
+  const compact = view.people.length > 24;
+  const tiny = view.people.length > 120;
   const countries = new Set(view.people.filter((p) => !p.left).map((p) => p.country)).size;
 
   let headline: string;
@@ -111,7 +127,9 @@ export default function Room({
   else if (view.sweepPass)
     headline = view.sweepRedraw ? `Re-drawing spot ${view.sweepPass}…` : `Drawing spot ${view.sweepPass} of ${total}…`;
   else if (view.nextJob)
-    headline = view.nextJob.redraw ? `Re-drawing spot ${view.nextJob.pass}…` : `Drawing spot ${view.nextJob.pass} of ${total}…`;
+    headline = view.nextJob.redraw
+      ? `Re-drawing spot ${view.nextJob.pass}…`
+      : `Drawing spot ${view.nextJob.pass} of ${total}…`;
   else if (view.closed) headline = "Room closed";
   else headline = "Winners are claiming";
 
@@ -123,15 +141,7 @@ export default function Room({
     photo: p.photo,
     seed: p.seed,
     state:
-      view.highlight === p.id
-        ? "highlight"
-        : holderOf.has(p.id)
-          ? "winner"
-          : p.left
-            ? "left"
-            : p.me
-              ? "me"
-              : "normal",
+      view.highlight === p.id ? "highlight" : holderOf.has(p.id) ? "winner" : p.left ? "left" : p.me ? "me" : "normal",
   }));
   // Draw the visitor's pin last so it sits on top of anyone from the same city.
   pins.sort((a, b) => Number(a.id === meId) - Number(b.id === meId));
@@ -156,6 +166,12 @@ export default function Room({
   useLayoutEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
+    // In a big room arrivals come every moment and every tile would be sliding at once: the
+    // grid just settles into its new order instead.
+    if (grid.childElementCount > BIG_ROOM) {
+      spots.current.clear();
+      return;
+    }
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const next = new Map<string, { x: number; y: number }>();
     grid.querySelectorAll<HTMLElement>("[data-tile]").forEach((el) => {
@@ -198,13 +214,24 @@ export default function Room({
   }, []);
 
   const [editing, setEditing] = useState(false);
+  const reactionsOf = new Map<string, Reaction[]>();
+  for (const r of view.reactions) reactionsOf.set(r.personId, [...(reactionsOf.get(r.personId) ?? []), r]);
   const [bursts, setBursts] = useState<{ id: number; emoji: string }[]>([]);
   const burstSeq = useRef(0);
 
   return (
-    <div className="space-y-5">
-      {canJoin && <JoinPanel ref={panelRef} view={view} draft={draft} onChange={onDraft} onJoin={onJoin} missingName={missingName} />}
-      {!joined && view.closed && (
+    <div className="space-y-4">
+      {canJoin && (
+        <JoinPanel
+          ref={panelRef}
+          view={view}
+          draft={draft}
+          onChange={onDraft}
+          onJoin={onJoin}
+          missingName={missingName}
+        />
+      )}
+      {!joined && view.closed && !view.spectator && (
         <section className="rounded-2xl border border-line bg-surface px-6 py-5">
           <h2 className="text-[22px] font-semibold">You missed this draw</h2>
           <p className="mt-1 text-[15px] text-muted">
@@ -215,16 +242,22 @@ export default function Room({
       )}
 
       {/* Status */}
-      <section className="rounded-2xl border border-line bg-surface px-6 py-5">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <section className="rounded-2xl border border-line bg-surface px-5 py-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-              {view.test && "Test · "}Live draw · {links === 1 ? "1 Claude Pro link" : `${links} Claude Pro links`}, {total}{" "}
+              {view.test && "Test · "}Live draw{view.everyone && " · everyone in line invited"} ·{" "}
+              {links === 1 ? "1 Claude Pro link" : `${links} Claude Pro links`}, {total}{" "}
               {total === 1 ? "spot" : "spots"}
             </p>
-            <h1 className="mt-1 text-[38px] leading-tight font-bold tabular-nums">{headline}</h1>
+            <h1 className="mt-0.5 text-[30px] leading-tight font-bold tabular-nums">{headline}</h1>
           </div>
           <div className="flex flex-wrap gap-2 text-[13px] font-semibold">
+            {view.spectator && (
+              <span data-pill="watching" className="rounded-full bg-ink px-3 py-1 text-white">
+                👀 Watching
+              </span>
+            )}
             <span className="rounded-full bg-[#f0ede6] px-3 py-1">👥 {view.presentCount} in the room</span>
             <span className="rounded-full bg-[#f4e4da] px-3 py-1 text-accent-dark">
               🎟 {total} {total === 1 ? "spot" : "spots"}
@@ -240,14 +273,14 @@ export default function Room({
         {view.banner && (
           <p
             key={view.banner.text}
-            className={`draw-pop mt-4 rounded-xl border px-4 py-2.5 text-[15px] font-semibold ${TONE[view.banner.tone]}`}
+            className={`draw-pop mt-3 rounded-xl border px-4 py-2 text-[15px] font-semibold ${TONE[view.banner.tone]}`}
           >
             {view.banner.text}
           </p>
         )}
 
         {!view.closed && (
-          <p className="mt-3 text-[14px] text-muted">
+          <p className="mt-2 text-[13px] text-muted">
             {view.me && view.me.joinAt > view.drawAt && !view.meEverWon
               ? "You arrived after the draw started, so you're in for any spot that comes back. "
               : ""}
@@ -256,7 +289,7 @@ export default function Room({
           </p>
         )}
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+        <div className="mt-3 grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
           {view.passes.map((pass) => (
             <PassChip key={pass.n} pass={pass} view={view} holder={pass.holder ? byId.get(pass.holder) : undefined} />
           ))}
@@ -276,8 +309,7 @@ export default function Room({
               : myLoss.reason === "left"
                 ? "You left the room"
                 : "Your claim time ran out"}
-            , so it was re-drawn
-            among the people still here. Your place in line for the next draw is safe.
+            , so it was re-drawn among the people still here. Your place in line for the next draw is safe.
           </p>
         </section>
       )}
@@ -297,96 +329,113 @@ export default function Room({
       )}
 
       {/* The room */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="rounded-2xl border border-line bg-surface px-5 py-5">
+      {/* On a desktop the room and the chat fill the rest of the screen side by side, each
+          scrolling inside itself, so the whole draw is in view at once. */}
+      <div className="grid gap-4 lg:h-[max(520px,calc(100dvh-330px))] lg:grid-cols-[minmax(0,1fr)_minmax(420px,1.1fr)]">
+        <section className="flex min-h-0 flex-col rounded-2xl border border-line bg-surface px-4 py-4">
           <div className="mb-1 flex items-baseline justify-between">
-            <h2 className="text-[18px] font-semibold">In the room</h2>
+            <h2 className="text-[16px] font-semibold">In the room</h2>
             <span className="text-[13px] text-muted tabular-nums">{view.presentCount} watching</span>
           </div>
           {/* The shell clips while it eases to the grid's height; the grid's padding keeps the
               badges above each tile and the sweep's enlarged tile inside the clip. */}
-          <div ref={shellRef} className="-mx-1 overflow-hidden">
-            <div
-              ref={gridRef}
-              className={`grid gap-2 px-1 pt-2.5 pb-1 ${
-                compact ? "grid-cols-[repeat(auto-fill,minmax(58px,1fr))]" : "grid-cols-[repeat(auto-fill,minmax(82px,1fr))]"
-              }`}
-            >
-              {canJoin && <GhostTile draft={draft} onClick={onJoin} compact={compact} />}
-              {seated.map((person) => (
-                <Tile
-                  key={person.id}
-                  person={person}
-                  view={view}
-                  pass={holderOf.get(person.id)}
-                  missed={missed.has(person.id)}
-                  fresh={!person.me && person.joinAt > 0 && t - person.joinAt < 4 * speed}
-                  compact={compact}
-                  onEdit={person.me ? () => setEditing(true) : undefined}
-                />
-              ))}
+          <div className="-mx-1 max-h-[420px] min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain lg:max-h-none">
+            <div ref={shellRef} className="overflow-hidden">
+              <div
+                ref={gridRef}
+                className={`grid gap-1.5 px-1 pt-2.5 pb-1 ${
+                  compact
+                    ? tiny
+                      ? "grid-cols-[repeat(auto-fill,minmax(44px,1fr))]"
+                      : "grid-cols-[repeat(auto-fill,minmax(52px,1fr))]"
+                    : "grid-cols-[repeat(auto-fill,minmax(70px,1fr))]"
+                }`}
+              >
+                {canJoin && <GhostTile draft={draft} onClick={onJoin} compact={compact} />}
+                {seated.map((person) => (
+                  <Tile
+                    key={person.id}
+                    person={person}
+                    highlighted={view.highlight === person.id}
+                    pass={holderOf.get(person.id)}
+                    // The clock only matters to a tile counting down a claim.
+                    t={holderOf.get(person.id)?.status === "claiming" ? t : 0}
+                    claimSeconds={view.claim}
+                    reactions={reactionsOf.get(person.id) ?? NO_REACTIONS}
+                    missed={missed.has(person.id)}
+                    fresh={!person.me && person.joinAt > 0 && t - person.joinAt < 4 * speed}
+                    compact={compact}
+                    tiny={tiny}
+                    // A state setter never changes, so the memo on the tile holds.
+                    onEdit={person.me ? setEditing : undefined}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
             <span className="mr-1 text-[13px] text-muted">React</span>
-            {EMOJI.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => {
-                  onReact(emoji);
-                  // Feedback where the finger is, joined or not: the tile it also rises from may
-                  // be scrolled away, and before joining there is no tile at all.
-                  const id = ++burstSeq.current;
-                  setBursts((all) => [...all, { id, emoji }]);
-                  setTimeout(() => setBursts((all) => all.filter((b) => b.id !== id)), 2000);
-                }}
-                className="relative h-10 w-10 rounded-full border border-line bg-surface text-[19px] transition hover:-translate-y-0.5 hover:bg-paper active:scale-90"
-                aria-label={`React ${emoji}`}
-              >
-                {emoji}
-                {bursts
-                  .filter((b) => b.emoji === emoji)
-                  .map((b) => (
-                    <span
-                      key={b.id}
-                      aria-hidden="true"
-                      className="draw-float pointer-events-none absolute top-0 left-1/2 text-[22px]"
-                    >
-                      {emoji}
-                    </span>
-                  ))}
-              </button>
-            ))}
-            {!joined && <span className="text-[13px] text-muted">Join to show yours on your tile</span>}
+            {!view.spectator &&
+              EMOJI.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    onReact(emoji);
+                    // Feedback where the finger is, joined or not: the tile it also rises from may
+                    // be scrolled away, and before joining there is no tile at all.
+                    const id = ++burstSeq.current;
+                    setBursts((all) => [...all, { id, emoji }]);
+                    setTimeout(() => setBursts((all) => all.filter((b) => b.id !== id)), 2000);
+                  }}
+                  className="relative h-9 w-9 rounded-full border border-line bg-surface text-[17px] transition hover:-translate-y-0.5 hover:bg-paper active:scale-90"
+                  aria-label={`React ${emoji}`}
+                >
+                  {emoji}
+                  {bursts
+                    .filter((b) => b.emoji === emoji)
+                    .map((b) => (
+                      <span
+                        key={b.id}
+                        aria-hidden="true"
+                        className="draw-float pointer-events-none absolute top-0 left-1/2 text-[22px]"
+                      >
+                        {emoji}
+                      </span>
+                    ))}
+                </button>
+              ))}
+            {!joined && (
+              <span className="text-[13px] text-muted">
+                {view.spectator ? "Spectators watch without reacting" : "Join to show yours on your tile"}
+              </span>
+            )}
           </div>
         </section>
 
-        <div className="space-y-5">
-          <section className="rounded-2xl border border-line bg-surface px-5 py-5">
-            <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-[18px] font-semibold">Where the room is</h2>
+        {/* On a phone the map and chat come before the grid, which can run to hundreds of tiles. */}
+        <div className="order-first flex min-h-0 flex-col gap-4 lg:order-none">
+          <section className="rounded-2xl border border-line bg-surface px-4 py-3">
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <h2 className="text-[15px] font-semibold">Where the room is</h2>
               <span className="text-[13px] text-muted">
                 {countries} {countries === 1 ? "country" : "countries"}
               </span>
             </div>
-            <WorldMap pins={pins} />
+            <div className="mx-auto max-w-[340px]">
+              <WorldMap pins={pins} />
+            </div>
           </section>
-          <section className="rounded-2xl border border-line bg-surface px-5 py-5">
-            <h2 className="mb-2 text-[18px] font-semibold">Activity</h2>
-            <ul className="space-y-1.5 text-[14px]">
-              {view.lines.map((line) => (
-                <li
-                  key={line.id}
-                  className={`draw-pop rounded-md px-2 py-1 ${
-                    line.tone === "good" ? "text-good" : line.tone === "bad" ? "text-bad" : "text-muted"
-                  }`}
-                >
-                  {line.text}
-                </li>
-              ))}
-            </ul>
-          </section>
+          <LiveChat
+            lines={chat}
+            people={peopleById}
+            meId={view.me?.id}
+            mode={chatMode}
+            live={!view.closed}
+            onSend={onChat}
+            onHide={onHideChat}
+            onJoin={onJoin}
+          />
         </div>
       </div>
 
@@ -501,27 +550,39 @@ function PassChip({ pass, view, holder }: { pass: Pass; view: View; holder?: Per
   );
 }
 
-function Tile({
+const NO_REACTIONS: Reaction[] = [];
+
+// Memoised: a room of hundreds re-renders five times a second for its clocks, and a tile only
+// needs to when something about that tile changed.
+const Tile = memo(function Tile({
   person,
-  view,
+  highlighted,
   pass,
+  t,
+  claimSeconds,
+  reactions,
   missed,
   fresh,
   compact,
+  tiny = false,
   onEdit,
 }: {
   person: Person;
-  view: View;
+  highlighted: boolean;
   pass?: Pass;
+  t: number;
+  claimSeconds: number;
+  reactions: Reaction[];
   missed: boolean;
   fresh: boolean;
   compact: boolean;
-  /** Only on the visitor's own tile: opens the name-and-picture editor. */
-  onEdit?: () => void;
+  /** A room of more than a hundred or so: the smallest tiles. */
+  tiny?: boolean;
+  /** Only on the visitor's own tile: opens the name-and-picture editor (called with true). */
+  onEdit?: (open: boolean) => void;
 }) {
-  const highlighted = view.highlight === person.id;
-  const avatar = compact ? 34 : 44;
-  const ringBox = avatar + 10;
+  const avatar = tiny ? 22 : compact ? 26 : 36;
+  const ringBox = avatar + 8;
 
   let look = "border-line bg-surface";
   if (highlighted) look = "z-10 scale-[1.07] border-accent bg-[#f7e5da] shadow-md";
@@ -530,7 +591,10 @@ function Tile({
   else if (person.me) look = "border-accent bg-surface";
 
   const badge = pass
-    ? { text: `${person.me ? "You · " : ""}Spot ${pass.n}${pass.status === "claimed" ? " ✓" : ""}`, cls: "bg-good text-white" }
+    ? {
+        text: `${person.me ? "You · " : ""}Spot ${pass.n}${pass.status === "claimed" ? " ✓" : ""}`,
+        cls: "bg-good text-white",
+      }
     : person.me
       ? { text: "You", cls: "bg-accent text-white" }
       : person.left
@@ -541,8 +605,7 @@ function Tile({
             ? { text: "Just in", cls: "bg-accent text-white" }
             : null;
 
-  const claim = pass?.status === "claiming" ? claimLeft(pass, view.t, view.claim) : null;
-  const reactions = view.reactions.filter((r) => r.personId === person.id);
+  const claim = pass?.status === "claiming" ? claimLeft(pass, t, claimSeconds) : null;
 
   return (
     <div
@@ -551,15 +614,15 @@ function Tile({
         role: "button",
         tabIndex: 0,
         title: "Change your name or picture",
-        onClick: onEdit,
+        onClick: () => onEdit(true),
         onKeyDown: (event: KeyboardEvent) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onEdit();
+            onEdit(true);
           }
         },
       })}
-      className={`group relative flex flex-col items-center rounded-xl border px-1 pt-3 pb-2 text-center transition-[background-color,border-color,scale,box-shadow] duration-150 ${look} ${
+      className={`group relative flex flex-col items-center rounded-xl border px-1 pt-2.5 pb-1.5 text-center transition-[background-color,border-color,scale,box-shadow] duration-150 ${look} ${
         person.left && !pass ? "opacity-40 grayscale" : ""
       } ${fresh ? "draw-arrive" : ""} ${onEdit ? "cursor-pointer hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent" : ""}`}
     >
@@ -579,7 +642,14 @@ function Tile({
         </span>
       )}
       <div className="relative flex items-center justify-center" style={{ width: ringBox, height: ringBox }}>
-        {claim && <Ring left={claim.left} of={claim.of} size={ringBox} urgent={claim.left <= 10 || pass?.graceFrom !== undefined} />}
+        {claim && (
+          <Ring
+            left={claim.left}
+            of={claim.of}
+            size={ringBox}
+            urgent={claim.left <= 10 || pass?.graceFrom !== undefined}
+          />
+        )}
         <Avatar
           photo={person.photo}
           seed={person.seed}
@@ -588,7 +658,9 @@ function Tile({
           className={person.me && !pass ? "ring-2 ring-accent ring-offset-2" : ""}
         />
       </div>
-      <p className={`mt-1 w-full truncate leading-tight font-semibold ${compact ? "text-[11px]" : "text-[13px]"}`}>
+      <p
+        className={`mt-1 w-full truncate leading-tight font-semibold ${tiny ? "text-[9px]" : compact ? "text-[10px]" : "text-[12px]"}`}
+      >
         {person.me ? `${person.name} (you)` : person.name}
       </p>
       {!compact && (
@@ -612,7 +684,7 @@ function Tile({
       ))}
     </div>
   );
-}
+});
 
 function MyWin({
   pass,

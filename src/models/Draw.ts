@@ -77,8 +77,16 @@ export interface IDraw extends Document {
   test: boolean;
   passIds: Types.ObjectId[];
   spots: ISpot[];
-  /** Who may enter: the front of the line when the invites went out. Lower-cased. */
+  /** Who may enter: the front of the line when the invites went out. Lower-cased. Never read
+      on a room's every ask (see load() in lib/draw.ts): a show invites the whole line. */
   invited: string[];
+  invitedCount: number;
+  /** Who the invite email has gone to, so a send that stopped part-way can pick up where it was. */
+  sent: string[];
+  /** May watch, never join: the operator, and the recorder filming the show. */
+  spectators: string[];
+  /** A show: everyone waiting was invited, so not coming costs nobody their place. */
+  everyone: boolean;
   jobs: { spot: number; redraw: boolean }[];
   nextJobAt?: Date;
   sweep?: ISweep;
@@ -121,6 +129,10 @@ const DrawSchema = new Schema<IDraw>(
     passIds: [{ type: Schema.Types.ObjectId, ref: "Pass" }],
     spots: [SpotSchema],
     invited: [{ type: String, lowercase: true }],
+    invitedCount: { type: Number, default: 0 },
+    sent: [{ type: String, lowercase: true }],
+    spectators: [{ type: String, lowercase: true }],
+    everyone: { type: Boolean, default: false },
     jobs: [{ _id: false, spot: Number, redraw: Boolean }],
     nextJobAt: { type: Date },
     sweep: {

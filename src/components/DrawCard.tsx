@@ -29,7 +29,10 @@ export default function DrawCard({ deal, summary }: { deal: Deal; summary: DrawS
             )}
           </h3>
           <p className="mt-1.5 text-[15px] text-muted">
-            {links(next.links)}, {spots(next.spots)}. The first {next.invited} in line are invited.
+            {links(next.links)}, {spots(next.spots)}.{" "}
+            {next.everyone
+              ? `Everyone who was in line is invited (${next.invited.toLocaleString("en-US")}), with the same chance each.`
+              : `The first ${next.invited} in line are invited.`}
           </p>
           {next.youreInvited ? (
             <Link

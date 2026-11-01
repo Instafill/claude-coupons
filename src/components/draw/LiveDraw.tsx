@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { DrawView } from "@/lib/draw";
+import type { ChatLine, DrawPerson, DrawView } from "@/lib/draw";
 import { POLL_MS } from "@/lib/drawRules";
 import type { Place } from "@/lib/places";
 
 import { focusJoin, type Draft } from "./JoinPanel";
+import type { ChatMode } from "./LiveChat";
 import Room from "./Room";
 import { TOAST_MS, type Banner, type Line, type Pass, type PassStatus, type Person, type View } from "./roomView";
 import { clock } from "./time";
@@ -33,7 +34,12 @@ interface Shown {
   at: number;
 }
 
+/** The server's view with the people list always filled in: a page keeps the last one it got. */
+type Full = DrawView & { people: DrawPerson[] };
+
 const REACTION_MS = 2200;
+// How much chat a page holds; older lines scroll away for good.
+const CHAT_HELD = 200;
 // After the room closes nothing moves but a winner's "did it work?", so it asks rarely.
 const CLOSED_POLL_MS = 15_000;
 
@@ -60,23 +66,60 @@ function nextDue(s: DrawView, now: number): number {
   return due.length ? Math.min(...due) : Infinity;
 }
 
-function toView(s: DrawView, now: number, loadedAt: number, shown: Shown[]): View {
+/**
+ * The room's people as tiles. A person whose tile reads the same as last time keeps the very
+ * same object, so with hundreds in the room only the tiles that changed draw again.
+ */
+function toPeople(list: DrawPerson[], absent: Set<string>, meId: string | undefined, held: Map<string, Person>): Person[] {
+  return list.map((p) => {
+    const left = absent.has(p.id);
+    const me = p.id === meId;
+    const had = held.get(p.id);
+    if (had && had.left === left && had.me === me && had.name === p.name && had.photo === p.picture && had.city === p.city)
+      return had;
+    const person: Person = {
+      id: p.id,
+      name: p.name,
+      photo: p.picture,
+      seed: p.seed,
+      city: p.city,
+      country: p.country,
+      flag: p.flag,
+      lat: p.lat,
+      lon: p.lon,
+      joinAt: p.joinedAt / 1000,
+      joined: true,
+      left,
+      me,
+    };
+    held.set(p.id, person);
+    return person;
+  });
+}
+
+/** Chat lines merged by id, in order, without any the host took down. */
+function mergeChat(held: ChatLine[], fresh: ChatLine[]): ChatLine[] {
+  if (!fresh.length) return held;
+  const byId = new Map(held.map((line) => [line.id, line]));
+  let changed = false;
+  for (const line of fresh) {
+    const had = byId.get(line.id);
+    if (line.hidden) {
+      if (had) {
+        byId.delete(line.id);
+        changed = true;
+      }
+    } else if (!had) {
+      byId.set(line.id, line);
+      changed = true;
+    }
+  }
+  if (!changed) return held;
+  return [...byId.values()].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1)).slice(-CHAT_HELD);
+}
+
+function toView(s: Full, people: Person[], now: number, loadedAt: number, shown: Shown[]): View {
   const meId = s.viewer.id;
-  const people: Person[] = s.people.map((p) => ({
-    id: p.id,
-    name: p.name,
-    photo: p.picture,
-    seed: p.seed,
-    city: p.city,
-    country: p.country,
-    flag: p.flag,
-    lat: p.lat,
-    lon: p.lon,
-    joinAt: p.joinedAt / 1000,
-    joined: true,
-    left: !p.present,
-    me: p.id === meId,
-  }));
   const byId = new Map(people.map((p) => [p.id, p]));
   const name = (id?: string) => byId.get(id ?? "")?.name ?? "Someone";
   const isMe = (id?: string) => !!meId && id === meId;
@@ -157,6 +200,8 @@ function toView(s: DrawView, now: number, loadedAt: number, shown: Shown[]): Vie
     drawAt: s.drawAt / 1000,
     claim: s.claimSeconds,
     test: s.test,
+    everyone: s.everyone,
+    spectator: s.viewer.spectator,
     links: s.links,
     drawStarted,
     closed: s.status === "closed",
@@ -185,12 +230,20 @@ function toView(s: DrawView, now: number, loadedAt: number, shown: Shown[]): Vie
   };
 }
 
-export default function LiveDraw({ initial, known, place }: { initial: DrawView; known: Known; place: Place }) {
+export default function LiveDraw({ initial: first, known, place }: { initial: DrawView; known: Known; place: Place }) {
+  const initial = first as Full;
   const id = initial.id;
-  const [server, setServer] = useState(initial);
+  const [server, setServer] = useState<Full>(initial);
+  const [chat, setChat] = useState<ChatLine[]>(() => mergeChat([], initial.chat));
+  const lastChatAt = useRef(initial.chat.length ? Math.max(...initial.chat.map((line) => line.at)) : 0);
   // The server's clock minus ours. Every countdown in every room reads the server's.
   const offset = useRef(0);
-  const latest = useRef(initial);
+  const latest = useRef<Full>(initial);
+  // Tiles as last built, so an unchanged person keeps the same object from one answer to the next.
+  const heldPeople = useRef(new Map<string, Person>());
+  const [people, setPeople] = useState<Person[]>(() =>
+    toPeople(initial.people, new Set(initial.absent), initial.viewer.id, new Map())
+  );
   const [now, setNow] = useState(initial.now);
   const [shown, setShown] = useState<Shown[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -204,11 +257,19 @@ export default function LiveDraw({ initial, known, place }: { initial: DrawView;
     place,
   }));
 
-  const apply = useCallback((view: DrawView, sentAt: number) => {
+  const apply = useCallback((answer: DrawView, sentAt: number) => {
     // Half the round trip is the best guess at when the server read its clock.
-    offset.current = view.now - (sentAt + Date.now()) / 2;
+    offset.current = answer.now - (sentAt + Date.now()) / 2;
+    // The whole people list comes on arrival; after that only the arrivals since the last ask.
+    const people = answer.people ?? [...latest.current.people, ...(answer.peopleAdded ?? [])];
+    const view: Full = { ...answer, people };
     latest.current = view;
     setServer(view);
+    setPeople(toPeople(people, new Set(answer.absent), answer.viewer.id, heldPeople.current));
+    if (answer.chat.length) {
+      lastChatAt.current = Math.max(lastChatAt.current, ...answer.chat.map((line) => line.at));
+      setChat((held) => mergeChat(held, answer.chat));
+    }
     // Reactions are shown from the moment this page first sees them: one sent just after the
     // last ask would otherwise be nearly over by the time it arrived.
     setShown((all) => {
@@ -222,7 +283,13 @@ export default function LiveDraw({ initial, known, place }: { initial: DrawView;
 
   const poll = useCallback(async () => {
     const sentAt = Date.now();
-    const response = await fetch(`/api/draw/${id}`, { cache: "no-store" });
+    // What this page holds, so the answer carries only what's new to it.
+    const have = new URLSearchParams({
+      n: String(latest.current.people.length),
+      ph: latest.current.peopleHash,
+      since: String(lastChatAt.current),
+    });
+    const response = await fetch(`/api/draw/${id}?${have}`, { cache: "no-store" });
     if (response.ok) apply(await response.json(), sentAt);
   }, [id, apply]);
 
@@ -274,7 +341,8 @@ export default function LiveDraw({ initial, known, place }: { initial: DrawView;
     };
   }, [id, poll]);
 
-  const view = toView(server, now, initial.now, shown);
+  const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
+  const view = toView(server, people, now, initial.now, shown);
 
   // A background tab still says what is happening in its title: a winner who switched away
   // sees it from the tab strip.
@@ -289,6 +357,37 @@ export default function LiveDraw({ initial, known, place }: { initial: DrawView;
   useEffect(() => {
     document.title = `${title} - Claude Coupons`;
   }, [title]);
+
+  const sendChat = useCallback(
+    async (text: string): Promise<string | null> => {
+      const sentAt = Date.now();
+      const response = await fetch(`/api/draw/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "chat", text }),
+      }).catch(() => null);
+      if (!response) return "That didn't send. Try again.";
+      const data = await response.json().catch(() => ({}));
+      if (data.view) apply(data.view, sentAt);
+      return response.ok ? null : (data.error ?? "That didn't send. Try again.");
+    },
+    [id, apply]
+  );
+
+  const hideChat = useCallback(
+    async (message: string) => {
+      setChat((held) => held.filter((line) => line.id !== message));
+      await fetch(`/api/draw/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "hide", message }),
+      }).catch(() => {});
+    },
+    [id]
+  );
+
+  const joined = !!view.me;
+  const chatMode: ChatMode = server.viewer.spectator ? "host" : joined ? "chat" : view.closed ? "closed" : "join";
 
   const send = async (body: Record<string, unknown>) => {
     const sentAt = Date.now();
@@ -346,6 +445,11 @@ export default function LiveDraw({ initial, known, place }: { initial: DrawView;
           send({ action: "edit", name: next.name, usePhoto: next.usePhoto });
         }}
         missingName={missingName}
+        chat={chat}
+        peopleById={peopleById}
+        chatMode={chatMode}
+        onChat={sendChat}
+        onHideChat={server.viewer.spectator ? hideChat : undefined}
         onClaim={() => send({ action: "claim" })}
         onPassOn={() => send({ action: "passon" })}
         onReact={(emoji) => {

@@ -73,6 +73,10 @@ export interface View {
   drawAt: number;
   claim: number;
   test: boolean;
+  /** A show: the whole line was invited, and everyone here has the same chance. */
+  everyone: boolean;
+  /** Watching, not playing: the operator, or the recorder filming it. */
+  spectator: boolean;
   links: number;
   drawStarted: boolean;
   closed: boolean;

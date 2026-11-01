@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 
 import { getUser } from "@/lib/auth";
-import { claimSpot, editEntrant, joinDraw, leaveDraw, passOnSpot, placeForRequest, react, roomFor } from "@/lib/draw";
+import {
+  claimSpot,
+  editEntrant,
+  hideChat,
+  joinDraw,
+  leaveDraw,
+  passOnSpot,
+  placeForRequest,
+  postChat,
+  react,
+  roomFor,
+  roomJson,
+} from "@/lib/draw";
 import { hashIp } from "@/lib/passes";
 
 // One draw's room. GET is the ask every open page makes every couple of seconds: it moves the
@@ -11,19 +23,28 @@ import { hashIp } from "@/lib/passes";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  const view = await roomFor(id, user);
-  if (!view) return NextResponse.json({ error: "This draw doesn't exist." }, { status: 404, headers: NO_STORE });
-  // Only the people invited see who is in the room.
-  if (!view.viewer.invited) {
+  // What the page already holds: how many people and the hash naming them, and the time of its
+  // newest chat line. The answer carries only what's new to it.
+  const query = request.nextUrl.searchParams;
+  const n = Number(query.get("n"));
+  const since = Number(query.get("since"));
+  const room = await roomJson(id, user, {
+    n: Number.isInteger(n) && n >= 0 && query.has("n") ? n : undefined,
+    ph: query.get("ph") ?? undefined,
+    chatSince: since > 0 ? since : undefined,
+  });
+  if (!room) return NextResponse.json({ error: "This draw doesn't exist." }, { status: 404, headers: NO_STORE });
+  // Only the people invited (and the hosts watching) see who is in the room.
+  if (room.access !== "invited" && room.access !== "spectator") {
     return NextResponse.json(
       { error: "This draw is for the people invited to it." },
       { status: 403, headers: NO_STORE }
     );
   }
-  return NextResponse.json(view, { headers: NO_STORE });
+  return new NextResponse(room.json, { headers: { ...NO_STORE, "Content-Type": "application/json" } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -55,13 +76,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     case "edit":
       return answer(id, user, await editEntrant(id, user, { name: body.name, usePhoto: body.usePhoto }));
+    case "chat":
+      return answer(id, user, await postChat(id, user, body.text));
+    case "hide":
+      return answer(id, user, await hideChat(id, user, body.message));
     case "passon":
       return answer(id, user, await passOnSpot(id, user));
     case "claim": {
       const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? request.headers.get("x-real-ip");
       const result = await claimSpot(id, user, hashIp(ip));
       if (!result.ok) return answer(id, user, result);
-      const view = await roomFor(id, user);
+      const view = await roomFor(id, user, {}, { fresh: true });
       return NextResponse.json({ ...result, view }, { headers: NO_STORE });
     }
     default:
@@ -75,7 +100,8 @@ async function answer(
   user: NonNullable<Awaited<ReturnType<typeof getUser>>>,
   result: { ok: true } | { ok: false; error: string; status: number }
 ) {
-  const view = await roomFor(id, user);
+  // They just did something: the answer waits for a room that shows it.
+  const view = await roomFor(id, user, {}, { fresh: true });
   if (!result.ok) return NextResponse.json({ error: result.error, view }, { status: result.status, headers: NO_STORE });
   return NextResponse.json({ ok: true, view }, { headers: NO_STORE });
 }

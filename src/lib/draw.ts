@@ -22,6 +22,7 @@ import { sendDrawInvites } from "@/lib/sendgrid";
 import { enterUrl, stopUrl } from "@/lib/watchers";
 import Draw, { DRAW_STATUS, IDraw, IFeedItem, ISpot, ReleaseReason, SPOT_STATUS } from "@/models/Draw";
 import DrawEntrant, { IDrawEntrant } from "@/models/DrawEntrant";
+import DrawMessage, { IDrawMessage, MESSAGE_KIND } from "@/models/DrawMessage";
 import Membership from "@/models/Membership";
 import Pass, { IPass, PASS_STATUS } from "@/models/Pass";
 import Unlock from "@/models/Unlock";
@@ -249,7 +250,7 @@ function advance(draw: LeanDraw, ctx: Ctx): boolean {
     event(draw, ctx, "draw_started", {
       present: presentCount(ctx),
       joined: ctx.people.size,
-      invited: draw.invited.length,
+      invited: draw.invitedCount,
       eligible: eligible(draw, ctx).length,
     });
     changed = true;
@@ -290,7 +291,7 @@ function advance(draw: LeanDraw, ctx: Ctx): boolean {
       redraws: draw.spots.reduce((n, s) => n + s.history.length, 0),
       joined: ctx.people.size,
       present: presentCount(ctx),
-      invited: draw.invited.length,
+      invited: draw.invitedCount,
     });
     const id = draw._id;
     ctx.effects.push(() => retireSpentPasses(id));
@@ -315,9 +316,13 @@ const STATE_FIELDS = [
   "closedAt",
 ] as const;
 
+// A room's every ask reads the draw, so the long lists - a show invites the whole line - stay
+// in the database; who may come in is asked of it directly (accessTo).
+const UNREAD_LISTS = "-invited -sent -spectators";
+
 async function load(id: Types.ObjectId | string) {
   const [draw, entrants] = await Promise.all([
-    Draw.findById(id).lean<LeanDraw>(),
+    Draw.findById(id).select(UNREAD_LISTS).lean<LeanDraw>(),
     DrawEntrant.find({ drawId: id }).lean<LeanEntrant[]>(),
   ]);
   return { draw, entrants };
@@ -343,6 +348,7 @@ async function mutate(
       events: [],
       effects: [],
     };
+    const before = { feedSeq: draw.feedSeq, status: draw.status };
     if (!change(draw, ctx)) return { draw, entrants };
 
     const $set: Record<string, unknown> = {};
@@ -359,6 +365,12 @@ async function mutate(
 
     draw.rev += 1;
     for (const [name, data] of ctx.events) logEvent(name, data);
+    // Only the write that landed tells the chat, so a line is never said twice.
+    try {
+      await postSystem(draw._id, systemLines(draw, ctx, before));
+    } catch (error) {
+      console.error("Draw chat line failed:", error);
+    }
     for (const effect of ctx.effects) {
       try {
         await effect();
@@ -384,9 +396,23 @@ export async function advanceDraw(id: string) {
 
 // ---- what a room's visitors do ------------------------------------------------------------
 
-/** Lets one person in: invited to this draw, by the address their session proved. */
-function invitedTo(draw: Pick<LeanDraw, "invited">, user: SessionUser | null): boolean {
-  return !!user && draw.invited.includes(user.email.toLowerCase());
+/**
+ * How someone may be in a room, by the address their session proved: invited (may join and
+ * win), a spectator (may watch, never join), or neither. Asked of the database, which hands
+ * back at most the one matching address, rather than reading a list as long as the line.
+ */
+export type Access = "invited" | "spectator" | null;
+
+async function accessTo(id: Types.ObjectId | string, address: string | undefined): Promise<Access> {
+  if (!address) return null;
+  const email = address.toLowerCase();
+  const row = await Draw.findOne(
+    { _id: id },
+    { invited: { $elemMatch: { $eq: email } }, spectators: { $elemMatch: { $eq: email } } }
+  ).lean<{ invited?: string[]; spectators?: string[] }>();
+  if (row?.spectators?.length) return "spectator";
+  if (row?.invited?.length) return "invited";
+  return null;
 }
 
 /** What the room will show of a typed name: the first word, letters only, or nothing. */
@@ -410,9 +436,11 @@ export async function joinDraw(
   place: Place
 ): Promise<DrawResult> {
   await dbConnect();
-  const draw = await Draw.findById(id).lean<LeanDraw>();
+  const draw = await Draw.findById(id).select(UNREAD_LISTS).lean<LeanDraw>();
   if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
-  if (!invitedTo(draw, user)) return { ok: false, error: "This draw is for the people invited to it.", status: 403 };
+  const access = await accessTo(draw._id, user.email);
+  if (access === "spectator") return { ok: false, error: "You're watching this one: spectators can't join.", status: 403 };
+  if (access !== "invited") return { ok: false, error: "This draw is for the people invited to it.", status: 403 };
   if (draw.status === DRAW_STATUS.closed) return { ok: false, error: "This draw is over.", status: 409 };
   const name = cleanName(input.name);
   if (!name) return { ok: false, error: "Add your first name, then press Join.", status: 400 };
@@ -450,7 +478,13 @@ export async function joinDraw(
       beforeDraw: draw.status === DRAW_STATUS.open,
       photo: Boolean(input.usePhoto && user.picture),
     });
+    // The arrival goes in the chat, so the room feels people coming in.
+    const tile = result.upsertedId?.toString();
+    await postSystem(draw._id, [
+      { at: now.getTime(), event: "joined", tile, name, text: `👋 ${name} joined from ${place.city}` },
+    ]).catch((error) => console.error("Draw chat line failed:", error));
   }
+  forget(id);
   return { ok: true };
 }
 
@@ -470,6 +504,7 @@ export async function editEntrant(
   );
   if (!result.matchedCount) return { ok: false, error: "Join the draw first.", status: 409 };
   logEvent("draw_profile_changed", { draw: id, user: user.id, photo: Boolean(picture) });
+  forget(id);
   return { ok: true };
 }
 
@@ -487,19 +522,6 @@ export async function placeForRequest(email: string, headers: Headers, zone?: st
   return placeFor(watcher ?? {}, null, zone);
 }
 
-/** "Still here." Written at most every few seconds, and at once after a goodbye. */
-export async function heartbeat(id: string, userId: string): Promise<void> {
-  const now = new Date();
-  await DrawEntrant.updateOne(
-    {
-      drawId: id,
-      userId,
-      $or: [{ lastSeenAt: { $lt: new Date(now.getTime() - 5000) } }, { leftAt: { $exists: true } }],
-    },
-    { $set: { lastSeenAt: now }, $unset: { leftAt: "" } }
-  );
-}
-
 /** The page said goodbye. A winner's grace starts on the next advance. */
 export async function leaveDraw(id: string, userId: string): Promise<void> {
   await dbConnect();
@@ -508,6 +530,7 @@ export async function leaveDraw(id: string, userId: string): Promise<void> {
     { $set: { leftAt: new Date() } }
   );
   if (left.modifiedCount) logEvent("draw_left", { draw: id, user: userId });
+  forget(id);
 }
 
 export async function react(id: string, userId: string, emoji: unknown): Promise<void> {
@@ -531,6 +554,7 @@ export async function react(id: string, userId: string, emoji: unknown): Promise
       },
     }
   );
+  forget(id);
 }
 
 export type ClaimResult =
@@ -568,6 +592,7 @@ export async function claimSpot(id: string, user: SessionUser, ipHash: string): 
     return true;
   });
   if (!result) return { ok: false, error: "This draw doesn't exist.", status: 404 };
+  forget(id);
   if (!won) return { ok: false, error: "This spot isn't yours to claim any more.", status: 409 };
   const pass = await Pass.findById(won.passId);
   if (!pass) return { ok: false, error: "This pass is gone.", status: 410 };
@@ -588,10 +613,39 @@ export async function passOnSpot(id: string, user: SessionUser): Promise<DrawRes
     return true;
   });
   if (!result) return { ok: false, error: "This draw doesn't exist.", status: 404 };
+  forget(id);
   return released ? { ok: true } : { ok: false, error: "There's no spot of yours to pass on.", status: 409 };
 }
 
 // ---- what a room is shown -----------------------------------------------------------------
+
+export interface DrawPerson {
+  id: string;
+  name: string;
+  picture?: string;
+  seed: string;
+  city: string;
+  country: string;
+  flag: string;
+  lat: number;
+  lon: number;
+  joinedAt: number;
+  present: boolean;
+}
+
+/** One chat line as a room sees it: the speaker by tile, never by account. */
+export interface ChatLine {
+  id: string;
+  at: number;
+  kind: "chat" | "system";
+  tile?: string;
+  name?: string;
+  text: string;
+  host?: boolean;
+  event?: string;
+  /** Taken down by the host: a page that showed it removes it. */
+  hidden?: boolean;
+}
 
 export interface DrawView {
   /** The server's clock, so every page counts down to the same second. */
@@ -603,6 +657,8 @@ export interface DrawView {
   claimSeconds: number;
   links: number;
   invited: number;
+  /** A show: the whole line was invited. */
+  everyone: boolean;
   spots: {
     n: number;
     link: number;
@@ -625,19 +681,15 @@ export interface DrawView {
   jobs: { spot: number; redraw: boolean }[];
   /** When the next sweep may start, so a page can ask for news right then. */
   nextJobAt?: number;
-  people: {
-    id: string;
-    name: string;
-    picture?: string;
-    seed: string;
-    city: string;
-    country: string;
-    flag: string;
-    lat: number;
-    lon: number;
-    joinedAt: number;
-    present: boolean;
-  }[];
+  /** The whole list: on arrival, or when the page's no longer matches. */
+  people?: DrawPerson[];
+  /** Only the people after those the page already holds. */
+  peopleAdded?: DrawPerson[];
+  /** How many people, and the hash naming them all: what a page sends back as n and ph. */
+  peopleCount: number;
+  peopleHash: string;
+  /** Tile ids of everyone not in the room just now; everyone else is. */
+  absent: string[];
   feed: {
     id: number;
     at: number;
@@ -650,9 +702,13 @@ export interface DrawView {
     claimed?: number;
   }[];
   reactions: { id: string; at: number; who: string; emoji: string }[];
+  /** The latest chat lines, or those since the page last asked. */
+  chat: ChatLine[];
   eligible: number;
   viewer: {
     invited: boolean;
+    /** May watch, never join. */
+    spectator: boolean;
     /** Their tile's id once they have joined. */
     id?: string;
     eligible: boolean;
@@ -662,49 +718,217 @@ export interface DrawView {
   };
 }
 
+// ---- the shared room ----------------------------------------------------------------------
+//
+// Everything but `viewer` is the same for everyone in a room, so it is built once per beat on
+// each server - one read of the draw, its people and its chat - and every ask in that beat is
+// answered from memory: no database call on a page's ordinary two-second ask. Its "still here"
+// is noted in memory and written with everyone else's in one batch when the next beat is built.
+// Anything a visitor does drops the beat at once, so they see it straight away.
+
+const BEAT_MS = 700;
+// How many chat lines a room is sent on arrival, and kept in each beat to answer from.
+const CHAT_KEPT = 80;
+// A page asks for the lines since its newest; this much overlap covers servers whose clocks
+// differ by a moment, and the page drops lines it already has.
+const CHAT_OVERLAP_MS = 3000;
+// Presence is judged over PRESENT_MS, so a check-in is only worth writing once it's this old.
+const SEEN_WRITE_MS = 20_000;
+
+type Mine = NonNullable<DrawView["viewer"]["mine"]>;
+
+interface Shared {
+  draw: LeanDraw;
+  entrants: Map<string, LeanEntrant>;
+  tile: Map<string, string>;
+  eligible: Set<string>;
+  base: Omit<DrawView, "now" | "viewer" | "people" | "peopleAdded" | "chat">;
+  /** `base` as JSON without its braces, spliced into every answer instead of re-serialised. */
+  baseJson: string;
+  people: DrawPerson[];
+  peopleJson: string;
+  /** prefix[i] names the first i people, so a page that holds them is sent only the rest. */
+  prefix: string[];
+  chat: ChatLine[];
+  /** Each claimed winner's pass, read once per beat rather than on each of their asks. */
+  mine: Map<string, Mine>;
+}
+
+// A room's beat on this server. `gen` counts what visitors did here since; a beat built at an
+// older gen is out of date. While one ask rebuilds it, the others are answered from the last
+// one - a moment old at most - instead of all waiting on the database.
+interface Beat {
+  gen: number;
+  builtGen: number;
+  at: number;
+  askedAt: number;
+  ready?: Shared | null;
+  building?: { gen: number; promise: Promise<Shared | null> };
+}
+const beats = new Map<string, Beat>();
+// How old a beat may be and still answer while the next is built.
+const STALE_OK_MS = 5000;
+// Check-ins waiting for the next beat: draw -> user -> when, and whether to clear a goodbye.
+const pendingSeen = new Map<string, Map<string, { at: Date; back: boolean }>>();
+
+/** Marks a room's beat out of date: a visitor here just changed something. */
+function forget(id: string): void {
+  const beat = beats.get(id.toString());
+  if (beat) beat.gen += 1;
+}
+
+/** Writes the waiting check-ins in one batch. A goodbye said after a check-in is never undone. */
+async function flushSeen(id: string): Promise<void> {
+  const waiting = pendingSeen.get(id);
+  if (!waiting?.size) return;
+  pendingSeen.delete(id);
+  const drawId = new Types.ObjectId(id);
+  await DrawEntrant.bulkWrite(
+    [...waiting].flatMap(([userId, { at, back }]) => [
+      { updateOne: { filter: { drawId, userId, lastSeenAt: { $lt: at } }, update: { $set: { lastSeenAt: at } } } },
+      ...(back ? [{ updateOne: { filter: { drawId, userId, leftAt: { $lt: at } }, update: { $unset: { leftAt: "" as const } } } }] : []),
+    ]),
+    { ordered: false }
+  );
+}
+
+async function minesFor(draw: LeanDraw): Promise<Map<string, Mine>> {
+  const mine = new Map<string, Mine>();
+  await Promise.all(
+    draw.spots
+      .filter((s) => s.status === SPOT_STATUS.claimed && s.holder)
+      .map(async (s) => {
+        const [pass, unlock] = await Promise.all([
+          Pass.findById(s.passId).lean<IPass>(),
+          Unlock.findOne({ passId: s.passId, userId: new Types.ObjectId(s.holder) }).lean<{ outcome?: string }>(),
+        ]);
+        if (pass)
+          mine.set(s.holder!, {
+            url: dealLink(getDeal(pass.deal), pass.code),
+            code: pass.code,
+            passId: pass._id.toString(),
+            outcome: unlock?.outcome ?? "none",
+          });
+      })
+  );
+  return mine;
+}
+
+function buildBeat(id: string, beat: Beat): Promise<Shared | null> {
+  const gen = beat.gen;
+  const promise = (async () => {
+    // The waiting check-ins go in alongside the read; the next beat reads them back.
+    const [, result] = await Promise.all([
+      flushSeen(id).catch((error) => console.error("Draw check-ins failed:", error)),
+      advanceDraw(id),
+    ]);
+    if (!result) return null;
+    const [lines, mine] = await Promise.all([
+      DrawMessage.find({ drawId: result.draw._id }).sort({ at: -1, _id: -1 }).limit(CHAT_KEPT).lean<IDrawMessage[]>(),
+      minesFor(result.draw),
+    ]);
+    return buildShared(result.draw, result.entrants, lines.reverse(), mine);
+  })();
+  beat.building = { gen, promise };
+  promise.then(
+    (shared) => {
+      if (gen >= beat.builtGen) {
+        beat.ready = shared;
+        beat.builtGen = gen;
+        beat.at = Date.now();
+      }
+      if (beat.building?.promise === promise) beat.building = undefined;
+    },
+    () => {
+      if (beat.building?.promise === promise) beat.building = undefined;
+    }
+  );
+  return promise;
+}
+
 /**
- * The room as one visitor sees it. People are named by their tile id, never by account or
- * address, and a pass's link is only ever in the view of the person who claimed it.
+ * The room as it stands. `fresh` is for the visitor who just did something: they wait for a
+ * beat that includes it. Everyone else gets the current beat, or the last one while the next
+ * is being built.
  */
-export async function drawView(draw: LeanDraw, entrants: LeanEntrant[], user: SessionUser | null): Promise<DrawView> {
-  const ctx: Ctx = { now: new Date(), people: new Map(entrants.map((e) => [e.userId, e])), events: [], effects: [] };
-  const tile = new Map(entrants.map((e) => [e.userId, e._id.toString()]));
+function sharedRoom(id: string, { fresh = false }: { fresh?: boolean } = {}): Promise<Shared | null> {
+  let beat = beats.get(id);
+  if (!beat) {
+    beat = { gen: 0, builtGen: -1, at: 0, askedAt: 0 };
+    beats.set(id, beat);
+  }
+  const now = Date.now();
+  beat.askedAt = now;
+  // Old rooms' beats go; one entry per open room is all this ever holds.
+  if (beats.size > 50) for (const [key, other] of beats) if (now - other.askedAt > 60_000) beats.delete(key);
+
+  const upToDate = beat.ready !== undefined && beat.builtGen === beat.gen && now - beat.at < BEAT_MS;
+  if (fresh) {
+    if (upToDate) return Promise.resolve(beat.ready!);
+    return beat.building?.gen === beat.gen ? beat.building.promise : buildBeat(id, beat);
+  }
+  if (upToDate) return Promise.resolve(beat.ready!);
+  if (beat.building) {
+    return beat.ready !== undefined && now - beat.at < STALE_OK_MS ? Promise.resolve(beat.ready) : beat.building.promise;
+  }
+  // This ask noticed: it builds the next beat and waits for it.
+  return buildBeat(id, beat);
+}
+
+function chatLine(m: IDrawMessage): ChatLine {
+  return {
+    id: m._id.toString(),
+    at: new Date(m.at).getTime(),
+    kind: m.kind,
+    tile: m.tile,
+    name: m.name,
+    text: m.hidden ? "" : m.text,
+    host: m.host || undefined,
+    event: m.event,
+    hidden: m.hidden || undefined,
+  };
+}
+
+function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[], mine: Map<string, Mine>): Shared {
+  const ctx: Ctx = { now: new Date(), people: new Map(list.map((e) => [e.userId, e])), events: [], effects: [] };
+  const tile = new Map(list.map((e) => [e.userId, e._id.toString()]));
   const who = (userId?: string) => (userId ? (tile.get(userId) ?? "gone") : undefined);
   const ms = (date?: Date) => (date ? new Date(date).getTime() : undefined);
   const free = eligible(draw, ctx);
+  const cutoff = ctx.now.getTime() - 3000;
 
-  const viewer: DrawView["viewer"] = {
-    invited: invitedTo(draw, user),
-    eligible: !!user && free.includes(user.id),
-    everWon: !!user && draw.awards.some((a) => a.userId === user.id),
-  };
-  if (user && tile.has(user.id)) viewer.id = tile.get(user.id);
-  const claimedSpot = user && draw.spots.find((s) => s.holder === user.id && s.status === SPOT_STATUS.claimed);
-  if (user && claimedSpot) {
-    const [pass, unlock] = await Promise.all([
-      Pass.findById(claimedSpot.passId),
-      Unlock.findOne({ passId: claimedSpot.passId, userId: new Types.ObjectId(user.id) }),
-    ]);
-    if (pass) {
-      viewer.mine = {
-        url: dealLink(getDeal(pass.deal), pass.code),
-        code: pass.code,
-        passId: pass._id.toString(),
-        outcome: unlock?.outcome ?? "none",
-      };
-    }
+  const people = [...list]
+    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime() || (a._id < b._id ? -1 : 1))
+    .map((e) => ({
+      id: e._id.toString(),
+      name: e.name,
+      picture: e.picture,
+      seed: seedFor(draw._id.toString(), e.userId),
+      city: e.city,
+      country: e.country,
+      flag: flagOf(e.country),
+      lat: e.lat,
+      lon: e.lon,
+      joinedAt: ms(e.joinedAt)!,
+      present: present(ctx, e.userId),
+    }));
+  // Arrivals only ever add to the end, so the first n people are named by a running hash; a
+  // changed name or picture changes every hash after it, and those pages get the list afresh.
+  const prefix = [""];
+  for (const p of people) {
+    const last = prefix[prefix.length - 1];
+    prefix.push(crypto.createHash("sha1").update(`${last}|${p.id}:${p.name}:${p.picture ?? ""}`).digest("hex").slice(0, 12));
   }
 
-  const cutoff = ctx.now.getTime() - 3000;
-  return {
-    now: ctx.now.getTime(),
+  const base: Shared["base"] = {
     id: draw._id.toString(),
     status: draw.status,
     test: draw.test,
     drawAt: new Date(draw.drawAt).getTime(),
     claimSeconds: draw.claimSeconds,
     links: draw.passIds.length,
-    invited: draw.invited.length,
+    invited: draw.invitedCount ?? 0,
+    everyone: !!draw.everyone,
     spots: draw.spots.map((s) => ({
       n: s.n,
       link: spotLink(draw, s),
@@ -725,21 +949,9 @@ export async function drawView(draw: LeanDraw, entrants: LeanEntrant[], user: Se
     },
     jobs: draw.jobs.map((j) => ({ spot: j.spot, redraw: j.redraw })),
     nextJobAt: ms(draw.nextJobAt),
-    people: entrants
-      .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
-      .map((e) => ({
-        id: e._id.toString(),
-        name: e.name,
-        picture: e.picture,
-        seed: seedFor(draw._id.toString(), e.userId),
-        city: e.city,
-        country: e.country,
-        flag: flagOf(e.country),
-        lat: e.lat,
-        lon: e.lon,
-        joinedAt: ms(e.joinedAt)!,
-        present: present(ctx, e.userId),
-      })),
+    peopleCount: people.length,
+    peopleHash: prefix[people.length],
+    absent: people.filter((p) => !p.present).map((p) => p.id),
     feed: draw.feed.map((f) => ({
       id: f.id,
       at: ms(f.at)!,
@@ -755,7 +967,20 @@ export async function drawView(draw: LeanDraw, entrants: LeanEntrant[], user: Se
       .filter((r) => new Date(r.at).getTime() > cutoff)
       .map((r) => ({ id: r.id, at: ms(r.at)!, who: who(r.userId)!, emoji: r.emoji })),
     eligible: free.length,
-    viewer,
+  };
+
+  return {
+    draw,
+    entrants: ctx.people,
+    tile,
+    eligible: new Set(free),
+    base,
+    baseJson: JSON.stringify(base).slice(1, -1),
+    people,
+    peopleJson: JSON.stringify(people),
+    prefix,
+    chat: lines.map(chatLine),
+    mine,
   };
 }
 
@@ -767,14 +992,275 @@ export function seedFor(drawId: string, userId: string): string {
   return crypto.createHash("sha256").update(`${drawId}:${userId}`).digest("hex").slice(0, 16);
 }
 
-/** The room's view for this visitor, after bringing the draw up to date and noting they're here. */
-export async function roomFor(id: string, user: SessionUser | null): Promise<DrawView | null> {
+// Who may come in, remembered per server: an invite list doesn't change once sent, and
+// someone who hasn't joined yet asks every two seconds while they decide.
+const accessMemo = new Map<string, { at: number; access: Access }>();
+
+async function accessFor(id: string, shared: Shared, user: SessionUser | null): Promise<Access> {
+  if (!user) return null;
+  // Someone with a tile was let in to make it.
+  if (shared.entrants.has(user.id)) return "invited";
+  const key = `${id}:${user.email.toLowerCase()}`;
+  const hit = accessMemo.get(key);
+  if (hit && Date.now() - hit.at < 60_000) return hit.access;
+  const access = await accessTo(id, user.email);
+  if (accessMemo.size > 20_000) accessMemo.clear();
+  accessMemo.set(key, { at: Date.now(), access });
+  return access;
+}
+
+/**
+ * "Still here", noted in memory; the next beat writes it with everyone else's. Coming back
+ * after a goodbye is the exception: a winner's grace is running, so it is written at once and
+ * the beat dropped, and the room sees them back before their claim arrives.
+ */
+async function checkIn(id: string, shared: Shared, user: SessionUser | null): Promise<void> {
+  const entrant = user && shared.entrants.get(user.id);
+  if (!entrant) return;
+  const now = new Date();
+  if (entrant.leftAt) {
+    entrant.lastSeenAt = now;
+    entrant.leftAt = undefined;
+    await DrawEntrant.updateOne(
+      { drawId: id, userId: entrant.userId, leftAt: { $lt: now } },
+      { $set: { lastSeenAt: now }, $unset: { leftAt: "" } }
+    );
+    forget(id);
+    return;
+  }
+  if (now.getTime() - new Date(entrant.lastSeenAt).getTime() < SEEN_WRITE_MS) return;
+  let waiting = pendingSeen.get(id);
+  if (!waiting) pendingSeen.set(id, (waiting = new Map()));
+  waiting.set(entrant.userId, { at: now, back: !!entrant.leftAt });
+  // So this beat's other asks from them don't note it again.
+  entrant.lastSeenAt = now;
+  entrant.leftAt = undefined;
+}
+
+type Have = { n?: number; ph?: string; chatSince?: number };
+
+/** The people a page needs: none, the arrivals after the ones it holds, or the whole list. */
+function peopleFor(shared: Shared, { n, ph }: Have): "none" | "all" | DrawPerson[] {
+  const total = shared.people.length;
+  if (n === undefined || ph === undefined || n > total || shared.prefix[n] !== ph) return "all";
+  return n === total ? "none" : shared.people.slice(n);
+}
+
+function chatFor(shared: Shared, chatSince?: number): ChatLine[] {
+  return chatSince === undefined
+    ? shared.chat.filter((line) => !line.hidden)
+    : shared.chat.filter((line) => line.at > chatSince - CHAT_OVERLAP_MS);
+}
+
+/**
+ * The visitor's own part of the room. People are named by their tile id, never by account or
+ * address, and a pass's link is only ever in the view of the person who claimed it.
+ */
+function viewerFor(shared: Shared, user: SessionUser | null, access: Access): DrawView["viewer"] {
+  const viewer: DrawView["viewer"] = {
+    invited: access === "invited",
+    spectator: access === "spectator",
+    eligible: !!user && shared.eligible.has(user.id),
+    everWon: !!user && shared.draw.awards.some((a) => a.userId === user.id),
+  };
+  if (user && shared.tile.has(user.id)) viewer.id = shared.tile.get(user.id);
+  const mine = user && shared.mine.get(user.id);
+  if (mine) viewer.mine = mine;
+  return viewer;
+}
+
+async function visit(id: string, user: SessionUser | null, fresh = false) {
   if (!Types.ObjectId.isValid(id)) return null;
   await dbConnect();
-  // Side by side: the check-in only has to land before the next ask, not before this one.
-  const [, result] = await Promise.all([user ? heartbeat(id, user.id) : null, advanceDraw(id)]);
-  if (!result) return null;
-  return drawView(result.draw, result.entrants, user);
+  const shared = await sharedRoom(id, { fresh });
+  if (!shared) return null;
+  const [access] = await Promise.all([accessFor(id, shared, user), checkIn(id, shared, user)]);
+  return { shared, access, viewer: viewerFor(shared, user, access) };
+}
+
+/** The room's view for this visitor, as an object (the page's first render, and after an action). */
+export async function roomFor(
+  id: string,
+  user: SessionUser | null,
+  have: Have = {},
+  { fresh = false }: { fresh?: boolean } = {}
+): Promise<DrawView | null> {
+  const seen = await visit(id, user, fresh);
+  if (!seen) return null;
+  const { shared, viewer } = seen;
+  const people = peopleFor(shared, have);
+  return {
+    ...shared.base,
+    now: Date.now(),
+    ...(people === "all" ? { people: shared.people } : people === "none" ? {} : { peopleAdded: people }),
+    chat: chatFor(shared, have.chatSince),
+    viewer,
+  };
+}
+
+/**
+ * The same, as JSON, for a page's two-second ask: the shared part was serialised once for the
+ * beat, so an answer is a few small strings joined, however many people are in the room.
+ */
+export async function roomJson(id: string, user: SessionUser | null, have: Have): Promise<{ json: string; access: Access } | null> {
+  const seen = await visit(id, user);
+  if (!seen) return null;
+  const { shared, viewer, access } = seen;
+  const people = peopleFor(shared, have);
+  const parts = [
+    `"now":${Date.now()}`,
+    `"viewer":${JSON.stringify(viewer)}`,
+    `"chat":${JSON.stringify(chatFor(shared, have.chatSince))}`,
+  ];
+  if (people === "all") parts.push(`"people":${shared.peopleJson}`);
+  else if (people !== "none") parts.push(`"peopleAdded":${JSON.stringify(people)}`);
+  return { json: `{${parts.join(",")},${shared.baseJson}}`, access };
+}
+
+// ---- the chat -----------------------------------------------------------------------------
+
+const CHAT_MAX = 200;
+const CHAT_GAP_MS = 1200;
+// After the room closes, the chat stays open this long for the goodbyes.
+const CHAT_AFTER_CLOSE_MS = 10 * 60 * 1000;
+const LINKISH = /(https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(com|net|org|io|ai|app|dev|co|me|ly|gg|xyz|link|ru|info|biz|site|online|shop|top)\b|\S+@\S+\.\S+)/i;
+
+// Control characters, zero-width marks and direction overrides: built from code points, so the
+// source holds no invisible characters itself.
+const INVISIBLE = new RegExp(
+  `[${([[0x00, 0x1f], [0x7f, 0x9f], [0x200b, 0x200f], [0x2028, 0x202e], [0x2066, 0x2069]] as const)
+    .map(([from, to]) => `${String.fromCharCode(from)}-${String.fromCharCode(to)}`)
+    .join("")}]`,
+  "g"
+);
+
+
+/** What the chat will show of a message: one line, no control characters, at most CHAT_MAX. */
+export function cleanChat(raw: unknown): string {
+  return String(raw ?? "")
+    .normalize("NFC")
+    .replace(INVISIBLE, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, CHAT_MAX);
+}
+
+/** A message from someone in the room, or from the host. */
+export async function postChat(id: string, user: SessionUser, raw: unknown): Promise<DrawResult> {
+  if (!Types.ObjectId.isValid(id)) return { ok: false, error: "This draw doesn't exist.", status: 404 };
+  const text = cleanChat(raw);
+  if (!text) return { ok: false, error: "Type a message first.", status: 400 };
+  if (LINKISH.test(text)) return { ok: false, error: "Links and addresses can't go in the chat.", status: 400 };
+  if (containsBlockedCodeWord(text.replace(/\s/g, "")))
+    return { ok: false, error: "Codes can't go in the chat.", status: 400 };
+
+  await dbConnect();
+  const [draw, entrant] = await Promise.all([
+    Draw.findById(id).select("status closedAt").lean<Pick<LeanDraw, "status" | "closedAt">>(),
+    DrawEntrant.findOne({ drawId: id, userId: user.id }).lean<LeanEntrant>(),
+  ]);
+  if (!draw) return { ok: false, error: "This draw doesn't exist.", status: 404 };
+  if (draw.closedAt && Date.now() - new Date(draw.closedAt).getTime() > CHAT_AFTER_CLOSE_MS)
+    return { ok: false, error: "The chat for this draw has closed.", status: 409 };
+
+  let speaker: { tile?: string; name: string; host?: boolean };
+  if (entrant) speaker = { tile: entrant._id.toString(), name: entrant.name };
+  else if ((await accessTo(id, user.email)) === "spectator")
+    speaker = { name: user.name?.trim().split(/\s+/)[0]?.slice(0, 20) || "Host", host: true };
+  else return { ok: false, error: "Join the draw to chat.", status: 403 };
+
+  const last = await DrawMessage.findOne({ drawId: id, userId: user.id }).sort({ at: -1 }).lean<IDrawMessage>();
+  if (last && Date.now() - new Date(last.at).getTime() < CHAT_GAP_MS)
+    return { ok: false, error: "One moment - you're sending fast.", status: 429 };
+  // The same words twice in a row is a double press, not a second message.
+  if (last && last.text === text && Date.now() - new Date(last.at).getTime() < 30_000) return { ok: true };
+
+  await DrawMessage.create({ drawId: id, at: new Date(), kind: MESSAGE_KIND.chat, userId: user.id, text, ...speaker });
+  forget(id);
+  return { ok: true };
+}
+
+/** The host takes a line down. It stays in the record, marked, and leaves every room. */
+export async function hideChat(id: string, user: SessionUser, messageId: unknown): Promise<DrawResult> {
+  if (!Types.ObjectId.isValid(id) || typeof messageId !== "string" || !Types.ObjectId.isValid(messageId))
+    return { ok: false, error: "Bad request.", status: 400 };
+  await dbConnect();
+  if ((await accessTo(id, user.email)) !== "spectator") return { ok: false, error: "Only the host can do that.", status: 403 };
+  await DrawMessage.updateOne({ _id: messageId, drawId: id }, { $set: { hidden: true } });
+  logEvent("draw_chat_hidden", { draw: id, message: messageId });
+  forget(id);
+  return { ok: true };
+}
+
+/** A draw's whole chat, in order, for reading back afterwards. */
+export async function chatRecord(id: string) {
+  if (!Types.ObjectId.isValid(id)) return null;
+  await dbConnect();
+  const lines = await DrawMessage.find({ drawId: id }).sort({ at: 1, _id: 1 }).lean<IDrawMessage[]>();
+  return lines.map((m) => ({
+    at: m.at,
+    kind: m.kind,
+    name: m.name,
+    host: m.host || undefined,
+    event: m.event,
+    text: m.text,
+    hidden: m.hidden || undefined,
+  }));
+}
+
+/** The room's own lines - who arrived, what was drawn - written as the record of what happened. */
+async function postSystem(drawId: Types.ObjectId | string, lines: Omit<ChatLine, "id" | "kind">[]): Promise<void> {
+  if (!lines.length) return;
+  await DrawMessage.insertMany(
+    lines.map((line) => ({ drawId, kind: MESSAGE_KIND.system, ...line, at: new Date(line.at) })),
+    { ordered: true }
+  );
+}
+
+/** What the room says about each new feed item, in words, with names as they are now. */
+function systemLines(draw: LeanDraw, ctx: Ctx, before: { feedSeq: number; status: string }) {
+  const lines: Omit<ChatLine, "id" | "kind">[] = [];
+  const total = draw.spots.length;
+  const person = (userId?: string) => (userId ? ctx.people.get(userId) : undefined);
+  if (before.status === DRAW_STATUS.open && draw.status !== DRAW_STATUS.open) {
+    const here = presentCount(ctx);
+    lines.push({
+      at: ctx.now.getTime(),
+      event: "started",
+      text: `🚦 The draw is starting: ${here} ${here === 1 ? "person" : "people"} in the room, ${total} ${total === 1 ? "spot" : "spots"}`,
+    });
+  }
+  for (const f of draw.feed.filter((item) => item.id > before.feedSeq)) {
+    const p = person(f.userId);
+    const name = p?.name ?? "Someone";
+    const base = { at: new Date(f.at).getTime(), event: f.kind, tile: p?._id.toString(), name: p?.name };
+    if (f.kind === "sweep")
+      lines.push({
+        ...base,
+        text: f.redraw
+          ? `🔁 Re-drawing spot ${f.spot} among the ${f.candidates} still here`
+          : `🎲 Drawing spot ${f.spot} of ${total} from ${f.candidates} ${f.candidates === 1 ? "person" : "people"}`,
+      });
+    else if (f.kind === "won") lines.push({ ...base, text: `🎉 ${name} won spot ${f.spot}!` });
+    else if (f.kind === "claimed") lines.push({ ...base, text: `✅ ${name} claimed spot ${f.spot}` });
+    else if (f.kind === "released")
+      lines.push({
+        ...base,
+        text:
+          f.reason === "passed_on"
+            ? `↩️ ${name} passed spot ${f.spot} on`
+            : f.reason === "left"
+              ? `🚪 ${name} left, so spot ${f.spot} goes back`
+              : `⏱️ ${name} didn't claim spot ${f.spot} in time`,
+      });
+    else if (f.kind === "winner_left")
+      lines.push({ ...base, text: `🚪 ${name} left the room. Spot ${f.spot} goes back in ${GRACE_SECONDS} s unless they return` });
+    else if (f.kind === "winner_back") lines.push({ ...base, text: `👋 ${name} is back. Spot ${f.spot} is still theirs` });
+    else if (f.kind === "unfilled") lines.push({ ...base, text: `Nobody was left to draw spot ${f.spot} for` });
+    else if (f.kind === "closed")
+      lines.push({ ...base, text: `🏁 Room closed: ${f.claimed ?? 0} of ${total} ${total === 1 ? "spot" : "spots"} claimed` });
+  }
+  return lines;
 }
 
 // ---- opening a draw -----------------------------------------------------------------------
@@ -803,7 +1289,16 @@ export function invitesFor(spots: number): number {
 
 /** What a board shows about its draws: the next one, what is waiting, and the last result. */
 export interface DrawSummary {
-  next?: { id: string; status: string; drawAt: number; spots: number; links: number; invited: number; youreInvited: boolean };
+  next?: {
+    id: string;
+    status: string;
+    drawAt: number;
+    spots: number;
+    links: number;
+    invited: number;
+    everyone: boolean;
+    youreInvited: boolean;
+  };
   /** Held listings not yet in a draw, and the spots they make. */
   waiting: { links: number; spots: number };
   last?: { closedAt: number; claimed: number; spots: number; joined: number };
@@ -817,7 +1312,7 @@ export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawS
   const [open, last, held] = await Promise.all([
     Draw.findOne({ deal, test: false, status: { $ne: DRAW_STATUS.closed } })
       .sort({ drawAt: 1 })
-      .select("drawAt status spots passIds invited")
+      .select("drawAt status spots passIds invitedCount everyone")
       .lean<LeanDraw>(),
     Draw.findOne({ deal, test: false, status: DRAW_STATUS.closed })
       .sort({ closedAt: -1 })
@@ -843,8 +1338,9 @@ export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawS
           drawAt: new Date(next.drawAt).getTime(),
           spots: next.spots.length,
           links: next.passIds.length,
-          invited: next.invited.length,
-          youreInvited: !!email && next.invited.includes(email.toLowerCase()),
+          invited: next.invitedCount ?? 0,
+          everyone: !!next.everyone,
+          youreInvited: (await accessTo(next._id, email)) === "invited",
         }
       : undefined,
     waiting: { links: waitingPasses.length, spots: waitingSpots },
@@ -861,28 +1357,68 @@ export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawS
   };
 }
 
-export type OpenResult = { draw: LeanDraw; created: boolean; delivered: number } | { draw: null; reason: string };
+export type OpenResult =
+  | {
+      draw: LeanDraw;
+      created: boolean;
+      /** Invites accepted by the mailer in this call. */
+      delivered: number;
+      /** Invites still to send: a big send stops before the request runs out, and picks up. */
+      remaining: number;
+      /** Each spectator's way in: the same signed-in link an invite carries. */
+      spectatorLinks: Record<string, string>;
+    }
+  | { draw: null; reason: string };
 
-/**
- * Opens a draw: every held listing with uses left becomes spots, the front of the line is
- * invited, and the invites go out. Idempotent per slot - a second call finds the first draw.
- *
- * A test draw is given its codes and its addresses instead. It invites only those, leaves
- * the line and everyone's place in it alone, and can be opened any time.
- */
-export async function openDraw(input: {
+export interface OpenInput {
   deal: DealSlug;
   drawAt: Date;
   claimSeconds?: number;
   test?: { emails: string[]; codes: string[] };
-}): Promise<OpenResult> {
+  /** Only these held listings, each checked by hand first; otherwise every held one. */
+  passIds?: string[];
+  /** A show: invite everyone waiting on the board, not the front, and count it against nobody. */
+  everyone?: boolean;
+  /** Addresses that may watch the room but never join it - the operator, the recorder. */
+  spectators?: string[];
+  /** False opens the room without mailing anyone, so it can be looked at first (sendInvites). */
+  send?: boolean;
+}
+
+/** Makes sure an address can be signed in by link: a confirmed watch row with an enter token. */
+async function linkFor(email: string, deal: DealSlug, drawId: string): Promise<string> {
+  await Watcher.updateOne(
+    { email },
+    {
+      $setOnInsert: {
+        email,
+        stopToken: crypto.randomBytes(24).toString("hex"),
+        confirmedAt: new Date(),
+        queueMigratedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+  const watcher = await Watcher.findOne({ email });
+  await ensureEnterTokens([watcher!]);
+  return enterUrl(watcher!.enterToken!, deal, drawId);
+}
+
+/**
+ * Opens a draw: held listings become spots, people are invited, and (unless `send` is false)
+ * the invites go out. Idempotent per slot - a second call finds the first draw.
+ *
+ * A test draw is given its codes and its addresses instead. It invites only those, leaves
+ * the line and everyone's place in it alone, and can be opened any time.
+ */
+export async function openDraw(input: OpenInput): Promise<OpenResult> {
   await dbConnect();
   const { deal, drawAt, test } = input;
-  const brand = getDeal(deal);
+  const spectators = [...new Set((input.spectators ?? []).map((e) => e.trim().toLowerCase()))];
 
   if (!test) {
-    const existing = await Draw.findOne({ deal, drawAt, test: false }).lean<LeanDraw>();
-    if (existing) return { draw: existing, created: false, delivered: 0 };
+    const existing = await Draw.findOne({ deal, drawAt, test: false }).select(UNREAD_LISTS).lean<LeanDraw>();
+    if (existing) return { ...(await reopened(existing)), created: false };
   }
 
   let passes: IPass[];
@@ -905,6 +1441,14 @@ export async function openDraw(input: {
       _id: { $nin: busy },
       code: { $not: new RegExp(`^${TEST_CODE_PREFIX}`) },
     }).sort({ createdAt: 1 });
+    if (input.passIds) {
+      // Named listings: every one must be there to give, or nothing opens.
+      const wanted = new Set(input.passIds);
+      passes = passes.filter((p) => wanted.has(p._id.toString()));
+      const found = new Set(passes.map((p) => p._id.toString()));
+      const missing = input.passIds.filter((id) => !found.has(id));
+      if (missing.length) return { draw: null, reason: `not_held:${missing.join(",")}` };
+    }
     // A held link people reported dead, or one held past a listing's lifetime, is retired
     // here as the board would retire it, instead of being handed to another room.
     for (const pass of passes) {
@@ -925,30 +1469,18 @@ export async function openDraw(input: {
     }
   }
 
-  let invitees: { email: string; position?: number }[];
+  let invitees: string[];
   if (test) {
-    invitees = test.emails.map((email) => ({ email: email.trim().toLowerCase() }));
-    // Test addresses need a way in, like anyone invited: a confirmed watch row with an enter
-    // token. Created if missing; never given a place in any line.
-    for (const { email } of invitees) {
-      await Watcher.updateOne(
-        { email },
-        {
-          $setOnInsert: {
-            email,
-            stopToken: crypto.randomBytes(24).toString("hex"),
-            confirmedAt: new Date(),
-            queueMigratedAt: new Date(),
-          },
-        },
-        { upsert: true }
-      );
-    }
+    invitees = test.emails.map((email) => email.trim().toLowerCase());
+  } else if (input.everyone) {
+    // Everyone waiting. Nobody is demoted first: a show isn't a turn anyone can sleep through.
+    invitees = (await frontOfLine(deal, Number.MAX_SAFE_INTEGER)).map((m) => m.email);
   } else {
     await demoteNoShows(deal);
-    const members = await frontOfLine(deal, invitesFor(spots.length));
-    invitees = members.map((m) => ({ email: m.email, position: m.position }));
+    invitees = (await frontOfLine(deal, invitesFor(spots.length))).map((m) => m.email);
   }
+  // A spectator can't also be a player, even one who is in the line.
+  invitees = [...new Set(invitees)].filter((email) => !spectators.includes(email));
 
   let draw;
   try {
@@ -957,56 +1489,160 @@ export async function openDraw(input: {
       drawAt,
       claimSeconds: input.claimSeconds ?? CLAIM_SECONDS,
       test: Boolean(test),
+      everyone: Boolean(input.everyone && !test),
       passIds: passes.map((p) => p._id),
       spots,
-      invited: invitees.map((i) => i.email),
+      invited: invitees,
+      invitedCount: invitees.length,
+      spectators,
     });
   } catch (error) {
-    // Two runs raced for the slot. The other one opened it and sent the invites.
-    const existing = await Draw.findOne({ deal, drawAt, test: false }).lean<LeanDraw>();
-    if (existing) return { draw: existing, created: false, delivered: 0 };
+    // Two runs raced for the slot. The other one opened it and sends the invites.
+    const existing = await Draw.findOne({ deal, drawAt, test: false }).select(UNREAD_LISTS).lean<LeanDraw>();
+    if (existing) return { ...(await reopened(existing)), created: false };
     throw error;
   }
   const id = draw._id.toString();
 
-  const watchers = await Watcher.find({ email: { $in: invitees.map((i) => i.email) }, stoppedAt: { $exists: false } });
-  await ensureEnterTokens(watchers);
-  const delivered = await sendDrawInvites(
-    watchers.map((w) => ({
-      email: w.email,
-      enterUrl: enterUrl(w.enterToken!, deal, id),
-      stopUrl: stopUrl(w.stopToken),
-      timezone: w.timezone,
-    })),
-    brand,
-    {
-      id,
-      drawAt,
-      spots: spots.length,
-      links: passes.length,
-      invited: invitees.length,
-      claimSeconds: draw.claimSeconds,
-    }
-  );
-  if (!test && delivered.length) {
-    // An invite is an offer, as an alert was: three ignored and the number goes to the back.
-    await Membership.updateMany(
-      { deal, email: { $in: delivered } },
-      { $set: { lastNotifiedAt: new Date() }, $inc: { notifyCount: 1, offersSinceUnlock: 1 } }
-    );
-  }
+  // Test addresses and spectators need a way in, like anyone invited. Created if missing;
+  // never given a place in any line.
+  if (test) for (const email of invitees) await linkFor(email, deal, id);
+  const spectatorLinks: Record<string, string> = {};
+  for (const email of spectators) spectatorLinks[email] = await linkFor(email, deal, id);
+
   logEvent("draw_opened", {
     draw: id,
     deal,
     test: Boolean(test),
+    everyone: Boolean(input.everyone && !test),
     drawAt: drawAt.toISOString(),
     links: passes.length,
     spots: spots.length,
     invited: invitees.length,
-    delivered: delivered.length,
+    spectators: spectators.length,
     claimSeconds: draw.claimSeconds,
   });
-  return { draw: draw.toObject() as unknown as LeanDraw, created: true, delivered: delivered.length };
+
+  const lean = (await Draw.findById(id).select(UNREAD_LISTS).lean<LeanDraw>())!;
+  if (input.send === false) return { draw: lean, created: true, delivered: 0, remaining: invitees.length, spectatorLinks };
+  const sent = await sendInvites(id);
+  return { draw: lean, created: true, delivered: sent.delivered, remaining: sent.remaining, spectatorLinks };
+}
+
+/** A draw that was already open for the slot, with what the operator needs to carry on. */
+async function reopened(existing: LeanDraw) {
+  const lists = await Draw.findById(existing._id).select("spectators").lean<{ spectators?: string[] }>();
+  const spectatorLinks: Record<string, string> = {};
+  for (const email of lists?.spectators ?? [])
+    spectatorLinks[email] = await linkFor(email, existing.deal, existing._id.toString());
+  return { draw: existing, delivered: 0, remaining: await unsentCount(existing._id), spectatorLinks };
+}
+
+async function unsentCount(id: Types.ObjectId | string): Promise<number> {
+  const [row] = await Draw.aggregate<{ n: number }>([
+    { $match: { _id: new Types.ObjectId(id.toString()) } },
+    { $project: { n: { $size: { $setDifference: ["$invited", { $ifNull: ["$sent", []] }] } } } },
+  ]);
+  return row?.n ?? 0;
+}
+
+// How long one call may spend mailing. A show invites the whole line; past this the call
+// returns what is left and the next call carries on, so no request runs out mid-send.
+const SEND_BUDGET_MS = 200_000;
+const SEND_CHUNK = 100;
+
+/**
+ * Mails a draw's invites to everyone invited who hasn't had one. Safe to call again: each
+ * address is marked sent as soon as the mailer accepts it, and is never sent twice.
+ *
+ * `only` sends to just those addresses - invited or spectating - and leaves them unmarked,
+ * so the operator can see the real email before anyone else does.
+ */
+export async function sendInvites(
+  id: string,
+  { only, budgetMs = SEND_BUDGET_MS }: { only?: string[]; budgetMs?: number } = {}
+): Promise<{ delivered: number; remaining: number; preview: boolean }> {
+  await dbConnect();
+  const draw = await Draw.findById(id).lean<LeanDraw>();
+  if (!draw) return { delivered: 0, remaining: 0, preview: false };
+  const brand = getDeal(draw.deal);
+  const invite = {
+    id,
+    drawAt: new Date(draw.drawAt),
+    spots: draw.spots.length,
+    links: draw.passIds.length,
+    invited: draw.invitedCount ?? draw.invited.length,
+    claimSeconds: draw.claimSeconds,
+    everyone: !!draw.everyone,
+  };
+
+  const preview = Array.isArray(only);
+  let queue: string[];
+  if (preview) {
+    const allowed = new Set([...draw.invited, ...(draw.spectators ?? [])]);
+    queue = only!.map((e) => e.trim().toLowerCase()).filter((e) => allowed.has(e));
+  } else {
+    const done = new Set(draw.sent ?? []);
+    queue = draw.invited.filter((email) => !done.has(email));
+  }
+
+  const started = Date.now();
+  let delivered = 0;
+  while (queue.length && Date.now() - started < budgetMs) {
+    const chunk = queue.splice(0, SEND_CHUNK);
+    const watchers = await Watcher.find({ email: { $in: chunk }, stoppedAt: { $exists: false } });
+    await ensureEnterTokens(watchers);
+    const accepted = await sendDrawInvites(
+      watchers.map((w) => ({
+        email: w.email,
+        enterUrl: enterUrl(w.enterToken!, draw.deal, id),
+        stopUrl: stopUrl(w.stopToken),
+        timezone: w.timezone,
+      })),
+      brand,
+      invite
+    );
+    delivered += accepted.length;
+    if (preview) continue;
+    // Someone who stopped the emails since the line was read is done too: nothing to send.
+    const stopped = chunk.filter((email) => !watchers.some((w) => w.email === email));
+    await Draw.updateOne({ _id: draw._id }, { $addToSet: { sent: { $each: [...accepted, ...stopped] } } });
+    if (!draw.test && accepted.length) {
+      // An invite to the front is an offer, as an alert was: three ignored and the number goes
+      // to the back. A show's isn't - everyone was asked, and staying away costs nothing.
+      await Membership.updateMany(
+        { deal: draw.deal, email: { $in: accepted } },
+        {
+          $set: { lastNotifiedAt: new Date() },
+          $inc: draw.everyone ? { notifyCount: 1 } : { notifyCount: 1, offersSinceUnlock: 1 },
+        }
+      );
+    }
+  }
+  const remaining = preview ? 0 : await unsentCount(draw._id);
+  logEvent("draw_invites_sent", { draw: id, delivered, remaining, preview });
+  return { delivered, remaining, preview };
+}
+
+/** Where a draw stands, for the operator: who was asked, who came, what happened. */
+export async function drawStatus(id: string) {
+  if (!Types.ObjectId.isValid(id)) return null;
+  await dbConnect();
+  const { draw, entrants } = await load(id);
+  if (!draw) return null;
+  const ctx: Ctx = { now: new Date(), people: new Map(entrants.map((e) => [e.userId, e])), events: [], effects: [] };
+  return {
+    draw: id,
+    status: draw.status,
+    everyone: !!draw.everyone,
+    drawAt: draw.drawAt,
+    invited: draw.invitedCount ?? 0,
+    unsent: await unsentCount(draw._id),
+    joined: entrants.length,
+    present: presentCount(ctx),
+    spots: draw.spots.map((s) => ({ n: s.n, status: s.status, redraws: s.history.length })),
+    check: draw.check,
+  };
 }
 
 /**
@@ -1044,8 +1680,13 @@ async function retireSpentPasses(id: Types.ObjectId): Promise<void> {
 // What a finished draw must have done, checked from its stored rows rather than from the
 // code that wrote them. Anything in problems is a bug to chase, not a judgement call.
 async function runCheck(id: Types.ObjectId, eligibleAtClose: number): Promise<void> {
-  const { draw, entrants } = await load(id);
-  if (!draw) return;
+  const [{ draw, entrants }, lists] = await Promise.all([
+    load(id),
+    Draw.findById(id).select("invited spectators").lean<{ invited: string[]; spectators?: string[] }>(),
+  ]);
+  if (!draw || !lists) return;
+  const invited = new Set(lists.invited);
+  const spectators = new Set(lists.spectators ?? []);
   const problems: string[] = [];
   const byUser = new Map(entrants.map((e) => [e.userId, e]));
 
@@ -1057,8 +1698,10 @@ async function runCheck(id: Types.ObjectId, eligibleAtClose: number): Promise<vo
     else {
       if (new Date(entrant.joinedAt) > new Date(a.sweepStart))
         problems.push(`spot ${a.spot} went to ${a.userId}, who joined after its sweep began`);
-      if (!draw.invited.includes(entrant.email))
+      if (!invited.has(entrant.email))
         problems.push(`spot ${a.spot} went to ${a.userId}, who wasn't invited`);
+      if (spectators.has(entrant.email))
+        problems.push(`spot ${a.spot} went to ${a.userId}, a spectator`);
     }
   }
   for (const [user, n] of wins) if (n > 1) problems.push(`${user} won ${n} times`);
@@ -1104,6 +1747,7 @@ async function runCheck(id: Types.ObjectId, eligibleAtClose: number): Promise<vo
     timedOut: reasons.timeout,
     left: reasons.left,
     joined: entrants.length,
-    invited: draw.invited.length,
+    invited: draw.invitedCount ?? 0,
+    everyone: !!draw.everyone,
   });
 }

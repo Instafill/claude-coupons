@@ -254,7 +254,17 @@ export interface DrawInvite {
   links: number;
   invited: number;
   claimSeconds: number;
+  /** A show: the whole line was invited, and everyone in the room has the same chance. */
+  everyone?: boolean;
 }
+
+// Pictures in the show invite. Served from the site's public/email folder, so they exist once
+// the release that sends the mail is deployed. The guest-pass picture (what a winner sees on
+// Claude's side) goes in only once public/email/guest-pass.png is in the release: set this to
+// its address then, never before, or every invite shows a broken image.
+const EMAIL_IMAGES = "https://claudecoupons.com/email";
+const ROOM_PICTURE = `${EMAIL_IMAGES}/live-draw-room.png`;
+const GUEST_PASS_PICTURE: string = "";
 
 // The live draw invite: one email per draw, to the front of the line. Same shape as an alert
 // (one message each, for its own List-Unsubscribe header), and the same contract with the
@@ -317,11 +327,9 @@ function calendarUrl(deal: Deal, draw: DrawInvite, roomUrl: string): string {
   return `https://calendar.google.com/calendar/render?${params}`;
 }
 
-function sendOneInvite(
-  { email, enterUrl, stopUrl, timezone }: InviteRecipient,
-  deal: Deal,
-  draw: DrawInvite
-): Promise<unknown> {
+function sendOneInvite(recipient: InviteRecipient, deal: Deal, draw: DrawInvite): Promise<unknown> {
+  if (draw.everyone) return sendOneShowInvite(recipient, deal, draw);
+  const { email, enterUrl, stopUrl, timezone } = recipient;
   const time = drawTime(draw.drawAt, timezone);
   const when = time.local ? `${time.utc} (${time.local})` : time.utc;
   const spots = `${draw.spots} ${draw.spots === 1 ? "spot" : "spots"}`;
@@ -358,6 +366,96 @@ function sendOneInvite(
           <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
         </p>
       </div>`,
+  });
+}
+
+/** The show invite as subject, text and HTML. Separate from sending so it can be previewed. */
+export function showInviteContent(
+  { enterUrl, stopUrl, timezone }: Omit<InviteRecipient, "email">,
+  deal: Deal,
+  draw: DrawInvite
+): { subject: string; text: string; html: string } {
+  const time = drawTime(draw.drawAt, timezone);
+  const when = time.local ? `${time.local} (${time.utc})` : time.utc;
+  const roomUrl = `https://claudecoupons.com/draw/${draw.id}`;
+  const calendar = calendarUrl(deal, draw, roomUrl);
+  const everyone = draw.invited.toLocaleString("en-US");
+  const spots = `${draw.spots} ${draw.spots === 1 ? "spot" : "spots"}`;
+
+  const intro = `A Claude subscriber shared a guest pass with us. It works for ${numberWord(draw.spots)} people, so we're giving it away in a live draw: ${spots}, each a free week of Claude Pro.`;
+  const fair = `We've invited all ${everyone} people waiting for a Claude pass. Your place in line doesn't count for this one: everyone in the room when the draw starts has exactly the same chance.`;
+  const steps = [
+    "Open the room before it starts and join with your first name. The room shows your first name and city.",
+    `When the countdown hits zero, ${numberWord(draw.spots)} winners are picked at random, live, from the people in the room.`,
+    `A winner has ${draw.claimSeconds} seconds to press "Get my pass". If they don't, the spot is drawn again straight away among the people still there, so stay until the room closes.`,
+    "Win, and the guest pass link is yours, right there on the page. Claude asks for a card when you start the free week; cancel within 7 days and you pay nothing.",
+  ];
+  const miss = "Can't come? Nothing lost. You keep your place in line, and missing this draw doesn't count against you.";
+  const more = "More links come in from Claude subscribers every week, and each one becomes a draw.";
+
+  const button = (href: string, label: string) =>
+    `<a href="${href}" style="display: inline-block; background: #c9642f; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">${label}</a>`;
+  const esc = (t: string) => t.replace(/'/g, "&rsquo;").replace(/"([^"]+)"/g, "&ldquo;$1&rdquo;");
+
+  return {
+    subject: `Live draw, ${time.local ?? time.utc}: ${draw.spots} Claude Pro passes, same chance for everyone`,
+    text: [
+      "You're invited to a live draw.",
+      `When: ${when}`,
+      intro,
+      `Everyone has the same chance. ${fair}`,
+      `How it works:\n${steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}`,
+      miss,
+      `Open the draw room: ${enterUrl}`,
+      `Add it to your calendar: ${calendar}`,
+      more,
+      `Stop these emails: ${stopUrl}`,
+    ].join("\n\n"),
+    html: `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d; font-size: 15px; line-height: 1.5;">
+        <span style="display: none; max-height: 0; overflow: hidden;">All ${everyone} people waiting for a Claude pass are invited, and everyone in the room has the same chance.</span>
+        <p style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #a94f20;">Live draw &middot; Claude Pro</p>
+        <h1 style="margin: 4px 0 2px; font-size: 26px; line-height: 1.2;">You&rsquo;re invited to a live draw</h1>
+        <p style="margin: 0 0 18px; font-size: 18px;"><strong>${when}</strong></p>
+        <p style="margin: 0 0 20px;">${button(enterUrl, "Open the draw room")}&nbsp;&nbsp;<a href="${calendar}" style="color: #a94f20; font-size: 14px;">Add to calendar</a></p>
+        <p>${esc(intro).replace(`${spots}, each a free week of Claude Pro`, `<strong>${spots}, each a free week of Claude Pro</strong>`)}</p>
+        <div style="margin: 18px 0; padding: 14px 16px; border-radius: 12px; background: #eaf6ef; color: #1d6b43;">
+          <strong>Everyone has the same chance.</strong> ${esc(fair)}
+        </div>
+        <p style="margin: 18px 0 6px; font-weight: 600;">How it works</p>
+        <ol style="margin: 0; padding-left: 20px;">
+          ${steps.map((step) => `<li style="margin-bottom: 6px;">${esc(step)}</li>`).join("\n          ")}
+        </ol>
+        <p style="margin-top: 14px;">${esc(miss)}</p>
+        <a href="${enterUrl}" style="display: block; margin: 22px 0 6px;"><img src="${ROOM_PICTURE}" width="560" alt="The live draw room: everyone who joined, on a grid and a world map, while a spot is drawn" style="display: block; width: 100%; max-width: 560px; height: auto; border: 1px solid #e6e1d8; border-radius: 12px;"></a>
+        <p style="margin: 0 0 18px; color: #6e6a63; font-size: 13px;">The draw room: everyone who joined, where they&rsquo;re from, and each pick as it happens.</p>${
+          GUEST_PASS_PICTURE
+            ? `
+        <img src="${GUEST_PASS_PICTURE}" width="560" alt="What a winner sees after opening the link: Claude's guest pass page, a free week" style="display: block; width: 100%; max-width: 560px; height: auto; border: 1px solid #e6e1d8; border-radius: 12px;">
+        <p style="margin: 6px 0 18px; color: #6e6a63; font-size: 13px;">What a winner sees when they open their link.</p>`
+            : ""
+        }
+        <p style="margin: 22px 0;">${button(enterUrl, "Open the draw room")}</p>
+        <p style="color: #6e6a63; font-size: 14px;">${esc(more)}</p>
+        <p style="color: #6e6a63; font-size: 13px;">
+          <a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.
+        </p>
+      </div>`,
+  };
+}
+
+function sendOneShowInvite({ email, ...links }: InviteRecipient, deal: Deal, draw: DrawInvite): Promise<unknown> {
+  const { subject, text, html } = showInviteContent(links, deal, draw);
+  return sgMail.send({
+    to: email,
+    from: { email: FROM_EMAIL, name: FROM_NAME },
+    subject,
+    headers: {
+      "List-Unsubscribe": `<${links.stopUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    text,
+    html,
   });
 }
 

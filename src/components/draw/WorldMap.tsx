@@ -44,29 +44,50 @@ const RING: Record<Pin["state"], string> = {
   left: "ring-1 ring-white opacity-30 grayscale",
 };
 
+// One pin. Memoised on its plain values, so a room's clock ticking doesn't redraw every face.
+const MapPin = memo(function MapPin({
+  x,
+  y,
+  photo,
+  seed,
+  name,
+  state,
+}: {
+  x: number;
+  y: number;
+  photo?: string;
+  seed: string;
+  name: string;
+  state: Pin["state"];
+}) {
+  return (
+    <span className="draw-pin absolute" style={{ left: `${x}%`, top: `${y}%` }}>
+      <Avatar
+        photo={photo}
+        seed={seed}
+        name={name}
+        size={state === "me" ? 18 : 14}
+        className={`-translate-x-1/2 -translate-y-1/2 shadow-sm transition-transform duration-150 ${RING[state]}`}
+      />
+    </span>
+  );
+});
+
 export default function WorldMap({ pins }: { pins: Pin[] }) {
   return (
     <div className="relative w-full overflow-hidden" style={{ aspectRatio: `${COLS} / ${ROWS}` }}>
       <Land />
-      {pins.map((pin) => {
-        const x = ((pin.lon + 180) / 360) * 100;
-        const y = (((LAND_TOP - pin.lat) / LAND_STEP + 0.5) / ROWS) * 100;
-        return (
-          <span
-            key={pin.id}
-            className="draw-pin absolute"
-            style={{ left: `${x}%`, top: `${y}%` }}
-          >
-            <Avatar
-              photo={pin.photo}
-              seed={pin.seed}
-              name={pin.name}
-              size={pin.state === "me" ? 18 : 14}
-              className={`-translate-x-1/2 -translate-y-1/2 shadow-sm transition-transform duration-150 ${RING[pin.state]}`}
-            />
-          </span>
-        );
-      })}
+      {pins.map((pin) => (
+        <MapPin
+          key={pin.id}
+          x={((pin.lon + 180) / 360) * 100}
+          y={(((LAND_TOP - pin.lat) / LAND_STEP + 0.5) / ROWS) * 100}
+          photo={pin.photo}
+          seed={pin.seed}
+          name={pin.name}
+          state={pin.state}
+        />
+      ))}
     </div>
   );
 }

@@ -59,7 +59,7 @@ export default function DrawListCard({
       ) : (
         <>
           It starts at <LocalTime at={next.drawAt} weekday />. Be in the room when it does: winners are drawn from the
-          people there.
+          people there{next.everyone ? ", and everyone in the room has the same chance" : ""}.
         </>
       );
   } else if (standing) {

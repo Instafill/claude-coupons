@@ -53,7 +53,10 @@ export default function JoinPanel({
   const latestJoin = view.lines.find((line) => line.text.endsWith(" joined"));
 
   return (
-    <section ref={ref} className="draw-attention rounded-2xl border-2 border-accent bg-surface px-5 py-5 shadow-sm sm:px-6">
+    <section
+      ref={ref}
+      className="draw-attention rounded-2xl border-2 border-accent bg-surface px-5 py-5 shadow-sm sm:px-6"
+    >
       <span className="flex items-center gap-2 text-[13px] font-bold tracking-wider text-bad uppercase">
         <span className="draw-dot inline-block h-2.5 w-2.5 rounded-full bg-bad" />
         You&rsquo;re not in the draw yet
@@ -63,17 +66,20 @@ export default function JoinPanel({
           <>The draw has started. Join now to win a spot that comes back.</>
         ) : (
           <>
-            Join now. The draw starts in{" "}
-            <span className="text-accent tabular-nums">{clock(view.drawAt - view.t)}</span>
+            Join now. The draw starts in <span className="text-accent tabular-nums">{clock(view.drawAt - view.t)}</span>
           </>
         )}
       </h2>
       <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[14px] text-muted">
         <span>
           {others} {others === 1 ? "person is" : "people are"} in and watching
+          {view.everyone && " · everyone in the room has the same chance"}
         </span>
         {latestJoin && (
-          <span key={latestJoin.id} className="draw-pop rounded-full bg-[#f4e4da] px-2.5 py-0.5 font-semibold text-accent-dark">
+          <span
+            key={latestJoin.id}
+            className="draw-pop rounded-full bg-[#f4e4da] px-2.5 py-0.5 font-semibold text-accent-dark"
+          >
             {latestJoin.text} just now
           </span>
         )}
@@ -314,12 +320,15 @@ export function GhostTile({ draft, onClick, compact }: { draft: Draft; onClick: 
       <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-bad px-1.5 text-[10px] leading-4 font-bold whitespace-nowrap text-white uppercase">
         Not in yet
       </span>
-      <span className="flex items-center justify-center opacity-60" style={{ width: compact ? 44 : 54, height: compact ? 44 : 54 }}>
+      <span
+        className="flex items-center justify-center opacity-60"
+        style={{ width: compact ? 36 : 46, height: compact ? 36 : 46 }}
+      >
         <Avatar
           photo={draft.usePhoto ? draft.photo : undefined}
           seed={draft.seed}
           name={draft.name || "Your spot"}
-          size={compact ? 34 : 44}
+          size={compact ? 26 : 36}
         />
       </span>
       <span className={`mt-1 w-full truncate leading-tight font-semibold ${compact ? "text-[11px]" : "text-[13px]"}`}>

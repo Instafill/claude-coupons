@@ -23,7 +23,7 @@ export default async function DrawPage({ params }: { params: Promise<{ id: strin
   const view = await roomFor(id, user);
   if (!view) notFound();
 
-  if (!view.viewer.invited) {
+  if (!view.viewer.invited && !view.viewer.spectator) {
     return (
       <section className="mx-auto mt-10 max-w-xl rounded-2xl border border-line bg-surface px-6 py-7">
         <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">Live draw</p>
@@ -65,7 +65,9 @@ export default async function DrawPage({ params }: { params: Promise<{ id: strin
   const firstName = user?.name?.trim().split(/\s+/)[0]?.slice(0, 20);
   const place = await placeForRequest(user!.email, await headers());
   return (
-    <div id="draw-room" className="pt-2">
+    // Wider than the site's reading column: the room and its chat use the screen, centred, never
+    // wider than it (the 3rem leaves room for a scrollbar, so nothing scrolls sideways).
+    <div id="draw-room" className="relative left-1/2 w-[min(1440px,calc(100vw-3rem))] -translate-x-1/2 pt-1">
       {/* The layout's KitCut banner and sticky bar would push the room below the fold and sit
           on top of it; on this page only, they step aside. */}
       <style>{`body:has(#draw-room) [aria-label="${KITCUT.label}"] { display: none; }`}</style>

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 // A face for everyone in the room. A photo when there is one; otherwise an identicon, the
 // generated avatar Stack Overflow showed through Gravatar: a hash of a seed picks a colour
 // and a 5x5 grid mirrored left to right, so the same seed always draws the same face and two
@@ -17,7 +19,7 @@ function hash(seed: string): [number, number] {
   return [h1 >>> 0, h2 >>> 0];
 }
 
-export function Identicon({ seed, size }: { seed: string; size: number }) {
+export const Identicon = memo(function Identicon({ seed, size }: { seed: string; size: number }) {
   const [bits, tone] = hash(seed);
   const hue = tone % 360;
   const cells: [number, number][] = [];
@@ -38,9 +40,11 @@ export function Identicon({ seed, size }: { seed: string; size: number }) {
       ))}
     </svg>
   );
-}
+});
 
-export function Avatar({
+// Memoised: a room shows hundreds of these on its grid and its map, and a face never changes
+// between two ticks of the room's clock.
+export const Avatar = memo(function Avatar({
   photo,
   seed,
   name,
@@ -69,4 +73,4 @@ export function Avatar({
       )}
     </span>
   );
-}
+});
