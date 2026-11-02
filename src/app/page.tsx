@@ -183,7 +183,7 @@ export default async function Home({
 
       <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
         <h2>What you get with a Claude Code pass</h2>
-        <p>
+        <p className="mb-3">
           A pass is 7 free days of Claude Pro, shared by a subscriber who would otherwise let it
           expire. Each link is good for three people, so each one becomes three winners in a draw.
         </p>

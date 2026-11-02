@@ -59,8 +59,42 @@ export default function DrawHero({
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line bg-surface">
-      <div className="grid gap-8 px-6 py-7 sm:px-8 sm:py-9 lg:grid-cols-[1.15fr_1fr] lg:gap-10">
-        <div>
+      {/* On a draw day the draw itself leads, across the whole card: when, what, and the room. */}
+      {next && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-[#f0cdb8] bg-[#fdf3ec] px-6 py-4 sm:px-8">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              </span>
+              {live ? "Live now" : "Next live draw"}
+            </p>
+            <p className="mt-0.5 text-[20px] leading-snug font-semibold">
+              {live ? "The draw is on" : <LocalTime at={next.drawAt} weekday />}
+              <span className="font-normal text-muted">
+                {" "}
+                &middot; {spots(next.spots)}
+                {next.opensAt && !live && (
+                  <>
+                    {" "}
+                    &middot; room opens <LocalTime at={next.opensAt} />
+                  </>
+                )}
+              </span>
+            </p>
+          </div>
+          <Link
+            href={`/draw/${next.id}`}
+            className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
+          >
+            {next.youreInvited ? "Open your room →" : live ? "Watch live →" : "See the room →"}
+          </Link>
+        </div>
+      )}
+
+      <div className="grid gap-8 px-6 py-7 sm:px-8 sm:py-9 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
+        <div className="flex flex-col justify-center">
           <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">Live draws &middot; {deal.name} Pro</p>
           <h2 className="mt-2 text-[30px] leading-[1.15] font-bold sm:text-[36px]">
             Win a free week of {deal.name} Pro in a <span className="text-accent">live draw</span>.
@@ -86,6 +120,7 @@ export default function DrawHero({
               </li>
             ))}
           </ul>
+          {joinedToday >= 5 && <p className="mt-5 text-[13px] text-muted">{joinedToday} people joined the list today.</p>}
         </div>
 
         <div className="flex flex-col justify-center">
@@ -93,36 +128,6 @@ export default function DrawHero({
             <p className="mb-3 rounded-lg bg-[#eaf6ef] px-3 py-2 text-sm font-semibold text-good">
               You&rsquo;re on the list. Every live draw&rsquo;s invite comes to you.
             </p>
-          )}
-
-          {next && (
-            <div className="mb-4 rounded-2xl border border-[#f0cdb8] bg-[#fdf3ec] px-5 py-4">
-              <p className="flex items-center gap-2 text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                </span>
-                {live ? "Live now" : "Next live draw"}
-              </p>
-              <p className="mt-1 text-[22px] leading-tight font-semibold">
-                {live ? "The draw is on" : <LocalTime at={next.drawAt} weekday />}
-              </p>
-              <p className="mt-1 text-[14px] text-muted">
-                {spots(next.spots)}
-                {next.opensAt && !live && (
-                  <>
-                    {" "}
-                    &middot; room opens <LocalTime at={next.opensAt} />
-                  </>
-                )}
-              </p>
-              <Link
-                href={`/draw/${next.id}`}
-                className="mt-3 inline-block rounded-lg bg-accent px-4 py-2 text-[15px] font-semibold text-white hover:bg-accent-dark"
-              >
-                {next.youreInvited ? "Open your room →" : live ? "Watch live →" : "See the room →"}
-              </Link>
-            </div>
           )}
 
           {onList ? (
@@ -133,7 +138,7 @@ export default function DrawHero({
               <p className="mt-1.5 text-[15px]">
                 {next?.youreInvited
                   ? "You're invited to the next draw. Your room link is in your email, and above."
-                  : "We'll email you the invite to every live draw until you win, a few minutes before it starts."}
+                  : "We'll email you the invite to every live draw until you win."}
               </p>
               {/* Renders nothing: the one moment we see someone we could not place before. */}
               <PlaceMe />
@@ -146,10 +151,6 @@ export default function DrawHero({
               </p>
               <WatchForm deal={deal} signedIn={signedIn} email={email} buttonLabel="Invite me to the draws" />
             </div>
-          )}
-
-          {joinedToday >= 5 && (
-            <p className="mt-3 text-center text-[13px] text-muted">{joinedToday} people joined the list today</p>
           )}
         </div>
       </div>

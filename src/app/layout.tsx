@@ -41,7 +41,7 @@ export default async function RootLayout({
               ClaudeCoupons<span className="font-normal text-muted">.com</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-4 text-[15px]">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[14px] whitespace-nowrap sm:text-[15px]">
             {/* Sitewide link, so the guest pass guide is reachable from every page and
                 carries the internal link weight for the phrase it targets. */}
             <Link href="/claude-guest-pass" className="hover:text-accent-dark">
