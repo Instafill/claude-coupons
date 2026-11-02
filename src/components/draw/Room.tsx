@@ -20,7 +20,6 @@ const TONE = {
   bad: "border-[#efc2b8] bg-[#fbebe7] text-bad",
 };
 
-const EMOJI = ["👋", "🔥", "🤞", "🍀", "😬", "🎉"];
 // Past this many tiles a room stops animating tiles into their new places.
 const BIG_ROOM = 80;
 
@@ -62,7 +61,6 @@ export default function Room({
   missingName,
   onClaim,
   onPassOn,
-  onReact,
   onOutcome,
   chat,
   peopleById,
@@ -83,7 +81,6 @@ export default function Room({
   missingName: boolean;
   onClaim: () => void;
   onPassOn: () => void;
-  onReact: (emoji: string) => void;
   onOutcome: (passId: string, result: "claimed" | "dead") => void;
   chat: ChatLine[];
   peopleById: Map<string, Person>;
@@ -225,139 +222,147 @@ export default function Room({
   const [editing, setEditing] = useState(false);
   const reactionsOf = new Map<string, Reaction[]>();
   for (const r of view.reactions) reactionsOf.set(r.personId, [...(reactionsOf.get(r.personId) ?? []), r]);
-  const [bursts, setBursts] = useState<{ id: number; emoji: string }[]>([]);
-  const burstSeq = useRef(0);
 
   return (
-    <div className="space-y-4">
-      {canJoin && (
-        <JoinPanel
-          ref={panelRef}
-          view={view}
-          draft={draft}
-          onChange={onDraft}
-          onJoin={onJoin}
-          missingName={missingName}
-        />
-      )}
-      {!joined && !view.spectator && !view.invited && (
-        <p className="rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] text-muted">
-          You&rsquo;re watching this draw. Only people on the list can join; join it on the{" "}
-          <Link href="/" className="font-semibold text-accent-dark underline">
-            home page
-          </Link>{" "}
-          and every draw&rsquo;s invite comes to you, this one too if it hasn&rsquo;t started.
-        </p>
-      )}
-      {!joined && view.closed && !view.spectator && view.invited && (
-        <section className="rounded-2xl border border-line bg-surface px-6 py-5">
-          <h2 className="text-[22px] font-semibold">You missed this draw</h2>
-          <p className="mt-1 text-[15px] text-muted">
-            You never took your spot, so you weren&rsquo;t in it. You keep your place in line, and we&rsquo;ll invite
-            you to the next one.
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)] lg:items-start">
+      {/* On a desktop: the draw on the left, the chat the whole height of the screen on the
+          right. On a phone this column dissolves, so the chat sits after the status and before
+          the grid, which can run to hundreds of tiles. */}
+      <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4">
+        {canJoin && (
+          <JoinPanel
+            ref={panelRef}
+            view={view}
+            draft={draft}
+            onChange={onDraft}
+            onJoin={onJoin}
+            missingName={missingName}
+          />
+        )}
+        {!joined && !view.spectator && !view.invited && (
+          <p className="rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] text-muted">
+            You&rsquo;re watching this draw. Only people on the list can join; join it on the{" "}
+            <Link href="/" className="font-semibold text-accent-dark underline">
+              home page
+            </Link>{" "}
+            and every draw&rsquo;s invite comes to you, this one too if it hasn&rsquo;t started.
           </p>
-        </section>
-      )}
-
-      {/* Status */}
-      <section className="rounded-2xl border border-line bg-surface px-5 py-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-              {view.test && "Test · "}Live draw{view.everyone && " · everyone on the list invited"} ·{" "}
-              {links === 1 ? "1 Claude Pro link" : `${links} Claude Pro links`}, {total}{" "}
-              {total === 1 ? "spot" : "spots"}
+        )}
+        {!joined && view.closed && !view.spectator && view.invited && (
+          <section className="rounded-2xl border border-line bg-surface px-6 py-5">
+            <h2 className="text-[22px] font-semibold">You missed this draw</h2>
+            <p className="mt-1 text-[15px] text-muted">
+              You never took your spot, so you weren&rsquo;t in it. You keep your place in line, and we&rsquo;ll invite
+              you to the next one.
             </p>
-            <h1 className="mt-0.5 text-[30px] leading-tight font-bold tabular-nums">{headline}</h1>
-          </div>
-          <div className="flex flex-wrap gap-2 text-[13px] font-semibold">
-            {view.spectator && (
-              <span data-pill="watching" className="rounded-full bg-ink px-3 py-1 text-white">
-                👀 Watching
-              </span>
-            )}
-            <span className="rounded-full bg-[#f0ede6] px-3 py-1">👥 {view.presentCount} in the room</span>
-            <span className="rounded-full bg-[#f4e4da] px-3 py-1 text-accent-dark">
-              🎟 {total} {total === 1 ? "spot" : "spots"}
-            </span>
-            {view.mainDone && !view.closed && view.meEligible && stillOpen && (
-              <span className="rounded-full bg-[#eaf6ef] px-3 py-1 text-good">
-                If a spot comes back: 1 in {view.eligible}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {view.banner && (
-          <p
-            key={view.banner.text}
-            className={`draw-pop mt-3 rounded-xl border px-4 py-2 text-[15px] font-semibold ${TONE[view.banner.tone]}`}
-          >
-            {view.banner.text}
-          </p>
+          </section>
         )}
 
-        {!view.closed && (
-          <p className="mt-2 text-[13px] text-muted">
-            {view.me && view.me.joinAt > view.drawAt && !view.meEverWon
-              ? "You arrived after the draw started, so you're in for any spot that comes back. "
-              : ""}
-            Stay until the room closes. Any spot a winner doesn&rsquo;t claim within {view.claim} seconds is re-drawn
-            live, within seconds, among the people still here.
-          </p>
+        {/* Status */}
+        <section className="rounded-2xl border border-line bg-surface px-5 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
+                {view.test && "Test · "}Live draw{view.everyone && " · everyone on the list invited"} ·{" "}
+                {links === 1 ? "1 Claude Pro link" : `${links} Claude Pro links`}, {total}{" "}
+                {total === 1 ? "spot" : "spots"}
+              </p>
+              <h1 className="mt-0.5 text-[30px] leading-tight font-bold tabular-nums">{headline}</h1>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[13px] font-semibold">
+              {view.spectator && (
+                <span data-pill="watching" className="rounded-full bg-ink px-3 py-1 text-white">
+                  👀 Watching
+                </span>
+              )}
+              <span className="rounded-full bg-[#f0ede6] px-3 py-1">👥 {view.presentCount} in the room</span>
+              <span className="rounded-full bg-[#f4e4da] px-3 py-1 text-accent-dark">
+                🎟 {total} {total === 1 ? "spot" : "spots"}
+              </span>
+              {view.mainDone && !view.closed && view.meEligible && stillOpen && (
+                <span className="rounded-full bg-[#eaf6ef] px-3 py-1 text-good">
+                  If a spot comes back: 1 in {view.eligible}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {view.banner && (
+            <p
+              key={view.banner.text}
+              className={`draw-pop mt-3 rounded-xl border px-4 py-2 text-[15px] font-semibold ${TONE[view.banner.tone]}`}
+            >
+              {view.banner.text}
+            </p>
+          )}
+
+          {!view.closed && (
+            <p className="mt-2 text-[13px] text-muted">
+              {view.me && view.me.joinAt > view.drawAt && !view.meEverWon
+                ? "You arrived after the draw started, so you're in for any spot that comes back. "
+                : ""}
+              Stay until the room closes. Any spot a winner doesn&rsquo;t claim within {view.claim} seconds is re-drawn
+              live, within seconds, among the people still here.
+            </p>
+          )}
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+            {view.passes.map((pass) => (
+              <PassChip key={pass.n} pass={pass} view={view} holder={pass.holder ? byId.get(pass.holder) : undefined} />
+            ))}
+          </div>
+        </section>
+
+        {/* The visitor's own outcome */}
+        {myPass && (
+          <MyWin
+            pass={myPass}
+            view={view}
+            mine={view.mine}
+            onClaim={onClaim}
+            onPassOn={onPassOn}
+            onOutcome={onOutcome}
+          />
+        )}
+        {!myPass && myLoss && (
+          <section className="rounded-2xl border border-line bg-surface px-6 py-5">
+            <h2 className="text-[22px] font-semibold">Spot {myLoss.n} went back to the room</h2>
+            <p className="mt-1 text-[15px] text-muted">
+              {myLoss.reason === "passed_on"
+                ? "You passed it on"
+                : myLoss.reason === "left"
+                  ? "You left the room"
+                  : "Your claim time ran out"}
+              , so it was re-drawn among the people still here. Your place in line for the next draw is safe.
+            </p>
+          </section>
+        )}
+        {view.closed && joined && !view.meEverWon && (
+          <section className="rounded-2xl border border-line bg-surface px-6 py-5">
+            <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">This draw is over</p>
+            <h2 className="mt-1 text-[25px] font-semibold">Not this time</h2>
+            <p className="mt-1 text-[15px] text-muted">
+              The spots went to{" "}
+              {view.passes
+                .filter((p) => p.status === "claimed" && p.holder)
+                .map((p) => byId.get(p.holder!)?.name)
+                .join(", ") || "nobody"}
+              . You keep your place in line for the next draw.
+            </p>
+          </section>
         )}
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
-          {view.passes.map((pass) => (
-            <PassChip key={pass.n} pass={pass} view={view} holder={pass.holder ? byId.get(pass.holder) : undefined} />
-          ))}
-        </div>
-      </section>
-
-      {/* The visitor's own outcome */}
-      {myPass && (
-        <MyWin pass={myPass} view={view} mine={view.mine} onClaim={onClaim} onPassOn={onPassOn} onOutcome={onOutcome} />
-      )}
-      {!myPass && myLoss && (
-        <section className="rounded-2xl border border-line bg-surface px-6 py-5">
-          <h2 className="text-[22px] font-semibold">Spot {myLoss.n} went back to the room</h2>
-          <p className="mt-1 text-[15px] text-muted">
-            {myLoss.reason === "passed_on"
-              ? "You passed it on"
-              : myLoss.reason === "left"
-                ? "You left the room"
-                : "Your claim time ran out"}
-            , so it was re-drawn among the people still here. Your place in line for the next draw is safe.
-          </p>
-        </section>
-      )}
-      {view.closed && joined && !view.meEverWon && (
-        <section className="rounded-2xl border border-line bg-surface px-6 py-5">
-          <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">This draw is over</p>
-          <h2 className="mt-1 text-[25px] font-semibold">Not this time</h2>
-          <p className="mt-1 text-[15px] text-muted">
-            The spots went to{" "}
-            {view.passes
-              .filter((p) => p.status === "claimed" && p.holder)
-              .map((p) => byId.get(p.holder!)?.name)
-              .join(", ") || "nobody"}
-            . You keep your place in line for the next draw.
-          </p>
-        </section>
-      )}
-
-      {/* The room */}
-      {/* On a desktop the room and the chat fill the rest of the screen side by side, each
-          scrolling inside itself, so the whole draw is in view at once. */}
-      <div className="grid gap-4 lg:h-[max(520px,calc(100dvh-330px))] lg:grid-cols-[minmax(0,1fr)_minmax(420px,1.1fr)]">
-        <section className="flex min-h-0 flex-col rounded-2xl border border-line bg-surface px-4 py-4">
+        {/* The room */}
+        <section className="order-2 flex min-h-0 flex-col rounded-2xl border border-line bg-surface px-4 py-4">
           <div className="mb-1 flex items-baseline justify-between">
             <h2 className="text-[16px] font-semibold">In the room</h2>
-            <span className="text-[13px] text-muted tabular-nums">{view.presentCount} watching</span>
+            <span className="text-[13px] text-muted tabular-nums">
+              {view.presentCount} watching · {countries} {countries === 1 ? "country" : "countries"}
+            </span>
           </div>
           {/* The shell clips while it eases to the grid's height; the grid's padding keeps the
               badges above each tile and the sweep's enlarged tile inside the clip. */}
-          <div className="-mx-1 max-h-[420px] min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain lg:max-h-none">
+          <div className="-mx-1 max-h-[420px] min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain lg:max-h-[min(560px,52dvh)]">
             <div ref={shellRef} className="overflow-hidden">
               <div
                 ref={gridRef}
@@ -391,75 +396,40 @@ export default function Room({
               </div>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-            <span className="mr-1 text-[13px] text-muted">React</span>
-            {!view.spectator &&
-              EMOJI.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => {
-                    onReact(emoji);
-                    // Feedback where the finger is, joined or not: the tile it also rises from may
-                    // be scrolled away, and before joining there is no tile at all.
-                    const id = ++burstSeq.current;
-                    setBursts((all) => [...all, { id, emoji }]);
-                    setTimeout(() => setBursts((all) => all.filter((b) => b.id !== id)), 2000);
-                  }}
-                  className="relative h-9 w-9 rounded-full border border-line bg-surface text-[17px] transition hover:-translate-y-0.5 hover:bg-paper active:scale-90"
-                  aria-label={`React ${emoji}`}
-                >
-                  {emoji}
-                  {bursts
-                    .filter((b) => b.emoji === emoji)
-                    .map((b) => (
-                      <span
-                        key={b.id}
-                        aria-hidden="true"
-                        className="draw-float pointer-events-none absolute top-0 left-1/2 text-[22px]"
-                      >
-                        {emoji}
-                      </span>
-                    ))}
-                </button>
-              ))}
-            {!joined && (
-              <span className="text-[13px] text-muted">
-                {view.spectator ? "Spectators watch without reacting" : "Join to show yours on your tile"}
-              </span>
-            )}
-          </div>
         </section>
 
-        {/* On a phone the map and chat come before the grid, which can run to hundreds of tiles. */}
-        <div className="order-first flex min-h-0 flex-col gap-4 lg:order-none">
-          <section className="rounded-2xl border border-line bg-surface px-4 py-3">
-            <div className="mb-1.5 flex items-baseline justify-between">
-              <h2 className="text-[15px] font-semibold">Where the room is</h2>
-              <span className="text-[13px] text-muted">
-                {countries} {countries === 1 ? "country" : "countries"}
-              </span>
-            </div>
-            <div className="mx-auto max-w-[340px]">
-              <WorldMap pins={pins} />
-            </div>
-          </section>
-          <LiveChat
-            lines={chat}
-            people={peopleById}
-            meId={view.me?.id}
-            mode={chatMode}
-            live={!view.closed}
-            onSend={onChat}
-            onHide={onHideChat}
-            onBlock={onBlockChat}
-            onReact={onReactChat}
-            reactions={chatReactions}
-            reacted={chatReacted}
-            onJoin={onJoin}
-          />
-        </div>
+        {/* Where everyone is, under the room. */}
+        <section className="order-3 rounded-2xl border border-line bg-surface px-4 py-3">
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <h2 className="text-[15px] font-semibold">Where the room is</h2>
+            <span className="text-[13px] text-muted">
+              {countries} {countries === 1 ? "country" : "countries"}
+            </span>
+          </div>
+          <div className="mx-auto max-w-[560px]">
+            <WorldMap pins={pins} />
+          </div>
+        </section>
       </div>
+
+      {/* The chat: where the party is. The right side of the screen, top to bottom, staying in
+          view while the left side scrolls. */}
+      <aside className="order-1 min-w-0 lg:sticky lg:top-3 lg:h-[calc(100dvh-5.5rem)]">
+        <LiveChat
+          lines={chat}
+          people={peopleById}
+          meId={view.me?.id}
+          mode={chatMode}
+          live={!view.closed}
+          onSend={onChat}
+          onHide={onHideChat}
+          onBlock={onBlockChat}
+          onReact={onReactChat}
+          reactions={chatReactions}
+          reacted={chatReacted}
+          onJoin={onJoin}
+        />
+      </aside>
 
       {editing && view.me && (
         <EditMe
@@ -679,17 +649,21 @@ const Tile = memo(function Tile({
           size={avatar}
           className={person.me && !pass ? "ring-2 ring-accent ring-offset-2" : ""}
         />
+        {person.flag && (
+          <span
+            aria-label={person.country}
+            className={`absolute -right-1 -bottom-0.5 leading-none drop-shadow-sm ${tiny ? "text-[11px]" : compact ? "text-[13px]" : "text-[16px]"}`}
+          >
+            {person.flag}
+          </span>
+        )}
       </div>
       <p
         className={`mt-1 w-full truncate leading-tight font-semibold ${tiny ? "text-[9px]" : compact ? "text-[10px]" : "text-[12px]"}`}
       >
         {person.me ? `${person.name} (you)` : person.name}
       </p>
-      {!compact && (
-        <p className="w-full truncate text-[11px] text-muted">
-          {person.flag} {person.city}
-        </p>
-      )}
+      {!compact && <p className="w-full truncate text-[11px] text-muted">{person.city}</p>}
       {claim && (
         <p className={`text-[11px] font-semibold tabular-nums ${claim.left <= 10 ? "text-bad" : "text-good"}`}>
           {clock(claim.left)}

@@ -9,6 +9,7 @@ import type { Place } from "@/lib/places";
 import { focusJoin, type Draft } from "./JoinPanel";
 import type { ChatMode } from "./LiveChat";
 import Room from "./Room";
+import { playDrawStart, playTick, playWin, unlockSound } from "./sounds";
 import { TOAST_MS, type Banner, type Line, type Pass, type PassStatus, type Person, type View } from "./roomView";
 import { clock } from "./time";
 
@@ -376,6 +377,40 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
     document.title = `${title} - Claude Coupons`;
   }, [title]);
 
+  // Browsers keep audio silent until the page is touched: the first press or key unlocks it.
+  useEffect(() => {
+    const unlock = () => unlockSound();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  // The draw out loud: a call when it starts, a click each time the pick moves on, a chime
+  // when a spot lands on someone. Only changes seen live make a sound, never the state found
+  // on arrival.
+  const started = view.drawStarted;
+  const wasStarted = useRef(started);
+  useEffect(() => {
+    if (started && !wasStarted.current) playDrawStart();
+    wasStarted.current = started;
+  }, [started]);
+  const highlight = view.highlight;
+  useEffect(() => {
+    if (highlight) playTick();
+  }, [highlight]);
+  const lastWon = [...server.feed].reverse().find((item) => item.kind === "won");
+  const lastWonId = lastWon?.id;
+  const lastWonMine = !!lastWon?.who && lastWon.who === server.viewer.id;
+  const heardWon = useRef(lastWonId);
+  useEffect(() => {
+    if (lastWonId === undefined || lastWonId === heardWon.current) return;
+    heardWon.current = lastWonId;
+    playWin(lastWonMine);
+  }, [lastWonId, lastWonMine]);
+
   const sendChat = useCallback(
     async (text: string): Promise<string | null> => {
       const sentAt = Date.now();
@@ -516,13 +551,6 @@ export default function LiveDraw({ initial: first, known, place }: { initial: Dr
         chatReacted={server.viewer.reacted}
         onClaim={() => send({ action: "claim" })}
         onPassOn={() => send({ action: "passon" })}
-        onReact={(emoji) => {
-          if (view.me) {
-            const me = view.me.id;
-            setShown((all) => [...all, { id: `mine-${Date.now()}`, who: me, emoji, at: Date.now() + offset.current }]);
-            send({ action: "react", emoji });
-          }
-        }}
         onOutcome={async (passId, result) => {
           await fetch(`/api/passes/${passId}/outcome`, {
             method: "POST",

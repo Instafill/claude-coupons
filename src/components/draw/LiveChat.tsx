@@ -1,12 +1,13 @@
 "use client";
 
-import { memo, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { memo, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import type { ChatLine } from "@/lib/draw";
 import { CHAT_REACTIONS } from "@/lib/drawRules";
 
 import { Avatar } from "./Avatar";
 import type { Person } from "./roomView";
+import { onSoundChange, playChat, setSoundMuted, soundMuted } from "./sounds";
 
 // The room's live chat, in the manner of a live stream's: what people say, and what the room
 // does - arrivals, every pick, claims, spots coming back - in one scrolling column, newest at
@@ -19,30 +20,20 @@ export type ChatMode = "chat" | "host" | "join" | "closed" | "watch" | "blocked"
 const NO_COUNTS: Record<string, number> = {};
 const NO_MINE: string[] = [];
 
-/**
- * Under a line: its reactions as chips (yours highlighted, a press toggles yours), and, on
- * hover or a tap on the line, the emoji to add - plus, for the host, Hide and Block.
- */
-function LineActions({
+/** Under a line: its reactions as chips, yours highlighted; a press toggles yours. */
+function Chips({
   id,
   counts,
   mine,
-  open,
   onReact,
-  onHide,
-  onBlock,
 }: {
   id: string;
   counts: Record<string, number>;
   mine: string[];
-  open: boolean;
   onReact?: (id: string, emoji: string) => void;
-  onHide?: (id: string) => void;
-  onBlock?: (id: string) => void;
 }) {
   const chips = Object.entries(counts).filter(([, n]) => n > 0);
-  const tools = !!(onReact || onHide || onBlock);
-  if (!chips.length && !tools) return null;
+  if (!chips.length) return null;
   return (
     <div className="mt-0.5 flex flex-wrap items-center gap-1">
       {chips.map(([emoji, n]) => (
@@ -61,52 +52,76 @@ function LineActions({
           {emoji} {n}
         </button>
       ))}
-      {tools && (
-        <span className={`${open ? "flex" : "hidden group-hover:flex"} items-center gap-0.5`}>
-          {onReact &&
-            CHAT_REACTIONS.filter((emoji) => !mine.includes(emoji)).map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onReact(id, emoji);
-                }}
-                className="rounded-full px-1 text-[14px] leading-5 opacity-70 hover:bg-line hover:opacity-100"
-                aria-label={`React ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          {onHide && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onHide(id);
-              }}
-              className="ml-1 rounded px-1.5 text-[12px] leading-5 text-muted hover:bg-line hover:text-bad"
-              title="Take this message down"
-            >
-              Hide
-            </button>
-          )}
-          {onBlock && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onBlock(id);
-              }}
-              className="rounded px-1.5 text-[12px] leading-5 font-semibold text-bad hover:bg-[#fbebe7]"
-              title="Block this person: all their messages go, and they can't post again"
-            >
-              Block
-            </button>
-          )}
-        </span>
-      )}
     </div>
+  );
+}
+
+/**
+ * On hover, or a tap on the line on a touch screen: the emoji to add - plus, for the host,
+ * Hide and Block - floating over the line's corner, so showing them never moves a line.
+ */
+function Tools({
+  id,
+  mine,
+  open,
+  onReact,
+  onHide,
+  onBlock,
+}: {
+  id: string;
+  mine: string[];
+  open: boolean;
+  onReact?: (id: string, emoji: string) => void;
+  onHide?: (id: string) => void;
+  onBlock?: (id: string) => void;
+}) {
+  if (!onReact && !onHide && !onBlock) return null;
+  return (
+    <span
+      className={`${open ? "flex" : "hidden group-hover:flex"} absolute -top-2 right-3 z-10 items-center gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-md`}
+    >
+      {onReact &&
+        CHAT_REACTIONS.filter((emoji) => !mine.includes(emoji)).map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onReact(id, emoji);
+            }}
+            className="rounded-full px-1 text-[15px] leading-6 opacity-80 hover:bg-line hover:opacity-100"
+            aria-label={`React ${emoji}`}
+          >
+            {emoji}
+          </button>
+        ))}
+      {onHide && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onHide(id);
+          }}
+          className="ml-1 rounded px-1.5 text-[12px] leading-6 text-muted hover:bg-line hover:text-bad"
+          title="Take this message down"
+        >
+          Hide
+        </button>
+      )}
+      {onBlock && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onBlock(id);
+          }}
+          className="rounded px-1.5 text-[12px] leading-6 font-semibold text-bad hover:bg-[#fbebe7]"
+          title="Block this person: all their messages go, and they can't post again"
+        >
+          Block
+        </button>
+      )}
+    </span>
   );
 }
 
@@ -182,6 +197,8 @@ function LiveChat({
   const [sending, setSending] = useState(false);
   const shown = rows(lines);
   const newest = lines[lines.length - 1]?.id;
+  const input = useRef<HTMLInputElement>(null);
+  const muted = useSyncExternalStore(onSoundChange, soundMuted, () => false);
 
   // Arriving, the chat opens on its newest line, as a live chat does.
   useLayoutEffect(() => {
@@ -194,9 +211,15 @@ function LiveChat({
   useLayoutEffect(() => {
     const el = list.current;
     if (!el || newest === seen.current) return;
+    // Someone else said something since the last lines: a soft pop, so the room is heard
+    // from another tab too.
+    const from = lines.findIndex((line) => line.id === seen.current);
+    const fresh = from === -1 ? lines.slice(-1) : lines.slice(from + 1);
+    if (fresh.some((line) => line.kind === "chat" && !(meId && line.tile === meId))) playChat();
     seen.current = newest;
     if (atBottom.current) el.scrollTop = el.scrollHeight;
     else setUnseen((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newest]);
 
   const toBottom = () => {
@@ -205,8 +228,8 @@ function LiveChat({
     setUnseen(0);
   };
 
-  const send = async (event: FormEvent) => {
-    event.preventDefault();
+  const send = async (event?: FormEvent) => {
+    event?.preventDefault();
     const message = text.trim();
     if (!message || sending) return;
     setSending(true);
@@ -217,18 +240,30 @@ function LiveChat({
       setText("");
       atBottom.current = true;
     }
+    input.current?.focus();
   };
 
   return (
-    <section className="flex h-[460px] min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface lg:h-auto lg:flex-1">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+    <section className="flex h-[560px] min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface lg:h-full">
+      <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
         <h2 className="text-[18px] font-semibold">Live chat</h2>
-        {live && (
-          <span className="flex items-center gap-1.5 rounded-full bg-[#fbebe7] px-2.5 py-0.5 text-[12px] font-bold tracking-wide text-bad uppercase">
-            <span className="draw-dot inline-block h-2 w-2 rounded-full bg-bad" />
-            Live
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSoundMuted(!muted)}
+            className="rounded-full border border-line px-2.5 py-0.5 text-[12px] font-semibold text-muted hover:border-accent hover:text-ink"
+            aria-pressed={!muted}
+            title={muted ? "Turn the room's sounds on" : "Turn the room's sounds off"}
+          >
+            {muted ? "🔇 Sound off" : "🔊 Sound on"}
+          </button>
+          {live && (
+            <span className="flex items-center gap-1.5 rounded-full bg-[#fbebe7] px-2.5 py-0.5 text-[12px] font-bold tracking-wide text-bad uppercase">
+              <span className="draw-dot inline-block h-2 w-2 rounded-full bg-bad" />
+              Live
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1">
@@ -275,11 +310,14 @@ function LiveChat({
                 );
               }
               const { line } = row;
-              const actions = (
-                <LineActions
+              const mineReacted = reacted[line.id] ?? NO_MINE;
+              const chips = (
+                <Chips id={line.id} counts={reactions[line.id] ?? NO_COUNTS} mine={mineReacted} onReact={onReact} />
+              );
+              const tools = (
+                <Tools
                   id={line.id}
-                  counts={reactions[line.id] ?? NO_COUNTS}
-                  mine={reacted[line.id] ?? NO_MINE}
+                  mine={mineReacted}
                   open={openLine === line.id}
                   onReact={onReact}
                   onHide={line.kind === "chat" && !line.host ? onHide : undefined}
@@ -291,10 +329,11 @@ function LiveChat({
                   <li
                     key={line.id}
                     onClick={() => setOpenLine((open) => (open === line.id ? null : line.id))}
-                    className={`group draw-pop px-4 py-1 text-[13px] hover:bg-paper ${TONE[line.event ?? ""] ?? "text-muted"}`}
+                    className={`group draw-pop relative px-4 py-1 text-[13px] hover:bg-paper ${TONE[line.event ?? ""] ?? "text-muted"}`}
                   >
                     {line.text}
-                    {actions}
+                    {chips}
+                    {tools}
                   </li>
                 );
               }
@@ -304,7 +343,7 @@ function LiveChat({
                 <li
                   key={line.id}
                   onClick={() => setOpenLine((open) => (open === line.id ? null : line.id))}
-                  className="group flex items-start gap-2.5 px-4 py-1 hover:bg-paper"
+                  className="group relative flex items-start gap-2.5 px-4 py-1 hover:bg-paper"
                 >
                   {line.host ? (
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] text-white">
@@ -332,8 +371,9 @@ function LiveChat({
                       )}
                       {line.text}
                     </p>
-                    {actions}
+                    {chips}
                   </div>
+                  {tools}
                 </li>
               );
             })}
@@ -374,11 +414,20 @@ function LiveChat({
           <form onSubmit={send}>
             <div className="flex items-center gap-2">
               <input
+                ref={input}
                 value={text}
                 onChange={(event) => {
                   setText(event.target.value.slice(0, MAX));
                   if (error) setError(null);
                 }}
+                onKeyDown={(event) => {
+                  // Enter sends, whatever state the send button is in; Shift+Enter is left alone.
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    send();
+                  }
+                }}
+                enterKeyHint="send"
                 maxLength={MAX}
                 placeholder={mode === "host" ? "Message the room as host…" : "Say something to the room…"}
                 aria-label="Chat message"
