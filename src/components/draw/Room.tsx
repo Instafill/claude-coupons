@@ -242,11 +242,11 @@ export default function Room({
       )}
       {!joined && !view.spectator && !view.invited && (
         <p className="rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] text-muted">
-          You&rsquo;re watching this draw. It&rsquo;s for the people who were invited; take a number on the{" "}
+          You&rsquo;re watching this draw. Only people on the list can join; join it on the{" "}
           <Link href="/" className="font-semibold text-accent-dark underline">
             home page
           </Link>{" "}
-          to be invited to the next one.
+          and every draw&rsquo;s invite comes to you, this one too if it hasn&rsquo;t started.
         </p>
       )}
       {!joined && view.closed && !view.spectator && view.invited && (
@@ -264,7 +264,7 @@ export default function Room({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
-              {view.test && "Test · "}Live draw{view.everyone && " · everyone in line invited"} ·{" "}
+              {view.test && "Test · "}Live draw{view.everyone && " · everyone on the list invited"} ·{" "}
               {links === 1 ? "1 Claude Pro link" : `${links} Claude Pro links`}, {total}{" "}
               {total === 1 ? "spot" : "spots"}
             </p>
