@@ -242,6 +242,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         },
       })),
     },
+    // A YouTube video the article plays, with its embed address.
+    ...post.sections.flatMap((section) =>
+      section.youtube
+        ? [
+            {
+              "@context": "https://schema.org",
+              "@type": "VideoObject",
+              name: section.youtube.title,
+              description: section.youtube.description,
+              thumbnailUrl: [`https://i.ytimg.com/vi/${section.youtube.id}/hqdefault.jpg`],
+              uploadDate: section.youtube.uploadDate,
+              duration: section.youtube.duration,
+              embedUrl: `https://www.youtube.com/embed/${section.youtube.id}`,
+              url: `https://www.youtube.com/watch?v=${section.youtube.id}`,
+            },
+          ]
+        : []
+    ),
     // Every film the article plays, so each can surface in video results.
     ...post.sections.flatMap((section) =>
       (section.videos ?? []).map((video) => ({
@@ -441,6 +459,35 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
+              )}
+
+              {/* A YouTube video, played in place. youtube-nocookie: no YouTube cookies until
+                  the reader presses play. Lazy, so it costs nothing until it is scrolled to. */}
+              {section.youtube && (
+                <figure className="my-6 overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-xs">
+                  <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${section.youtube.id}?rel=0`}
+                      title={section.youtube.title}
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                      className="h-full w-full"
+                    />
+                  </div>
+                  <figcaption className="px-2 pt-3 pb-1 text-sm text-muted">
+                    {section.youtube.caption}{" "}
+                    <a
+                      href={`https://www.youtube.com/watch?v=${section.youtube.id}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="font-semibold text-accent-dark hover:underline"
+                    >
+                      Watch on YouTube →
+                    </a>
+                  </figcaption>
+                </figure>
               )}
 
               {/* Films. preload="metadata": a few KB each (the web copies are faststart), so

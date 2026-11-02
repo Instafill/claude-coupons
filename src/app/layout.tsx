@@ -182,11 +182,30 @@ export default async function RootLayout({
               </svg>
               Built by @ogamaniuk
             </a>
+            <a
+              className="flex items-center gap-1.5 hover:text-accent-dark"
+              href="https://www.youtube.com/@claudecoupons"
+              rel="noopener"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M15.67 4.13a2 2 0 0 0-1.41-1.42C13.02 2.38 8 2.38 8 2.38s-5.02 0-6.26.33A2 2 0 0 0 .33 4.13C0 5.38 0 8 0 8s0 2.62.33 3.87a2 2 0 0 0 1.41 1.42c1.24.33 6.26.33 6.26.33s5.02 0 6.26-.33a2 2 0 0 0 1.41-1.42C16 10.62 16 8 16 8s0-2.62-.33-3.87ZM6.4 10.4V5.6L10.56 8 6.4 10.4Z" />
+              </svg>
+              Live draws on YouTube
+            </a>
             <Link href="/about" className="hover:text-accent-dark">
               About
             </Link>
             <Link href="/friends" className="hover:text-accent-dark">
               Our friends
+            </Link>
+            <Link href="/sponsor" className="hover:text-accent-dark">
+              Sponsor this site
             </Link>
           </p>
           <p className="mt-3">

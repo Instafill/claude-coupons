@@ -49,6 +49,18 @@ export interface BlogVideo {
   uploadDate: string;
 }
 
+/** A video on YouTube, played in place (privacy-enhanced embed) and emitted as a VideoObject. */
+export interface BlogYouTube {
+  id: string;
+  title: string;
+  caption: string;
+  /** ISO 8601 date. */
+  uploadDate: string;
+  /** ISO 8601, e.g. PT10M42S. */
+  duration: string;
+  description: string;
+}
+
 export interface BlogTakeaway {
   mark: "yes" | "no";
   title: string;
@@ -76,6 +88,7 @@ export interface BlogPostSection {
   stepsTitle?: string;
   images?: BlogImage[];
   videos?: BlogVideo[];
+  youtube?: BlogYouTube;
   /** A call to action boxed at the end of the section. */
   cta?: BlogCta;
   table?: {
@@ -607,7 +620,235 @@ const CLAUDE_VIDEO_GUIDE: BlogPost = {
   ],
 };
 
+// The move from waves to live giveaways, told with the numbers that forced it and the first
+// show's own recording. Every figure here was read from the database on 1 November 2026.
+const LIVE_IMG = "/blog/live-giveaways";
+
+const LIVE_GIVEAWAYS: BlogPost = {
+  slug: "live-claude-pro-giveaways",
+  title: "Why we replaced the queue with live Claude Pro giveaways",
+  h1: "1,234 people, 10 links a week: why Claude passes now go out in live giveaways",
+  metaDescription:
+    "Our Claude pass queue grew to 1,234 people while about ten links a week came in. Emailing them in waves stopped working, so passes now go out in live giveaways where everyone has the same chance. Here's the recording of the first one.",
+  summary:
+    "The waiting list kept growing, the passes didn't, and most alert emails went unopened. So we stopped emailing passes in waves and started giving them away live: everyone on the list is invited, everyone in the room has the same chance, and the whole thing is on video.",
+  publishedAt: "2026-11-01T22:00:00Z",
+  updatedAt: "2026-11-01T22:00:00Z",
+  readingTime: "6 min read",
+  category: "Behind the scenes",
+  badge: "With the recording",
+  featured: true,
+  tags: ["Claude Pro", "Live giveaway", "Guest passes", "Claude Coupons"],
+  author: AUTHORS.alex,
+  keywords: [
+    "claude pro giveaway",
+    "free claude pro",
+    "claude guest pass giveaway",
+    "claude code pass giveaway",
+    "live giveaway",
+    "claude pro free week",
+  ],
+  imageAlt: "The first live Claude Pro giveaway: three winners claimed, the room of people and their countries on a map, and the live chat",
+  image: `${LIVE_IMG}/og-live-giveaways.jpg`,
+  takeaways: [
+    {
+      mark: "no",
+      title: "Waves stopped working:",
+      text: "1,234 people were waiting for about ten links a week, and most alert emails were never opened.",
+    },
+    {
+      mark: "yes",
+      title: "Now it's a live giveaway:",
+      text: "everyone on the list is invited, everyone in the room has the same chance, and winners are drawn live.",
+    },
+    {
+      mark: "yes",
+      title: "The first one worked:",
+      text: "1,232 invites went out in 7 seconds, 29 people joined from 18 countries, and all 3 passes were claimed within seconds.",
+    },
+  ],
+  faqHeading: "Live giveaways: questions",
+  cta: {
+    kicker: "Next giveaway",
+    title: "Get invited to the next live giveaway",
+    text: "Leave your email once. Every giveaway's invite comes to you until you win, and everyone in the room has the same chance.",
+    primary: { href: "/", label: "Invite me →" },
+    secondary: { href: "/submit", label: "Share a spare pass" },
+  },
+  sections: [
+    {
+      id: "the-problem",
+      h2: "The list grew faster than the passes",
+      body: [
+        "Claude Coupons started as a simple idea: Claude Pro and Max subscribers have guest passes they don't use, and plenty of people would love a free week of Claude Pro. A subscriber lists their link, and the next people in line get it. Each link works for three people.",
+        "People liked it, and the waiting list grew every single week: 349 people joined in the first week of the list, then 140 to 210 every week after that. By 1 November, 1,234 people were waiting for a Claude pass.",
+        "Passes didn't grow with it. Subscribers listed about ten links a week, some weeks two, some weeks twenty-three. Ten links make thirty free weeks of Claude Pro, against 150 or more new people joining the list.",
+      ],
+      table: {
+        columns: [
+          { key: "what", label: "In a typical week" },
+          { key: "n", label: "How many" },
+        ],
+        rows: [
+          { what: "People joining the list", n: "140–210" },
+          { what: "Claude links listed", n: "about 10" },
+          { what: "Free weeks those links can give", n: "about 30" },
+          { what: "People waiting on 1 November", n: "1,234" },
+        ],
+        caption: "Read from the site's own database, September to November 2026.",
+      },
+    },
+    {
+      id: "why-waves-failed",
+      h2: "Why emailing passes in waves stopped working",
+      body: [
+        "Until this week, a new link was offered in waves: an email to the first ten people in line, then ten more every five minutes, until all three uses were taken. In a small queue that's fast and fair. With a thousand people it went wrong in four ways.",
+      ],
+      bullets: [
+        "Most emails were never opened. Between 25 and 28 October at least 71% of pass alerts went unread, and a typical link needed nine waves, ninety emails, to find its three people.",
+        "It was a race. Whoever happened to be at their screen in those five minutes won. Someone asleep in another time zone, or in a meeting, lost their turn without ever seeing it.",
+        "The back of the line never moved. With about thirty free weeks a week and 150 people joining, someone who joined today was looking at months of waiting.",
+        "Links died on the way. Of 305 passes people opened, 122 were reported as not working, often because they'd already been used up by the time the third wave arrived.",
+      ],
+      images: [
+        {
+          src: `${LIVE_IMG}/wave-queue-card.jpg`,
+          alt: "The queue card with waves: join now and you are wave 1, waves open five minutes apart, let three turns go by and your number goes to the back",
+          caption: "How the queue looked with waves. This card still runs on one smaller board, where it works because the list is short.",
+          width: 1600,
+          height: 988,
+          label: "Before",
+        },
+      ],
+    },
+    {
+      id: "live-giveaways",
+      h2: "What we do now: live giveaways",
+      body: [
+        "So we changed the whole model. Links that come in are held, checked by hand, and given away live, in one room, at a set time:",
+      ],
+      steps: [
+        "Everyone on the list gets an email invite with the time and a calendar invitation. Not the first fifty, everyone.",
+        "Fifteen minutes before, the room opens. You join with your first name; the room shows your first name and city, a world map fills up, and there's a live chat.",
+        "At the start time, winners are picked at random from everyone in the room. Each person in the room has exactly the same chance, whether they joined the list in September or this morning.",
+        "A winner has 60 seconds to press Get my pass. If they don't, that pass is drawn again right away among the people still there, so it pays to stay until the room closes.",
+        "Win and you leave the list. Miss a giveaway and nothing happens: you're invited to the next one.",
+      ],
+      bodyAfter: [
+        "Anyone can open the room and watch, signed in or not. That matters: you can see the draw happen, who won, and that every pass was claimed. Nothing is hidden behind an email you might have missed.",
+      ],
+      images: [
+        {
+          src: `${LIVE_IMG}/room-countdown.jpg`,
+          alt: "The giveaway room before it opens: a glowing orange starburst over a countdown, the opening and draw times, and three steps",
+          caption: "The link in the invite works straight away. Until the room opens it shows a countdown.",
+          width: 1600,
+          height: 1000,
+          label: "Screenshot",
+        },
+        {
+          src: `${LIVE_IMG}/invite-email.jpg`,
+          alt: "The giveaway invite email: the time in your own time zone, a button to open the room, and a note that everyone has the same chance",
+          caption: "The invite. It goes to everyone on the list and carries a calendar invitation, so the time lands in your calendar.",
+          width: 1600,
+          height: 1375,
+          label: "Screenshot",
+        },
+      ],
+    },
+    {
+      id: "first-giveaway",
+      h2: "The first live giveaway, on video",
+      body: [
+        "We ran the first one on 1 November with one link, three free weeks of Claude Pro. All 1,232 invites went out in seven seconds, and the draw started ten minutes later.",
+        "29 people joined, from 18 countries. They talked in the chat while the countdown ran, the three winners were drawn one after another, and each claimed their pass within seconds. No re-draws were needed. Here's the whole thing, recorded from the room:",
+      ],
+      youtube: {
+        id: "cEzBovDNPQw",
+        title: "Free Claude Pro Giveaway LIVE: First Draw, 3 Spots, 23 People, 18 Countries",
+        caption: "The first live giveaway, recorded from the room: the countdown, the chat, the three draws and the claims.",
+        uploadDate: "2026-11-02",
+        duration: "PT10M42S",
+        description:
+          "The first live Claude Pro giveaway on claudecoupons.com: everyone on the waiting list was invited, people joined from 18 countries, and three winners were drawn live and claimed their free week of Claude Pro.",
+      },
+      images: [
+        {
+          src: `${LIVE_IMG}/room-filling-up.jpg`,
+          alt: "The giveaway room 23 seconds before the draw: people's tiles with first names, a world map of where they are, and the live chat",
+          caption: "23 seconds before the draw: the room, the map and the chat.",
+          width: 1600,
+          height: 900,
+          label: "From the recording",
+        },
+        {
+          src: `${LIVE_IMG}/room-drawing.jpg`,
+          alt: "The giveaway mid-draw: spot 1 won by jacob from Tel Aviv with a claim timer, spot 2 being drawn",
+          caption: "Mid-draw: spot 1 is won and its winner has a minute to claim, spot 2 is being drawn.",
+          width: 1600,
+          height: 900,
+          label: "From the recording",
+        },
+        {
+          src: `${LIVE_IMG}/room-closed-winners.jpg`,
+          alt: "The giveaway room closed: all 3 spots claimed by jacob, Ich and Guilherme, with the room's people and their countries on the map",
+          caption: "Room closed: all three passes claimed. The room stays up, read-only, for anyone to look through.",
+          width: 1600,
+          height: 900,
+          label: "From the recording",
+        },
+      ],
+    },
+    {
+      id: "what-changed-on-the-site",
+      h2: "What changed on the site",
+      body: [
+        "The home page no longer shows your number in line, because your place no longer changes your chances. It shows how many people have got a free week of Claude Pro here, when the next giveaway is, and one button to get invited.",
+        "If you joined the list before, you don't need to do anything: you're invited to every giveaway until you win. If you join while a giveaway is already announced, you're added to it and get the same invite.",
+      ],
+      images: [
+        {
+          src: `${LIVE_IMG}/home-hero.jpg`,
+          alt: "The new home page: the next live draw with its time, how many people got a free week of Claude Pro, and the form to get invited",
+          caption: "The home page now: the next giveaway, the total so far, and the invite form.",
+          width: 1600,
+          height: 1100,
+          label: "Screenshot",
+        },
+      ],
+      callout: {
+        type: "tip",
+        title: "Have a spare Claude pass?",
+        text: "Run /passes in Claude Code or open Settings in the Claude app, copy your link and list it. Each link becomes three winners in the next live giveaway.",
+      },
+    },
+  ],
+  faqs: [
+    {
+      q: "Is it really free?",
+      a: "Yes. Joining the list and the giveaways cost nothing, and nothing is sold. The pass itself is a Claude guest pass: Anthropic asks for a card when you start the free week, and you pay nothing if you cancel within 7 days.",
+    },
+    {
+      q: "Does my place in the line matter any more?",
+      a: "No. Everyone on the list is invited to every giveaway, and everyone in the room when it starts has exactly the same chance.",
+    },
+    {
+      q: "What happens if I miss a giveaway?",
+      a: "Nothing. You stay on the list and get the invite to the next one. Missing one doesn't count against you.",
+    },
+    {
+      q: "How often are there giveaways?",
+      a: "Whenever subscribers share passes. Each giveaway is announced by email, with a calendar invitation, before its room opens.",
+    },
+    {
+      q: "Can I watch without being invited?",
+      a: "Yes. Anyone can open a giveaway room and watch the draw live. Only people on the list can join and chat.",
+    },
+  ],
+};
+
 export const BLOG_POSTS: BlogPost[] = [
+  LIVE_GIVEAWAYS,
   CLAUDE_VIDEO_GUIDE,
   {
     slug: "claude-promo-codes",
