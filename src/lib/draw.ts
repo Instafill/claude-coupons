@@ -442,6 +442,8 @@ export async function joinDraw(
     return { ok: false, error: "You're watching this one: spectators can't join.", status: 403 };
   if (access !== "invited") return { ok: false, error: "This draw is for the people invited to it.", status: 403 };
   if (draw.status === DRAW_STATUS.closed) return { ok: false, error: "This draw is over.", status: 409 };
+  if (draw.opensAt && new Date(draw.opensAt).getTime() > Date.now())
+    return { ok: false, error: "The room isn't open yet. Come back when the countdown ends.", status: 409 };
   const name = cleanName(input.name);
   if (!name) return { ok: false, error: "Add your first name, then press Join.", status: 400 };
 
@@ -654,6 +656,8 @@ export interface DrawView {
   status: string;
   test: boolean;
   drawAt: number;
+  /** Announced ahead: the page counts down to this and nobody joins before it. */
+  opensAt?: number;
   claimSeconds: number;
   links: number;
   invited: number;
@@ -954,6 +958,7 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
     status: draw.status,
     test: draw.test,
     drawAt: new Date(draw.drawAt).getTime(),
+    opensAt: draw.opensAt ? new Date(draw.opensAt).getTime() : undefined,
     claimSeconds: draw.claimSeconds,
     links: draw.passIds.length,
     invited: draw.invitedCount ?? 0,
@@ -1447,13 +1452,54 @@ export interface DrawSummary {
     invited: number;
     everyone: boolean;
     youreInvited: boolean;
+    /** Announced ahead: when the room opens. */
+    opensAt?: number;
   };
   /** Held listings not yet in a draw, and the spots they make. */
   waiting: { links: number; spots: number };
-  last?: { closedAt: number; claimed: number; spots: number; joined: number };
+  last?: {
+    id: string;
+    drawAt: number;
+    closedAt: number;
+    claimed: number;
+    spots: number;
+    joined: number;
+    /** First names of the people who claimed, as the room showed them. */
+    winners: string[];
+  };
   /** How many the next draw would invite, as things stand. */
   invites: number;
   nextScheduled: number;
+}
+
+async function lastDrawFor(last: LeanDraw): Promise<NonNullable<DrawSummary["last"]>> {
+  const claimed = last.spots.filter((s) => s.status === SPOT_STATUS.claimed);
+  const holders = claimed.map((s) => s.holder).filter((h): h is string => Boolean(h));
+  const [joined, names] = await Promise.all([
+    DrawEntrant.countDocuments({ drawId: last._id }),
+    DrawEntrant.find({ drawId: last._id, userId: { $in: holders } }).select("userId name").lean<{ userId: string; name: string }[]>(),
+  ]);
+  const byUser = new Map(names.map((e) => [e.userId, e.name]));
+  return {
+    id: last._id.toString(),
+    drawAt: new Date(last.drawAt).getTime(),
+    closedAt: new Date(last.closedAt!).getTime(),
+    claimed: claimed.length,
+    spots: last.spots.length,
+    joined,
+    winners: holders.map((h) => byUser.get(h)).filter((n): n is string => Boolean(n)),
+  };
+}
+
+/**
+ * Everyone who has got one of this brand's passes here, ever: one each however many they
+ * opened, and not counting a link they told us was dead. The home page's one big number.
+ */
+export async function peopleServed(deal: DealSlug): Promise<number> {
+  await dbConnect();
+  const brand = deal === "claude" ? { $or: [{ deal }, { deal: { $exists: false } }, { deal: null }] } : { deal };
+  const people = await Unlock.distinct("userId", { ...brand, outcome: { $ne: "dead" } });
+  return people.length;
 }
 
 export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawSummary> {
@@ -1461,11 +1507,11 @@ export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawS
   const [open, last, held] = await Promise.all([
     Draw.findOne({ deal, test: false, status: { $ne: DRAW_STATUS.closed } })
       .sort({ drawAt: 1 })
-      .select("drawAt status spots passIds invitedCount everyone")
+      .select("drawAt opensAt status spots passIds invitedCount everyone")
       .lean<LeanDraw>(),
     Draw.findOne({ deal, test: false, status: DRAW_STATUS.closed })
       .sort({ closedAt: -1 })
-      .select("closedAt spots")
+      .select("drawAt closedAt spots")
       .lean<LeanDraw>(),
     Pass.find({ status: PASS_STATUS.held, ...dealFilter(deal), code: { $not: new RegExp(`^${TEST_CODE_PREFIX}`) } }),
   ]);
@@ -1490,20 +1536,53 @@ export async function drawSummary(deal: DealSlug, email?: string): Promise<DrawS
           invited: next.invitedCount ?? 0,
           everyone: !!next.everyone,
           youreInvited: (await accessTo(next._id, email)) === "invited",
+          opensAt: next.opensAt ? new Date(next.opensAt).getTime() : undefined,
         }
       : undefined,
     waiting: { links: waitingPasses.length, spots: waitingSpots },
-    last: last
-      ? {
-          closedAt: new Date(last.closedAt!).getTime(),
-          claimed: last.spots.filter((s) => s.status === SPOT_STATUS.claimed).length,
-          spots: last.spots.length,
-          joined: await DrawEntrant.countDocuments({ drawId: last._id }),
-        }
-      : undefined,
+    last: last ? await lastDrawFor(last) : undefined,
     invites: invitesFor(waitingSpots || getDeal(deal).unlocksPerListing),
     nextScheduled: nextScheduledDraw().getTime(),
   };
+}
+
+/**
+ * Somebody who joined the line after a show was announced: they are in the line it invited,
+ * so they are invited too, and get the same email. Only a show still ahead of its draw, and
+ * only someone still waiting (not stopped, not already a winner). Never throws: joining the
+ * line must not fail because a mail did.
+ */
+export async function inviteLatecomer(address: string, deal: DealSlug): Promise<void> {
+  try {
+    await dbConnect();
+    const email = address.toLowerCase();
+    const waiting = await Membership.exists({ email, deal, stoppedAt: { $exists: false }, leftQueueAt: { $exists: false } });
+    if (!waiting) return;
+    const shows = await Draw.find({
+      deal,
+      test: false,
+      everyone: true,
+      status: DRAW_STATUS.open,
+      drawAt: { $gt: new Date() },
+      invited: { $ne: email },
+      spectators: { $ne: email },
+    })
+      .select("_id")
+      .lean<{ _id: Types.ObjectId }[]>();
+    for (const show of shows) {
+      const added = await Draw.updateOne(
+        { _id: show._id, invited: { $ne: email } },
+        { $addToSet: { invited: email }, $inc: { invitedCount: 1 } }
+      );
+      if (!added.modifiedCount) continue;
+      const id = show._id.toString();
+      const { delivered } = await sendInvites(id, { only: [email] });
+      if (delivered) await Draw.updateOne({ _id: show._id }, { $addToSet: { sent: email } });
+      logEvent("draw_latecomer", { deal, draw: id, delivered });
+    }
+  } catch (error) {
+    console.error("Latecomer invite failed:", error);
+  }
 }
 
 export type OpenResult =
@@ -1532,6 +1611,8 @@ export interface OpenInput {
   spectators?: string[];
   /** False opens the room without mailing anyone, so it can be looked at first (sendInvites). */
   send?: boolean;
+  /** Announced ahead: the room stays shut, with a countdown, until this moment. */
+  opensAt?: Date;
 }
 
 /** Makes sure an address can be signed in by link: a confirmed watch row with an enter token. */
@@ -1636,6 +1717,7 @@ export async function openDraw(input: OpenInput): Promise<OpenResult> {
     draw = await Draw.create({
       deal,
       drawAt,
+      opensAt: input.opensAt,
       claimSeconds: input.claimSeconds ?? CLAIM_SECONDS,
       test: Boolean(test),
       everyone: Boolean(input.everyone && !test),
@@ -1724,6 +1806,7 @@ export async function sendInvites(
     invited: draw.invitedCount ?? draw.invited.length,
     claimSeconds: draw.claimSeconds,
     everyone: !!draw.everyone,
+    opensAt: draw.opensAt ? new Date(draw.opensAt) : undefined,
   };
 
   const preview = Array.isArray(only);

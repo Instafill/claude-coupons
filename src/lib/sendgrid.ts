@@ -256,6 +256,8 @@ export interface DrawInvite {
   claimSeconds: number;
   /** A show: the whole line was invited, and everyone in the room has the same chance. */
   everyone?: boolean;
+  /** Announced ahead: the room opens at this moment, and shows a countdown until then. */
+  opensAt?: Date;
 }
 
 // Pictures in the show invite. Served from the site's public/email folder, so they exist once
@@ -316,7 +318,7 @@ function drawTime(at: Date, timezone?: string): { utc: string; local?: string } 
 /** A Google Calendar "add event" link: works from any mail client, no attachment. */
 function calendarUrl(deal: Deal, draw: DrawInvite, roomUrl: string): string {
   const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const start = new Date(draw.drawAt.getTime() - 5 * 60 * 1000);
+  const start = draw.opensAt ?? new Date(draw.drawAt.getTime() - 5 * 60 * 1000);
   const end = new Date(draw.drawAt.getTime() + 15 * 60 * 1000);
   const params = new URLSearchParams({
     action: "TEMPLATE",
@@ -369,6 +371,64 @@ function sendOneInvite(recipient: InviteRecipient, deal: Deal, draw: DrawInvite)
   });
 }
 
+/**
+ * The show as a calendar invitation (RFC 5545), attached to the invite so Gmail and Outlook
+ * show it as an event with the room link in it. One UID per draw, so a second copy updates
+ * the same event instead of adding another. RSVP is off: nobody needs to answer it.
+ */
+export function showCalendar(deal: Deal, draw: DrawInvite, email: string, enterUrl: string): string {
+  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const start = draw.opensAt ?? new Date(draw.drawAt.getTime() - 5 * 60 * 1000);
+  const end = new Date(draw.drawAt.getTime() + 15 * 60 * 1000);
+  // Commas, semicolons and backslashes are escaped in text values; lines fold at 75 octets.
+  const text = (t: string) => t.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  const fold = (line: string) => {
+    const out: string[] = [];
+    let rest = line;
+    while (rest.length > 74) {
+      out.push(rest.slice(0, 74));
+      rest = " " + rest.slice(74);
+    }
+    out.push(rest);
+    return out.join("\r\n");
+  };
+  const spots = `${draw.spots} ${draw.spots === 1 ? "free week" : "free weeks"} of ${deal.name} Pro`;
+  return [
+    "BEGIN:VCALENDAR",
+    "PRODID:-//claudecoupons.com//live draw//EN",
+    "VERSION:2.0",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:draw-${draw.id}@claudecoupons.com`,
+    `DTSTAMP:${stamp(new Date())}`,
+    `DTSTART:${stamp(start)}`,
+    `DTEND:${stamp(end)}`,
+    `SUMMARY:${text(`${deal.name} live draw: ${spots}`)}`,
+    `DESCRIPTION:${text(
+      `The room opens at the start of this event and the winners are drawn ${
+        draw.opensAt ? Math.round((draw.drawAt.getTime() - draw.opensAt.getTime()) / 60000) : 5
+      } minutes later, live. Everyone in the room has the same chance.\n\nYour link to the room: ${enterUrl}`
+    )}`,
+    `LOCATION:${text(enterUrl)}`,
+    `URL:${enterUrl}`,
+    `ORGANIZER;CN=Claude Coupons:mailto:${FROM_EMAIL}`,
+    `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:${email}`,
+    "STATUS:CONFIRMED",
+    "SEQUENCE:0",
+    "TRANSP:OPAQUE",
+    "BEGIN:VALARM",
+    "TRIGGER:-PT10M",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${text(`${deal.name} live draw: the room opens in 10 minutes`)}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .map(fold)
+    .join("\r\n");
+}
+
 /** The show invite as subject, text and HTML. Separate from sending so it can be previewed. */
 export function showInviteContent(
   { enterUrl, stopUrl, timezone }: Omit<InviteRecipient, "email">,
@@ -384,8 +444,12 @@ export function showInviteContent(
 
   const intro = `A Claude subscriber shared a guest pass with us. It works for ${numberWord(draw.spots)} people, so we're giving it away in a live draw: ${spots}, each a free week of Claude Pro.`;
   const fair = `We've invited all ${everyone} people waiting for a Claude pass. It doesn't matter when you joined: everyone in the room when the draw starts has exactly the same chance.`;
+  const opens = draw.opensAt ? drawTime(draw.opensAt, timezone) : null;
+  const opensWhen = opens ? (opens.local ?? opens.utc).replace(/ your time$/, "") : "";
   const steps = [
-    "Open the room before it starts and join with your first name. The room shows your first name and city, and there's a live chat while you wait.",
+    opens
+      ? `The room opens at ${opensWhen}, ${Math.round((draw.drawAt.getTime() - draw.opensAt!.getTime()) / 60000)} minutes before the draw. Your link below works now: it shows a countdown until then. Join with your first name; the room shows your first name and city, and there's a live chat while you wait.`
+      : "Open the room before it starts and join with your first name. The room shows your first name and city, and there's a live chat while you wait.",
     `When the countdown hits zero, ${numberWord(draw.spots)} winners are picked at random, live, from the people in the room.`,
     `A winner has ${draw.claimSeconds} seconds to press "Get my pass". If they don't, the spot is drawn again straight away among the people still there, so stay until the room closes.`,
     "Win, and the guest pass link is yours, right there on the page. Claude asks for a card when you start the free week; cancel within 7 days and you pay nothing.",
@@ -448,7 +512,16 @@ export function showInviteContent(
 
 function sendOneShowInvite({ email, ...links }: InviteRecipient, deal: Deal, draw: DrawInvite): Promise<unknown> {
   const { subject, text, html } = showInviteContent(links, deal, draw);
+  const calendar = showCalendar(deal, draw, email, links.enterUrl);
   return sgMail.send({
+    attachments: [
+      {
+        content: Buffer.from(calendar).toString("base64"),
+        filename: "invite.ics",
+        type: "text/calendar; method=REQUEST",
+        disposition: "attachment",
+      },
+    ],
     to: email,
     from: { email: FROM_EMAIL, name: FROM_NAME },
     subject,

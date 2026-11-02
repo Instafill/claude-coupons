@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import DrawCard from "@/components/DrawCard";
-import DrawListCard from "@/components/DrawListCard";
+import DrawHero from "@/components/DrawHero";
+import LastDraw from "@/components/LastDraw";
 import ShareCard from "@/components/ShareCard";
 import ShareCta from "@/components/ShareCta";
 import { getUser } from "@/lib/auth";
 import { OTHER_DEALS, getDeal } from "@/lib/deals";
-import { drawSummary } from "@/lib/draw";
+import { drawSummary, peopleServed } from "@/lib/draw";
 import { FAQS } from "@/lib/faqs";
-import { ensureQueueAdopted, joinedToday, servedThisWeek, standingFor } from "@/lib/queue";
+import { ensureQueueAdopted, joinedToday, standingFor } from "@/lib/queue";
 
 // The Claude board, and the page that ranks. Its copy is tuned against real queries and is
 // deliberately not generated from lib/deals.ts like the other boards are - the machinery is
@@ -65,6 +65,26 @@ export const metadata: Metadata = {
   },
 };
 
+// The four steps, from the list to a working pass. Short enough to read in passing.
+const HOW = [
+  {
+    title: "Join the list",
+    body: "Leave your email and confirm it once. No password, and nothing to pay.",
+  },
+  {
+    title: "Get the invite",
+    body: "When subscribers share passes, everyone on the list is emailed a link to the draw room.",
+  },
+  {
+    title: "Be in the room",
+    body: "Join with your first name. Winners are drawn live, everyone with the same chance, and you can chat while you wait.",
+  },
+  {
+    title: "Claim your week",
+    body: "Win and you have a minute to press Get my pass. Open the link on claude.ai and the 7 free days start.",
+  },
+];
+
 const GUEST_PASS_DOC =
   "https://support.claude.com/en/articles/13456702-claude-code-and-cowork-guest-passes";
 
@@ -82,7 +102,7 @@ export default async function Home({
   // are given out in live draws (lib/draw.ts), so the board is the draw, not a list of codes.
   const [summary, served, today, standing] = await Promise.all([
     drawSummary(DEAL.slug, user?.email),
-    servedThisWeek(DEAL.slug),
+    peopleServed(DEAL.slug),
     joinedToday(DEAL.slug),
     user ? standingFor(user.email, DEAL.slug) : Promise.resolve(null),
   ]);
@@ -124,42 +144,38 @@ export default async function Home({
         </h1>
       </section>
 
-      {/* The list is the ask; the board under it is the proof. When the board has passes
-          that shows the list works, and when it is empty the card says why joining is the
-          only move - so the card comes first in both cases. */}
+      {/* The whole ask on one screen: the number that proves it works, the promise, and the
+          form - or, on a draw day, the way into the room. */}
       <div className="mt-6">
-        <DrawListCard
+        <DrawHero
           deal={DEAL}
           summary={summary}
           served={served}
           joinedToday={today}
-          standing={standing}
+          onList={Boolean(standing)}
           signedIn={Boolean(user)}
           email={user?.email}
           confirmed={watch === "confirmed"}
         />
       </div>
 
-      {/* The promise and the rule of the board in four short sentences. Under the card
-          rather than above it: someone who arrived to take a number should reach the form
-          without reading first, and someone who wants to know what a pass is finds this
-          exactly where they start looking. */}
-      <p className="mt-6 max-w-2xl text-[19px] text-muted">
-        A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
-        Subscribers list their spare passes here, and each link is good for three people. They
-        are given away in live draws: when links come in, everyone in line gets an email invite,
-        and everyone in the room when the draw starts has the same chance. Take a number once and
-        you&rsquo;re invited to every draw until you win.
-      </p>
+      <section className="mt-12">
+        <h2 className="text-[26px] leading-tight font-bold">How a live draw works</h2>
+        <ol className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {HOW.map(({ title, body }, i) => (
+            <li key={title} className="rounded-2xl border border-line bg-surface px-5 py-5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-[15px] font-bold text-white">
+                {i + 1}
+              </span>
+              <p className="mt-3 text-[17px] font-semibold">{title}</p>
+              <p className="mt-1 text-[14px] text-muted">{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
-        <section className="flex flex-col rounded-2xl border border-line bg-surface px-6 py-7">
-          <h2 className="mb-4 text-2xl font-semibold">
-            Live Claude pass draws
-          </h2>
-          <DrawCard deal={DEAL} summary={summary} />
-        </section>
-
+      <div className="mt-12 grid items-stretch gap-8 lg:grid-cols-2">
+        {summary.last ? <LastDraw last={summary.last} /> : null}
         <ShareCard deal={DEAL} />
       </div>
 
@@ -167,6 +183,10 @@ export default async function Home({
 
       <section className="mt-14 max-w-3xl [&_h2]:mt-9 [&_h2]:mb-2.5 [&_h2]:text-[23px] [&_h2]:font-semibold">
         <h2>What you get with a Claude Code pass</h2>
+        <p>
+          A pass is 7 free days of Claude Pro, shared by a subscriber who would otherwise let it
+          expire. Each link is good for three people, so each one becomes three winners in a draw.
+        </p>
         <ul className="list-disc space-y-1 pl-6">
           <li>
             <strong>7 days of Claude Pro, free</strong> - the full paid plan,

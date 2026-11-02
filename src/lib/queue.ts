@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 
-import { DEFAULT_DEAL, DealSlug } from "@/lib/deals";
+import { DEFAULT_DEAL, DealSlug, getDeal } from "@/lib/deals";
 import { logEvent } from "@/lib/events";
 import { dbConnect } from "@/lib/mongodb";
 import { WAVE_MINUTES, WAVE_SIZE, dealOf, openWaveCount } from "@/lib/passes";
@@ -103,13 +103,21 @@ export async function joinQueue(
   await dbConnect();
   const existing = await Membership.findOne({ email: email.toLowerCase(), deal });
   if (existing && !existing.stoppedAt) return existing.position;
+  let position: number;
   if (existing) {
     // Stopped and come back: the number they had is still theirs, and the line has moved
     // on without them anyway, so reviving the row is fairer than sending them to the back.
     await Membership.updateOne({ _id: existing._id }, { $unset: { stoppedAt: "" } });
-    return existing.position;
+    position = existing.position;
+  } else {
+    position = await takeNumber(watcherId, email, deal);
   }
-  return takeNumber(watcherId, email, deal);
+  // A draw already announced invites everyone in the line, so it invites them too.
+  if (getDeal(deal).liveDraw) {
+    const { inviteLatecomer } = await import("@/lib/draw");
+    await inviteLatecomer(email, deal);
+  }
+  return position;
 }
 
 /** Every board an address stopped hearing about, in step with the watcher's own stop. */

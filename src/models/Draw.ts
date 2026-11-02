@@ -71,6 +71,8 @@ export interface IDraw extends Document {
   _id: Types.ObjectId;
   deal: DealSlug;
   drawAt: Date;
+  /** A draw announced ahead: until then the page shows a countdown and nobody can join. */
+  opensAt?: Date;
   claimSeconds: number;
   status: DrawStatus;
   /** A test draw invites the addresses it was given, never the line, and moves nobody in it. */
@@ -127,6 +129,7 @@ const DrawSchema = new Schema<IDraw>(
   {
     deal: { type: String, enum: DEAL_SLUGS, required: true },
     drawAt: { type: Date, required: true },
+    opensAt: { type: Date },
     claimSeconds: { type: Number, required: true },
     status: { type: String, enum: Object.values(DRAW_STATUS), default: DRAW_STATUS.open, index: true },
     test: { type: Boolean, default: false },
