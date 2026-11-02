@@ -141,7 +141,7 @@ export default function WatchForm({
             </label>
           ))}
         </div>
-        <p className="mt-1.5 text-[13px] text-muted">Does not affect your place in line.</p>
+        <p className="mt-1.5 text-[13px] text-muted">{deal.liveDraw ? "Does not affect your chances." : "Does not affect your place in line."}</p>
       </fieldset>
       )}
 
