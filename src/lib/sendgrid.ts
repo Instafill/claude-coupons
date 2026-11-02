@@ -258,6 +258,8 @@ export interface DrawInvite {
   everyone?: boolean;
   /** Announced ahead: the room opens at this moment, and shows a countdown until then. */
   opensAt?: Date;
+  /** The short "starting in 10 minutes, the room is open" nudge instead of the invite. */
+  reminder?: boolean;
 }
 
 // Pictures in the show invite. Served from the site's public/email folder, so they exist once
@@ -510,7 +512,47 @@ export function showInviteContent(
   };
 }
 
+/** The reminder a few minutes before a show: the room is open, come in now. */
+export function showReminderContent(
+  { enterUrl, stopUrl, timezone }: Omit<InviteRecipient, "email">,
+  deal: Deal,
+  draw: DrawInvite
+): { subject: string; text: string; html: string } {
+  const time = drawTime(draw.drawAt, timezone);
+  const at = (time.local ?? time.utc).replace(/^\w+ /, "");
+  const minutes = Math.max(1, Math.round((draw.drawAt.getTime() - Date.now()) / 60000));
+  const spots = `${draw.spots} free ${draw.spots === 1 ? "week" : "weeks"} of ${deal.name} Pro`;
+  const lead = `The room is open. The draw starts at ${at}, in about ${minutes} minutes: ${spots}, drawn live.`;
+  const rule = "Only people in the room when it starts can win, and everyone there has the same chance. Join with your first name and stay until the room closes: a spot that isn't claimed within a minute is drawn again.";
+  const button = `<a href="${enterUrl}" style="display: inline-block; background: #c9642f; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Join the room now</a>`;
+  return {
+    subject: `Starting in ${minutes} minutes: the live Claude Pro draw room is open`,
+    text: [lead, `Join the room: ${enterUrl}`, rule, "Can't come? Nothing lost: you're invited to the next draw.", `Stop these emails: ${stopUrl}`].join("\n\n"),
+    html: `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; color: #1f1e1d; font-size: 15px; line-height: 1.5;">
+        <p style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #a94f20;">Live draw &middot; Claude Pro</p>
+        <h1 style="margin: 4px 0 10px; font-size: 26px; line-height: 1.2;">Starting in ${minutes} minutes</h1>
+        <p style="font-size: 17px;">${lead}</p>
+        <p style="margin: 20px 0;">${button}</p>
+        <p style="color: #6e6a63; font-size: 14px;">${rule}</p>
+        <p style="color: #6e6a63; font-size: 14px;">Can&rsquo;t come? Nothing lost: you&rsquo;re invited to the next draw.</p>
+        <p style="color: #6e6a63; font-size: 13px;"><a href="${stopUrl}" style="color: #6e6a63;">Stop these emails</a> &mdash; one click, no questions.</p>
+      </div>`,
+  };
+}
+
 function sendOneShowInvite({ email, ...links }: InviteRecipient, deal: Deal, draw: DrawInvite): Promise<unknown> {
+  if (draw.reminder) {
+    const { subject, text, html } = showReminderContent(links, deal, draw);
+    return sgMail.send({
+      to: email,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject,
+      headers: { "List-Unsubscribe": `<${links.stopUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      text,
+      html,
+    });
+  }
   const { subject, text, html } = showInviteContent(links, deal, draw);
   const calendar = showCalendar(deal, draw, email, links.enterUrl);
   return sgMail.send({

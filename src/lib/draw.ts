@@ -1792,7 +1792,7 @@ const SEND_CHUNK = 100;
  */
 export async function sendInvites(
   id: string,
-  { only, budgetMs = SEND_BUDGET_MS }: { only?: string[]; budgetMs?: number } = {}
+  { only, budgetMs = SEND_BUDGET_MS, reminder = false }: { only?: string[]; budgetMs?: number; reminder?: boolean } = {}
 ): Promise<{ delivered: number; remaining: number; preview: boolean }> {
   await dbConnect();
   const draw = await Draw.findById(id).lean<LeanDraw>();
@@ -1807,6 +1807,7 @@ export async function sendInvites(
     claimSeconds: draw.claimSeconds,
     everyone: !!draw.everyone,
     opensAt: draw.opensAt ? new Date(draw.opensAt) : undefined,
+    reminder,
   };
 
   const preview = Array.isArray(only);
@@ -1814,6 +1815,11 @@ export async function sendInvites(
   if (preview) {
     const allowed = new Set([...draw.invited, ...(draw.spectators ?? [])]);
     queue = only!.map((e) => e.trim().toLowerCase()).filter((e) => allowed.has(e));
+  } else if (reminder) {
+    // The reminder skips anyone already in the room: they need no nudge.
+    const inRoom = await DrawEntrant.distinct("email", { drawId: draw._id });
+    const done = new Set([...(draw.reminded ?? []), ...inRoom]);
+    queue = draw.invited.filter((email) => !done.has(email));
   } else {
     const done = new Set(draw.sent ?? []);
     queue = draw.invited.filter((email) => !done.has(email));
@@ -1839,6 +1845,10 @@ export async function sendInvites(
     if (preview) continue;
     // Someone who stopped the emails since the line was read is done too: nothing to send.
     const stopped = chunk.filter((email) => !watchers.some((w) => w.email === email));
+    if (reminder) {
+      await Draw.updateOne({ _id: draw._id }, { $addToSet: { reminded: { $each: [...accepted, ...stopped] } } });
+      continue;
+    }
     await Draw.updateOne({ _id: draw._id }, { $addToSet: { sent: { $each: [...accepted, ...stopped] } } });
     if (!draw.test && accepted.length) {
       // An invite to the front is an offer, as an alert was: three ignored and the number goes
@@ -1852,8 +1862,8 @@ export async function sendInvites(
       );
     }
   }
-  const remaining = preview ? 0 : await unsentCount(draw._id);
-  logEvent("draw_invites_sent", { draw: id, delivered, remaining, preview });
+  const remaining = preview ? 0 : reminder ? queue.length : await unsentCount(draw._id);
+  logEvent(reminder ? "draw_reminders_sent" : "draw_invites_sent", { draw: id, delivered, remaining, preview });
   return { delivered, remaining, preview };
 }
 

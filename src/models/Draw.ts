@@ -85,6 +85,8 @@ export interface IDraw extends Document {
   invitedCount: number;
   /** Who the invite email has gone to, so a send that stopped part-way can pick up where it was. */
   sent: string[];
+  /** Who got the "starting in 10 minutes" reminder, so it too goes once. */
+  reminded?: string[];
   /** May watch, never join: the operator, and the recorder filming the show. */
   spectators: string[];
   /** A show: everyone waiting was invited, so not coming costs nobody their place. */
@@ -138,6 +140,7 @@ const DrawSchema = new Schema<IDraw>(
     invited: [{ type: String, lowercase: true }],
     invitedCount: { type: Number, default: 0 },
     sent: [{ type: String, lowercase: true }],
+    reminded: [{ type: String, lowercase: true }],
     spectators: [{ type: String, lowercase: true }],
     everyone: { type: Boolean, default: false },
     chatClosedAt: { type: Date },
