@@ -16,7 +16,7 @@ import { SITE_URL, articleMetadata } from "@/lib/seo";
 // trusts them.
 
 const DESCRIPTION =
-  "Referral codes that actually work, shared by the people who own them: Claude, Waymo, Uber, muse.ai, Pokémon GO, Fireflies.ai and KitCut. Take a number and unlock one when your wave opens.";
+  "Referral codes that actually work, shared by the people who own them: Claude, Waymo, Uber, muse.ai, Pokémon GO, Fireflies.ai and KitCut. Take a number and unlock one when your turn comes; Claude passes go out in live draws.";
 
 export const dynamic = "force-dynamic";
 
@@ -105,8 +105,8 @@ export default async function ReferralCodesPage() {
                     ? "No queue - see the codes →"
                     : standing
                       ? deal.liveDraw
-                        ? `You are number ${standing.position}, with ${standing.ahead} ahead of you.`
-                        : `You are number ${standing.position}, wave ${standing.wave}.`
+                        ? `You are number ${standing.position}: invited to every live draw.`
+                        : `You are number ${standing.position}, with ${standing.ahead} ahead of you.`
                       : "Take a number →"}
                 </p>
               </Link>
@@ -136,8 +136,8 @@ export default async function ReferralCodesPage() {
             <li>Leave your email on the board you want and confirm it once. That click is also your sign-in.</li>
             <li>You get a number. Numbers are handed out in order and never reused.</li>
             <li>When something is listed, the first ten in that line get it, then ten more every five minutes.</li>
-            <li>Claude passes are drawn instead: the front of the line is invited to a live draw, and winners are picked from the people in the room.</li>
             <li>Unlock it and you leave that queue, so everyone behind you moves up.</li>
+            <li>Claude passes are drawn instead: everyone in that line is invited to a live draw, and winners are picked at random from the people in the room, all with the same chance.</li>
             <li>Each board has its own line. Unlocking a Waymo code costs you nothing on the Claude one.</li>
           </ol>
 

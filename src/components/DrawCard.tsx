@@ -43,28 +43,26 @@ export default function DrawCard({ deal, summary }: { deal: Deal; summary: DrawS
             </Link>
           ) : (
             <p className="mt-3 text-[14px] text-muted">
-              Not invited this time? Keep your number: the line moves as winners leave it and as people who skip
-              three invites go to the back.
+              Not on this one&rsquo;s list? Keep your number: every draw invites everyone in line when it opens, so
+              the next one is yours.
             </p>
           )}
         </>
       ) : waiting.spots > 0 ? (
         <>
           <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">Waiting for the draw</p>
-          <h3 className="mt-1 text-[22px] leading-tight font-semibold">
-            {spots(waiting.spots)} at <LocalTime at={summary.nextScheduled} weekday />
-          </h3>
+          <h3 className="mt-1 text-[22px] leading-tight font-semibold">{spots(waiting.spots)} saved for the next draw</h3>
           <p className="mt-1.5 text-[15px] text-muted">
-            {links(waiting.links)} listed and saved for the next draw. Invites go to the front of the line two hours
-            before it starts.
+            {links(waiting.links)} listed. When the draw is set, everyone in line gets the invite by email, a few
+            minutes before it starts.
           </p>
         </>
       ) : (
         <>
           <h3 className="text-[19px] font-semibold">No {deal.name} passes waiting right now</h3>
           <p className="mt-2 text-[15px] text-muted">
-            A draw runs at <LocalTime at={summary.nextScheduled} /> on any day a pass has been listed. Take a number
-            above and the invite comes by email when you&rsquo;re near the front.
+            A live draw runs whenever passes have been listed. Take a number above and the invite comes by email, a
+            few minutes before it starts.
           </p>
         </>
       )}

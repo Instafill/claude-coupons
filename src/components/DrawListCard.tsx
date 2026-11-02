@@ -9,17 +9,11 @@ import type { DrawSummary } from "@/lib/draw";
 import type { Standing } from "@/lib/queue";
 
 // The first screen of a board given out by live draw: your place in the line, what it gets
-// you, and the form. PassListCard's counterpart for waves, with the same honest pressure -
-// nobody behind you can get in front - and a different promise: an invite, not a turn.
+// you, and the form. PassListCard's counterpart for the boards that go in turns, with a
+// different promise: an invite to every draw, the same chance as everyone, not a turn.
 
 // Below this, the day's pace is an argument against joining rather than for it.
 const SHOW_PACE_FROM = 5;
-
-function ordinal(n: number): string {
-  const tens = n % 100;
-  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
-  return `${n.toLocaleString("en-US")}${suffix}`;
-}
 
 export default function DrawListCard({
   deal,
@@ -63,18 +57,19 @@ export default function DrawListCard({
   } else if (standing) {
     heading = (
       <>
-        You&rsquo;re <span className="text-accent">{ordinal(standing.rank)}</span> in line.
+        You&rsquo;re in for the next <span className="text-accent">live draw</span>.
       </>
     );
     body =
-      "You're on the list for the next live draw. When Claude links come in, everyone in line gets the invite by email, and everyone in the room has the same chance.";
+      "When Claude links come in, everyone in line gets the invite by email, and everyone in the room has the same chance, however long they've waited.";
   } else {
     heading = (
       <>
         Take a number for the <span className="text-accent">live draw</span>.
       </>
     );
-    body = "Numbers are handed out in order and never reused. The place you take today is the best place you will ever have.";
+    body =
+      "Leave your email once and you're invited to every live draw until you win. It doesn't matter when you joined: everyone in the room has the same chance.";
   }
 
   const rules: React.ReactNode[] = [
@@ -88,7 +83,7 @@ export default function DrawListCard({
     <section className="rounded-2xl border border-line bg-surface px-6 py-6">
       {confirmed && standing && (
         <p className="mb-4 rounded-lg bg-[#eaf6ef] px-3 py-2 text-sm font-semibold text-good">
-          You&rsquo;re in. Number {standing.position}, {ordinal(standing.rank)} in line.
+          You&rsquo;re in. Number {standing.position}: the next draw&rsquo;s invite comes to you.
         </p>
       )}
 
@@ -124,7 +119,7 @@ export default function DrawListCard({
               <p className="mt-3 border-t border-line pt-3 text-[13px] text-muted">
                 {served > 0 && (
                   <>
-                    The queue moved {served} {served === 1 ? "place" : "places"} this week.{" "}
+                    {served} {served === 1 ? "person" : "people"} got a pass this week.{" "}
                   </>
                 )}
                 {last && (
@@ -148,12 +143,10 @@ export default function DrawListCard({
           {standing ? (
             <div className="rounded-xl border border-[#b9dcc9] bg-[#eaf6ef] px-4 py-4 text-good">
               <p className="font-semibold">
-                Number {standing.position} &middot; {ordinal(standing.rank)} in line
+                Number {standing.position} &middot; on the list
               </p>
               <p className="mt-1 text-sm">
-                {standing.ahead === 0
-                  ? "You're on the list. The next draw's invite comes to you."
-                  : "You're on the list. Every live draw's invite comes to you, with the same chance as everyone."}
+                Every live draw&rsquo;s invite comes to you, with the same chance as everyone, until you win.
               </p>
               {/* Renders nothing. Someone holding a number is the person we could not place
                   from anything stored, and this is the one moment we see them. */}
@@ -163,8 +156,8 @@ export default function DrawListCard({
             <>
               <WatchForm deal={deal} signedIn={signedIn} email={email} buttonLabel="Take my number" />
               <p className="mt-2 text-[13px] text-muted">
-                One click in the confirmation email holds your place. After that the only emails are draw invites, at
-                most one a day, and one click stops them.
+                One click in the confirmation email puts you on the list. After that the only emails are live draw
+                invites, and one click stops them.
               </p>
             </>
           )}

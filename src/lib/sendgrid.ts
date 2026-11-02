@@ -160,9 +160,9 @@ export async function sendWatchConfirmation(
   // "again" is a claim about the past. On a board still waiting for its first listing it
   // would be the one false word in an email whose whole job is to be trusted.
   const again = deal.awaitingFirstListing ? "" : " again";
-  // What they will get, said the way it happens: a draw invite, or their turn in a wave.
+  // What they will get, said the way it happens: an invite to every draw, or their turn.
   const promise = deal.liveDraw
-    ? "You'll get an invite to a live draw when passes have been listed and you're near the front of the line - at most one email a day, never a newsletter."
+    ? "You'll be invited to every live draw for Claude passes until you win one, a few minutes before it starts, and everyone in the room has the same chance. Draw invites only, never a newsletter."
     : `You'll get an email when ${deal.mailDescription} are listed and your turn in the line comes up - never a newsletter.`;
   const ask = deal.liveDraw
     ? `Someone asked us to put this address in the line for ${deal.mailDescription} at claudecoupons.com.`
@@ -266,7 +266,7 @@ const EMAIL_IMAGES = "https://claudecoupons.com/email";
 const ROOM_PICTURE = `${EMAIL_IMAGES}/live-draw-room.png?v=2`;
 const GUEST_PASS_PICTURE: string = `${EMAIL_IMAGES}/guest-pass.jpg`;
 
-// The live draw invite: one email per draw, to the front of the line. Same shape as an alert
+// The live draw invite: one email per draw, to everyone invited. Same shape as an alert
 // (one message each, for its own List-Unsubscribe header), and the same contract with the
 // caller: it returns who was actually accepted.
 export async function sendDrawInvites(
@@ -383,14 +383,14 @@ export function showInviteContent(
   const spots = `${draw.spots} ${draw.spots === 1 ? "spot" : "spots"}`;
 
   const intro = `A Claude subscriber shared a guest pass with us. It works for ${numberWord(draw.spots)} people, so we're giving it away in a live draw: ${spots}, each a free week of Claude Pro.`;
-  const fair = `We've invited all ${everyone} people waiting for a Claude pass. Your place in line doesn't count for this one: everyone in the room when the draw starts has exactly the same chance.`;
+  const fair = `We've invited all ${everyone} people waiting for a Claude pass. It doesn't matter when you joined: everyone in the room when the draw starts has exactly the same chance.`;
   const steps = [
-    "Open the room before it starts and join with your first name. The room shows your first name and city.",
+    "Open the room before it starts and join with your first name. The room shows your first name and city, and there's a live chat while you wait.",
     `When the countdown hits zero, ${numberWord(draw.spots)} winners are picked at random, live, from the people in the room.`,
     `A winner has ${draw.claimSeconds} seconds to press "Get my pass". If they don't, the spot is drawn again straight away among the people still there, so stay until the room closes.`,
     "Win, and the guest pass link is yours, right there on the page. Claude asks for a card when you start the free week; cancel within 7 days and you pay nothing.",
   ];
-  const miss = "Can't come? Nothing lost. You keep your place in line, and missing this draw doesn't count against you.";
+  const miss = "Can't come? Nothing lost. You stay on the list and get the invite to the next draw.";
   const more = "More links come in from Claude subscribers every week, and each one becomes a draw.";
 
   const button = (href: string, label: string) =>

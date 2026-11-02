@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const STATES: Record<string, { heading: string; body: string }> = {
   confirmed: {
     heading: "You're in the line",
-    body: "When passes are listed and you're near the front, we'll email you an invite to that day's live draw. Nothing else, at most one email a day, and every message carries a one-click link to stop.",
+    body: "When passes are listed, we'll email you an invite to the live draw, a few minutes before it starts. Everyone in the room has the same chance. Nothing else is sent, and every message carries a one-click link to stop.",
   },
   stopped: {
     heading: "You're not watching any more",

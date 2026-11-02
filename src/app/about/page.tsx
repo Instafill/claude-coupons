@@ -68,9 +68,9 @@ export default function AboutPage() {
           <Link className="text-accent-dark underline" href="/">
             join the queue
           </Link>
-          . Each pass goes out in a live draw to the people at the front of the line who turn
-          up for it, and each winner tells us whether it worked - that is how dead links drop
-          off.
+          . Each pass goes out in a live draw: everyone in line is invited, everyone who turns
+          up has the same chance, and each winner tells us whether it worked - that is how dead
+          links drop off.
         </li>
         <li>
           <strong>Someone gets to start.</strong> Seven days of Claude Pro to build the thing

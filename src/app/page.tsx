@@ -147,9 +147,9 @@ export default async function Home({
       <p className="mt-6 max-w-2xl text-[19px] text-muted">
         A pass is <strong>7 free days of Claude Pro</strong>, Claude Code and Cowork included.
         Subscribers list their spare passes here, and each link is good for three people. They
-        are given out in a live draw: the front of the line is invited, and the winners are drawn
-        from whoever is in the room. Take a number and it only gets better as the people ahead of
-        you are served.
+        are given away in live draws: when links come in, everyone in line gets an email invite,
+        and everyone in the room when the draw starts has the same chance. Take a number once and
+        you&rsquo;re invited to every draw until you win.
       </p>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-2">
@@ -215,9 +215,10 @@ export default async function Home({
             invent.
           </li>
           <li>
-            <strong>Win a spot in a live draw.</strong> When you reach the front
-            of the line you are invited; be in the room when it starts, then
-            press Get my pass to reveal its claude.ai invite link.
+            <strong>Win a spot in a live draw.</strong> When passes come in,
+            everyone in line gets an email invite to a draw a few minutes later.
+            Be in the room when it starts; if you win, press Get my pass to
+            reveal its claude.ai invite link.
           </li>
           <li>
             <strong>Redeem it on claude.ai</strong> - open the link and create
@@ -258,8 +259,8 @@ export default async function Home({
         <h2>Other referral codes on this board</h2>
         <p>
           The same queue runs for a few other programs, each one a code its owner would
-          otherwise let expire; those are offered down the line in small waves rather than
-          drawn. Every one of them pays the person who claims it:
+          otherwise let expire; those are offered down the line a few people at a time rather
+          than drawn. Every one of them pays the person who claims it:
         </p>
         <ul className="mt-3 list-disc space-y-1 pl-6">
           {OTHER_DEALS.map((deal) => (

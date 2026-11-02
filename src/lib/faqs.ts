@@ -19,7 +19,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How do I redeem a Claude coupon?",
-    a: "Take a number on the home page: leave your email and confirm it once, which is also your sign-in. Passes are given out in live draws: on a day links are listed, the front of the line is invited by email to a draw at 14:00 UTC. Be in the room when it starts; winners are drawn from the people there, and a winner presses Get my pass to reveal the claude.ai invite link. You redeem it on claude.ai itself by creating your account there; nothing is entered on this site.",
+    a: "Take a number on the home page: leave your email and confirm it once, which is also your sign-in. Passes are given away in live draws: when links are listed, everyone in line gets an email invite to a draw that starts a few minutes later. Be in the room when it starts; winners are drawn at random from the people there, all with the same chance, and a winner presses Get my pass to reveal the claude.ai invite link. You redeem it on claude.ai itself by creating your account there; nothing is entered on this site.",
   },
   {
     q: "Are Claude Code passes really free?",
@@ -35,7 +35,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How does the queue work?",
-    a: "You get a number when you confirm your email, and numbers are never reused. Each Claude pass link is good for three people, so it becomes three spots in a live draw. The front of the line is invited - fifteen people for every spot, at least fifty - and the winners are drawn from whoever is in the room when it starts. A winner has a minute to claim; a spot that isn't claimed is re-drawn straight away among the people still there. Win a spot and you leave the queue, so everyone behind you moves up. Skip three invites and your number moves to the back, which keeps a sleeping front row from holding up the people behind it.",
+    a: "You get a number when you confirm your email, and numbers are never reused. Each Claude pass link is good for three people, so it becomes three spots in a live draw. Everyone in line is invited, and your place in it doesn't change your chances: the winners are drawn at random from whoever is in the room when it starts. A winner has a minute to claim; a spot that isn't claimed is re-drawn straight away among the people still there. Win a spot and you leave the queue. Miss a draw and nothing changes: you're invited to the next one. Anyone can open the room and watch, and the people in the draw can chat while they wait.",
   },
   {
     q: "How do I share my own Claude Code passes?",
@@ -47,7 +47,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How will I know when there is a draw?",
-    a: "Leave an email address in the list at the top of the page and confirm it once. When passes have been listed and you are near the front of the line, you get one invite for that day's draw - at most one email a day, and never anything else. The draw is live, so the invite is worth opening: the spots go to the people in the room. Every message carries a one-click link to stop.",
+    a: "Leave an email address in the list at the top of the page and confirm it once. When passes have been listed, everyone in line gets an invite to the live draw, sent a few minutes before it starts, so it is worth opening quickly: the spots go to the people in the room. Draw invites are the only emails we send. Every message carries a one-click link to stop.",
   },
 ];
 
