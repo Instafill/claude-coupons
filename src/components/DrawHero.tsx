@@ -102,7 +102,7 @@ export default function DrawHero({
           </h2>
 
           {served > 0 && (
-            <p className="mt-5 flex items-baseline gap-3">
+            <p className="mt-5 flex items-center gap-3">
               <span className="text-[52px] leading-none font-bold tracking-tight text-accent tabular-nums sm:text-[60px]">
                 {served.toLocaleString("en-US")}
               </span>

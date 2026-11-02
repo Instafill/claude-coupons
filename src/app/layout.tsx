@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
@@ -19,10 +20,17 @@ export const metadata = {
     "Claim a free Claude Code pass or share yours. Every Claude pass gives a new user 7 days of Claude Pro - Claude Code and Cowork included.",
 } satisfies Metadata;
 
+// Google's crawlers, including the URL Inspection tool so a live test shows what Googlebot gets.
+// They are served the pages without the KitCut banner (the owner's call, 2026-11-01): it fills
+// the top of every page with another product's words.
+const GOOGLE_CRAWLER =
+  /Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google|AdsBot-Google|Mediapartners-Google|APIs-Google/i;
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await getUser();
+  const isGoogle = GOOGLE_CRAWLER.test((await headers()).get("user-agent") ?? "");
 
   return (
     <html lang="en">
@@ -98,8 +106,8 @@ export default async function RootLayout({
           </nav>
         </header>
 
-        {/* Our other product, on every page: see src/lib/kitcut.ts. */}
-        <KitCutBanner />
+        {/* Our other product, on every page but for Google's crawlers: see src/lib/kitcut.ts. */}
+        {!isGoogle && <KitCutBanner />}
 
         <main className="mx-auto max-w-5xl px-5 pb-16">{children}</main>
 
