@@ -102,13 +102,14 @@ export default function DrawHero({
           </h2>
 
           {served > 0 && (
-            <p className="mt-5 flex items-center gap-3">
-              <span className="text-[52px] leading-none font-bold tracking-tight text-accent tabular-nums sm:text-[60px]">
+            <p className="mt-6 flex items-center gap-4">
+              <span className="text-[56px] leading-[0.9] font-bold tracking-tight text-accent tabular-nums sm:text-[64px]">
                 {served.toLocaleString("en-US")}
               </span>
-              <span className="text-[17px] leading-snug text-muted">
-                people have got a free week
-                <br className="hidden sm:inline" /> of {deal.name} Pro here
+              <span className="border-l-2 border-[#f0cdb8] pl-4 text-[17px] leading-snug text-muted">
+                <strong className="font-semibold text-ink">people got a free week</strong>
+                <br />
+                of {deal.name} Pro here
               </span>
             </p>
           )}
