@@ -14,7 +14,7 @@ import {
   REDRAW_SWEEP_MS,
 } from "@/lib/drawRules";
 import { logEvent } from "@/lib/events";
-import { Geo, readGeo } from "@/lib/geo";
+import { Geo, readGeo, repairUtf8 } from "@/lib/geo";
 import { dbConnect } from "@/lib/mongodb";
 import { containsBlockedCodeWord, dealFilter, heldRetirement, recordUnlock } from "@/lib/passes";
 import { flagOf, placeFor, readCoords, type Place } from "@/lib/places";
@@ -931,7 +931,7 @@ function buildShared(draw: LeanDraw, list: LeanEntrant[], lines: IDrawMessage[],
       name: e.name,
       picture: e.picture,
       seed: seedFor(draw._id.toString(), e.userId),
-      city: e.city,
+      city: e.city && repairUtf8(e.city),
       country: e.country,
       flag: flagOf(e.country),
       lat: e.lat,

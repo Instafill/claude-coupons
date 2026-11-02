@@ -1,4 +1,4 @@
-import type { Geo } from "@/lib/geo";
+import { repairUtf8, type Geo } from "@/lib/geo";
 
 // Where someone in a draw's room is shown on its map. The city and country are the ones the
 // edge already names (lib/geo.ts); this only turns them into a pin.
@@ -116,7 +116,9 @@ export function readCoords(headers: Headers): { lat: number; lon: number } | nul
 }
 
 /** Where to pin someone: the edge's coordinates if it sent them, else the nearest known city. */
-export function placeFor(geo: Geo, coords?: { lat: number; lon: number } | null, browserZone?: string): Place {
+export function placeFor(raw: Geo, coords?: { lat: number; lon: number } | null, browserZone?: string): Place {
+  // Rows saved before the header fix can hold "SÃ£o Paulo"; read them the way they were meant.
+  const geo = { ...raw, city: raw.city && repairUtf8(raw.city), region: raw.region && repairUtf8(raw.region) };
   const city = geo.city?.toLowerCase();
   const exact = city ? CITIES.find((c) => c.city.toLowerCase() === city) : undefined;
   const zone = geo.timezone ?? browserZone;
