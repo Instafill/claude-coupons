@@ -136,10 +136,10 @@ export default async function Home({
         />
       ))}
 
-      <section className="pt-7 pb-2">
+      <section className="pt-4">
         {/* Carries three target phrases at once - "claude code passes", "claude coupons"
             and, via the domain form, "claude ai coupon". */}
-        <h1 className="text-[38px] leading-tight font-bold">
+        <h1 className="text-[24px] leading-tight font-bold text-muted">
           Claude Code Passes | Claude.ai Coupons
         </h1>
       </section>
