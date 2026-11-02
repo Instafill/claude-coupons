@@ -16,6 +16,13 @@ export const FRIENDS: Friend[] = [
       "Launch a YouTube channel and Claude makes the videos. Pick a niche, get finished episodes (script, animation, voice-over, music) with titles and thumbnails, published to your channel on a schedule.",
   },
   {
+    name: "VideoMakers",
+    url: "https://videomakers.io/",
+    tag: "AI video",
+    blurb:
+      "A directory of AI video creators from X and Threads: see what each one makes and the tools they use, then hire one for your project.",
+  },
+  {
     name: "InstaShare",
     url: "https://instashare.to",
     tag: "Developer tools",
@@ -25,9 +32,9 @@ export const FRIENDS: Friend[] = [
   {
     name: "BuildersHQ",
     url: "https://buildershq.net",
-    tag: "Developer tools",
+    tag: "Data MCP",
     blurb:
-      "A VS Code extension that gives a distributed team a shared sense of presence - who is online, who is shipping, what actually moved today.",
+      "One MCP server for the numbers builders look up: keyword volumes, ideas and ad forecasts, your sites on Google Search Console and Bing, site traffic, and YouTube and app store stats, for Claude or any assistant that speaks MCP.",
   },
   {
     name: "Instafill.ai",

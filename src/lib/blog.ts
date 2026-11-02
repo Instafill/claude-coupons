@@ -783,8 +783,8 @@ const LIVE_GIVEAWAYS: BlogPost = {
         },
         {
           src: `${LIVE_IMG}/room-drawing.jpg`,
-          alt: "The giveaway mid-draw: spot 1 won by jacob from Tel Aviv with a claim timer, spot 2 being drawn",
-          caption: "Mid-draw: spot 1 is won and its winner has a minute to claim, spot 2 is being drawn.",
+          alt: "The giveaway mid-draw: spot 1 claimed by jacob, Ich from Alzey has won spot 2 with 57 seconds to claim, spot 3 up next",
+          caption: "Mid-draw: spot 1 is claimed, spot 2's winner has a minute to claim it, spot 3 is next.",
           width: 1600,
           height: 900,
           label: "From the recording",
