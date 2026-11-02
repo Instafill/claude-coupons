@@ -61,7 +61,7 @@ export default function DrawHero({
     <section className="overflow-hidden rounded-3xl border border-line bg-surface">
       {/* On a draw day the draw itself leads, across the whole card: when, what, and the room. */}
       {next && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-[#f0cdb8] bg-[#fdf3ec] px-6 py-4 sm:px-8">
+        <div className="flex flex-col items-start gap-3 border-b border-[#f0cdb8] bg-[#fdf3ec] px-4 py-4 sm:flex-row sm:items-center sm:gap-5 sm:px-8">
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-[12px] font-semibold tracking-wider text-accent-dark uppercase">
               <span className="relative flex h-2 w-2">
@@ -72,9 +72,10 @@ export default function DrawHero({
             </p>
             <p className="mt-0.5 text-[20px] leading-snug font-semibold">
               {live ? "The draw is on" : <LocalTime at={next.drawAt} weekday />}
-              <span className="font-normal text-muted">
-                {" "}
-                &middot; {spots(next.spots)}
+              {/* Its own line on a phone, after the time on a wide screen. */}
+              <span className="block text-[15px] font-normal text-muted sm:inline sm:text-[20px]">
+                <span className="hidden sm:inline"> &middot; </span>
+                {spots(next.spots)}
                 {next.opensAt && !live && (
                   <>
                     {" "}
@@ -93,8 +94,8 @@ export default function DrawHero({
         </div>
       )}
 
-      <div className="grid gap-8 px-6 py-7 sm:px-8 sm:py-9 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
-        <div className="flex flex-col justify-center">
+      <div className="grid gap-8 px-4 py-6 sm:px-8 sm:py-9 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
+        <div className="flex min-w-0 flex-col justify-center">
           <p className="text-[12px] font-semibold tracking-wider text-accent-dark uppercase">Live draws &middot; {deal.name} Pro</p>
           <h2 className="mt-2 text-[30px] leading-[1.15] font-bold sm:text-[36px]">
             Win a free week of {deal.name} Pro in a <span className="text-accent">live draw</span>.
@@ -123,7 +124,7 @@ export default function DrawHero({
           {joinedToday >= 5 && <p className="mt-5 text-[13px] text-muted">{joinedToday} people joined the list today.</p>}
         </div>
 
-        <div className="flex flex-col justify-center">
+        <div className="flex min-w-0 flex-col justify-center">
           {confirmed && onList && (
             <p className="mb-3 rounded-lg bg-[#eaf6ef] px-3 py-2 text-sm font-semibold text-good">
               You&rsquo;re on the list. Every live draw&rsquo;s invite comes to you.
@@ -144,7 +145,7 @@ export default function DrawHero({
               <PlaceMe />
             </div>
           ) : (
-            <div className="rounded-2xl border border-line bg-paper px-5 py-5">
+            <div className="sm:rounded-2xl sm:border sm:border-line sm:bg-paper sm:px-5 sm:py-5">
               <p className="text-[19px] font-semibold">{next && !live ? "Get invited to this draw" : "Get invited to the next draw"}</p>
               <p className="mt-1 mb-3 text-[14px] text-muted">
                 Your email, confirmed once. Then the only emails are live draw invites, and one click stops them.
