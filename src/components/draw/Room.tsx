@@ -220,6 +220,38 @@ export default function Room({
   }, []);
 
   const [editing, setEditing] = useState(false);
+
+  // On a desktop the chat fills the screen from wherever it sits down to the bottom edge, so
+  // its input is always in view: below the header before the page scrolls, and the full
+  // height once it sticks. A fixed calc() left the input under the fold on an unscrolled page.
+  const chatRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = chatRef.current;
+    if (!el) return;
+    const wide = window.matchMedia("(min-width: 1024px)");
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!wide.matches) {
+          el.style.height = "";
+          return;
+        }
+        const top = Math.max(el.getBoundingClientRect().top, 12);
+        el.style.height = `${Math.max(window.innerHeight - top - 12, 360)}px`;
+      });
+    };
+    fit();
+    window.addEventListener("scroll", fit, { passive: true });
+    window.addEventListener("resize", fit);
+    wide.addEventListener("change", fit);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", fit);
+      window.removeEventListener("resize", fit);
+      wide.removeEventListener("change", fit);
+    };
+  }, []);
   const reactionsOf = new Map<string, Reaction[]>();
   for (const r of view.reactions) reactionsOf.set(r.personId, [...(reactionsOf.get(r.personId) ?? []), r]);
 
@@ -414,7 +446,7 @@ export default function Room({
 
       {/* The chat: where the party is. The right side of the screen, top to bottom, staying in
           view while the left side scrolls. */}
-      <aside className="order-1 min-w-0 lg:sticky lg:top-3 lg:h-[calc(100dvh-5.5rem)]">
+      <aside ref={chatRef} className="order-1 min-w-0 lg:sticky lg:top-3 lg:h-[calc(100dvh-1.5rem)]">
         <LiveChat
           lines={chat}
           people={peopleById}
