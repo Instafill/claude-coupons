@@ -191,6 +191,7 @@ function LiveChat({
   const [openLine, setOpenLine] = useState<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
+  const reading = useRef(false);
   const [unseen, setUnseen] = useState(0);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +205,22 @@ function LiveChat({
   useLayoutEffect(() => {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  // Anything that changes the chat's size (the panel fitting the screen, a reaction row, a
+  // late font) keeps a reader who is at the bottom at the bottom: only scrolling up by hand
+  // stops the chat following the newest line.
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const stick = () => {
+      if (atBottom.current) el.scrollTop = el.scrollHeight;
+    };
+    const watch = new ResizeObserver(stick);
+    watch.observe(el);
+    if (el.firstElementChild) watch.observe(el.firstElementChild);
+    for (const child of Array.from(el.children)) watch.observe(child);
+    return () => watch.disconnect();
   }, []);
 
   // New lines: follow them down if the reader is at the bottom, else count them for the pill.
@@ -271,9 +288,16 @@ function LiveChat({
           ref={list}
           onScroll={(event) => {
             const el = event.currentTarget;
-            atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+            const near = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+            // Only a reader's own scroll lets go of the bottom; a scroll the page caused by
+            // growing or shrinking the panel never does.
+            if (near || reading.current) atBottom.current = near;
             if (atBottom.current && unseen) setUnseen(0);
           }}
+          onWheel={() => (reading.current = true)}
+          onTouchMove={() => (reading.current = true)}
+          onPointerDown={() => (reading.current = true)}
+          onKeyDown={() => (reading.current = true)}
           className="h-full overflow-y-auto overscroll-contain py-2"
           aria-live="polite"
           aria-relevant="additions"
