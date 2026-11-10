@@ -16,6 +16,13 @@ export const FRIENDS: Friend[] = [
       "Launch a YouTube channel and Claude makes the videos. Pick a niche, get finished episodes (script, animation, voice-over, music) with titles and thumbnails, published to your channel on a schedule.",
   },
   {
+    name: "Mister Blocks",
+    url: "https://misterblocks.com",
+    tag: "LEGO AI",
+    blurb:
+      "LEGO AI for the bin of loose bricks: snap a photo and it suggests builds made only from the pieces you have, with 3D step-by-step instructions. You can also just ask it for a model. Free.",
+  },
+  {
     name: "VideoMakers",
     url: "https://videomakers.io/",
     tag: "AI video",
@@ -84,5 +91,40 @@ export const FRIENDS: Friend[] = [
     tag: "Marketing",
     blurb:
       "A marketplace pairing advertisers with publishers for sponsored posts and placements.",
+  },
+];
+
+// The site-wide footer's "Friends" block: short labels, Mister Blocks first. KitCut has its
+// own footer line already, so it is not repeated here.
+export const FOOTER_FRIENDS: { name: string; url: string; label: string }[] = [
+  { name: "Mister Blocks", url: "https://misterblocks.com", label: "LEGO AI build ideas" },
+  { name: "InstaShare", url: "https://instashare.to", label: "share a Claude Code session" },
+  { name: "BuildersHQ", url: "https://buildershq.net", label: "SEO and traffic data MCP" },
+  { name: "VideoMakers", url: "https://videomakers.io", label: "hire an AI video creator" },
+  { name: "Who Is Growing", url: "https://whoisgrowing.com", label: "AI growth newsletter" },
+  { name: "Instafill.ai", url: "https://instafill.ai", label: "AI form filling" },
+];
+
+// The home page's "From our friends" strip. Worded for someone who came here for Claude Code.
+export const HOME_FRIENDS: { name: string; url: string; line: string }[] = [
+  {
+    name: "Mister Blocks",
+    url: "https://misterblocks.com",
+    line: "LEGO AI from your own bricks: photograph the pile, get a model you can build tonight, step by step in 3D.",
+  },
+  {
+    name: "InstaShare",
+    url: "https://instashare.to",
+    line: "Send a Claude Code session to a teammate as one link, with API keys and local paths scrubbed out.",
+  },
+  {
+    name: "BuildersHQ",
+    url: "https://buildershq.net",
+    line: "Give Claude your Search Console, keyword and traffic numbers through a single MCP server.",
+  },
+  {
+    name: "Who Is Growing",
+    url: "https://whoisgrowing.com",
+    line: "A weekend read on which AI companies are gaining real traffic, not just funding.",
   },
 ];

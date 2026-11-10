@@ -9,6 +9,7 @@ import { getUser } from "@/lib/auth";
 import { OTHER_DEALS, getDeal } from "@/lib/deals";
 import { drawSummary, peopleServed } from "@/lib/draw";
 import { FAQS } from "@/lib/faqs";
+import { HOME_FRIENDS } from "@/lib/friends";
 import { ensureQueueAdopted, joinedToday, standingFor } from "@/lib/queue";
 
 // The Claude board, and the page that ranks. Its copy is tuned against real queries and is
@@ -308,6 +309,31 @@ export default async function Home({
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="mt-14">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-[22px] leading-tight font-bold">From our friends</h2>
+          <Link className="text-[14px] text-accent-dark underline" href="/friends">
+            All our friends &rarr;
+          </Link>
+        </div>
+        <p className="mt-1 text-[14px] text-muted">
+          A few things we or people we know built, some of them for Claude Code users.
+        </p>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {HOME_FRIENDS.map(({ name, url, line }) => (
+            <li
+              key={url}
+              className="rounded-xl border border-line bg-surface px-4 py-4 transition-colors hover:border-accent"
+            >
+              <a className="text-[16px] font-bold text-accent-dark underline" href={url} rel="noopener">
+                {name}
+              </a>
+              <p className="mt-1 text-[14px] text-muted">{line}</p>
+            </li>
+          ))}
+        </ul>
       </section>
     </>
   );

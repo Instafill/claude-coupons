@@ -8,6 +8,7 @@ import KitCutBanner from "@/components/KitCutBanner";
 import KitCutBar from "@/components/KitCutBar";
 import { getUser } from "@/lib/auth";
 import { OTHER_DEALS } from "@/lib/deals";
+import { FOOTER_FRIENDS } from "@/lib/friends";
 import { KITCUT, kitcutUrl } from "@/lib/kitcut";
 
 import "./globals.css";
@@ -208,7 +209,20 @@ export default async function RootLayout({
               Sponsor this site
             </Link>
           </p>
-          <p className="mt-3">
+          <div className="mt-5 border-t border-line pt-4">
+            <p className="text-[12px] font-semibold tracking-wide text-ink uppercase">Friends</p>
+            <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {FOOTER_FRIENDS.map(({ name, url, label }) => (
+                <li key={url}>
+                  <a className="font-semibold hover:text-accent-dark" href={url} rel="noopener">
+                    {name}
+                  </a>{" "}
+                  <span>&middot; {label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-4">
             <a className="font-semibold text-accent-dark underline" href={kitcutUrl("footer")} rel="noopener">
               Also by us: KitCut
             </a>{" "}
