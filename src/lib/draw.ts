@@ -1216,7 +1216,6 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
   if (!Types.ObjectId.isValid(id)) return { ok: false, error: "This draw doesn't exist.", status: 404 };
   const text = cleanChat(raw);
   if (!text) return { ok: false, error: "Type a message first.", status: 400 };
-  if (LINKISH.test(text)) return { ok: false, error: "Links and addresses can't go in the chat.", status: 400 };
   if (containsBlockedCodeWord(text.replace(/\s/g, "")))
     return { ok: false, error: "Codes can't go in the chat.", status: 400 };
 
@@ -1235,6 +1234,8 @@ export async function postChat(id: string, user: SessionUser, raw: unknown): Pro
   else if ((await accessTo(id, user.email)) === "spectator")
     speaker = { name: user.name?.trim().split(/\s+/)[0]?.slice(0, 20) || "Host", host: true };
   else return { ok: false, error: "Join the draw to chat.", status: 403 };
+  // Links and addresses are the host's to post; everyone else's are kept out of the chat.
+  if (!speaker.host && LINKISH.test(text)) return { ok: false, error: "Links and addresses can't go in the chat.", status: 400 };
   if (await Draw.exists({ _id: id, chatBlocked: user.id }))
     return { ok: false, error: "The host has turned off chat for you in this room.", status: 403 };
 
