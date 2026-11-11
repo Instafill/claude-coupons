@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import type { ChatLine } from "@/lib/draw";
 import { CHAT_REACTIONS } from "@/lib/drawRules";
@@ -14,6 +14,8 @@ import { onSoundChange, playChat, setSoundMuted, soundMuted } from "./sounds";
 // the bottom. It sticks to the bottom while you're there and leaves you be once you scroll up.
 
 const MAX = 200;
+// A chat nobody has touched for this long goes back to its newest line by itself.
+const IDLE_FOLLOW_MS = 15000;
 
 export type ChatMode = "chat" | "host" | "join" | "closed" | "watch" | "blocked";
 
@@ -192,6 +194,11 @@ function LiveChat({
   const list = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
   const reading = useRef(false);
+  const lastInput = useRef(0);
+  const touched = () => {
+    reading.current = true;
+    lastInput.current = Date.now();
+  };
   const [unseen, setUnseen] = useState(0);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -220,7 +227,36 @@ function LiveChat({
     watch.observe(el);
     if (el.firstElementChild) watch.observe(el.firstElementChild);
     for (const child of Array.from(el.children)) watch.observe(child);
-    return () => watch.disconnect();
+    // Lines added later (and the list replacing the "quiet" note) are new nodes the observer
+    // above never saw; a mutation watch re-sticks on every one of them and on a row growing.
+    const mutations = new MutationObserver((records) => {
+      stick();
+      for (const record of records)
+        record.addedNodes.forEach((node) => {
+          if (node instanceof Element) watch.observe(node);
+        });
+    });
+    mutations.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => {
+      watch.disconnect();
+      mutations.disconnect();
+    };
+  }, []);
+
+  // A chat nobody is steering follows the newest line, always: when the reader has not touched
+  // it for a while it goes back to the bottom by itself (a film of the room, a screen left on a
+  // wall, a tab read from across the room). Only a hand on it holds it up.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = list.current;
+      if (!el || atBottom.current) return;
+      if (Date.now() - lastInput.current < IDLE_FOLLOW_MS) return;
+      atBottom.current = true;
+      reading.current = false;
+      el.scrollTop = el.scrollHeight;
+      setUnseen(0);
+    }, 2000);
+    return () => clearInterval(id);
   }, []);
 
   // New lines: follow them down if the reader is at the bottom, else count them for the pill.
@@ -294,10 +330,10 @@ function LiveChat({
             if (near || reading.current) atBottom.current = near;
             if (atBottom.current && unseen) setUnseen(0);
           }}
-          onWheel={() => (reading.current = true)}
-          onTouchMove={() => (reading.current = true)}
-          onPointerDown={() => (reading.current = true)}
-          onKeyDown={() => (reading.current = true)}
+          onWheel={touched}
+          onTouchMove={touched}
+          onPointerDown={touched}
+          onKeyDown={touched}
           className="h-full overflow-y-auto overscroll-contain py-2"
           aria-live="polite"
           aria-relevant="additions"
