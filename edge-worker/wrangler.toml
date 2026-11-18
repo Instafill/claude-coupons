@@ -1,0 +1,10 @@
+# Runs in front of claudecoupons.com at Cloudflare: refuses Russia, Belarus and Russian crawlers, passes everything else
+# straight on to the site. Deploy from this folder with `npx wrangler deploy`.
+name = "claude-coupons-edge"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [
+  { pattern = "claudecoupons.com/*", zone_name = "claudecoupons.com" },
+  { pattern = "www.claudecoupons.com/*", zone_name = "claudecoupons.com" },
+]
